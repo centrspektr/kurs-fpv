@@ -28,6 +28,8 @@
   @keyframes tw-write{to{stroke-dashoffset:0}}
   @keyframes tw-fill{to{fill-opacity:1;opacity:1}}
   /* подписи узлов */
+  #leads{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:3;overflow:visible}
+  #leads polyline,#leads circle{transition:opacity .35s;filter:drop-shadow(0 0 3px rgba(0,0,0,.8))}
   #labels{position:fixed;inset:0;pointer-events:none;overflow:hidden;z-index:3}
   .lb{position:absolute;left:0;top:0;max-width:min(240px,70vw);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font:700 13px var(--body);color:#fff;padding:7px 13px;border-radius:99px;background:var(--glass);border:1px solid var(--pc,var(--line));cursor:pointer;opacity:0;transition:opacity .35s;will-change:transform}
   .lb.big{font-size:15px;padding:9px 16px}
@@ -108,7 +110,7 @@
   /* правка 7: экран пилота FPV, пока ныряем в здание модуля */
   #osd{position:fixed;inset:max(12px,env(safe-area-inset-top,0px)) max(12px,env(safe-area-inset-right,0px)) max(12px,env(safe-area-inset-bottom,0px)) max(12px,env(safe-area-inset-left,0px));z-index:7;pointer-events:none;opacity:0;transition:opacity .3s;border:2px solid rgba(241,243,255,.75);border-radius:26px;font:800 13px ui-monospace,Menlo,Consolas,monospace;color:#9dff7c;text-shadow:0 0 6px rgba(0,0,0,.9)}
   #osd.on{opacity:1}
-  body.osd #back,body.osd #topB,body.osd #hud,body.osd #plainB,body.osd #tourB,body.osd #autoB,body.osd #labels{opacity:0!important;pointer-events:none}
+  body.osd #back,body.osd #topB,body.osd #hud,body.osd #plainB,body.osd #tourB,body.osd #autoB,body.osd #labels,body.osd #leads{opacity:0!important;pointer-events:none}
   #osd span{position:absolute}
   #osd .tl{left:20px;top:16px}#osd .tr{right:20px;top:16px}#osd .bl{left:20px;bottom:16px}#osd .br{right:20px;bottom:16px}
   #osd .x{left:50%;top:50%;transform:translate(-50%,-50%);color:#f1f3ff;font-size:22px}
@@ -121,6 +123,7 @@
 <canvas id="c" aria-label="Карта курса: город Взлёт, модули и задания"></canvas>
 <canvas id="cm" aria-hidden="true"></canvas>
 <svg id="ttl" viewBox="0 0 620 250" role="img" aria-label="Взлёт, курс пилота"><defs><linearGradient id="tg" x1="0" x2="1"><stop offset="0" stop-color="#7cf3ff"/><stop offset=".4" stop-color="#a78bfa"/><stop offset=".75" stop-color="#ff7ce0"/><stop offset="1" stop-color="#ffd36e"/></linearGradient></defs><text class="tw" x="310" y="168" text-anchor="middle">Взлёт</text><text class="ts" x="318" y="226" text-anchor="middle">КУРС ПИЛОТА</text></svg>
+<svg id="leads" aria-hidden="true"></svg>
 <div id="labels"></div>
 
 <button id="back" type="button" aria-label="Назад">←</button>
