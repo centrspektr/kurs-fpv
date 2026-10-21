@@ -31,6 +31,7 @@
   .enter{background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:22px; margin-bottom:16px; max-width:520px;}
   .enter h2{font-size:18px; margin-bottom:6px;}
   .enter p{color:var(--dim); font-size:14px; margin-bottom:14px;}
+  .enter .about{color:var(--text); font-size:15px;} .enter h3{font-size:15px; margin:4px 0 4px;}
   .enter .row{display:flex; gap:8px; flex-wrap:wrap;}
   .enter input{flex:1; min-width:150px; padding:10px 12px; border-radius:8px; border:1px solid var(--line); background:var(--bg);
     color:var(--text); font:inherit; font-size:16px; letter-spacing:2px; text-transform:uppercase;}
@@ -48,8 +49,10 @@
 </header>
 
 <div class="enter" id="enter" hidden>
-  <h2>Вход в курс</h2>
-  <p>Введи код, который дал педагог. Тогда прогресс увидит педагог и он сможет открывать тебе модули.</p>
+  <h2>Курс юного FPV-пилота</h2>
+  <p class="about">6 модулей: от правил безопасности и устройства дрона до гонок и зачёта Аса. Учишься на телефоне или компьютере, летаешь в симуляторе и в зале с тренером.</p>
+  <h3>Вход по коду</h3>
+  <p>Код из 6 букв и цифр даёт педагог на занятии. С кодом педагог видит твой прогресс и открывает новые модули.</p>
   <div class="row"><input id="code" maxlength="8" placeholder="КОД" autocomplete="off"><button class="btn primary" id="joinBtn">Войти</button></div>
   <div class="err" id="err"></div>
   <div class="alt">Кода пока нет? <a id="guest">Посмотреть курс без входа</a> (прогресс сохранится только на этом устройстве).</div>

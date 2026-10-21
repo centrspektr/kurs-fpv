@@ -60,7 +60,7 @@ const lvChip = n => { const v = lvInfo(n); return `<span class="kr-lv l${v.n}">$
 
 const baseP = window.SPK_PROGRESS;
 /* KURS_RATE: пока курс на тесте, его очки не идут в общий рейтинг Взлёта (видны только во вкладке Курс). При запуске курса - true */
-const KURS_RATE = false;
+const KURS_RATE = !!CFG.rate;   // config.js: rate: true - очки курса идут в рейтинг кружка
 window.SPK_PROGRESS = function (c) { const r = Object.assign({}, baseP ? baseP(c) : { p: 0, b: 0, l: '' }); if (KURS_RATE) r.p = (r.p || 0) + allPts(); return r; };
 const baseR = window.SPK_RESET;
 window.SPK_RESET = function (c) { S = { t: {}, lvl: {} }; try { localStorage.setItem(KEY, '{}'); } catch (e) {} if (baseR) baseR(c); if (box) home(); };
@@ -68,6 +68,7 @@ window.SPK_RESET = function (c) { S = { t: {}, lvl: {} }; try { localStorage.set
 /* ---------- звук и вибро (как в тренировке) ---------- */
 let AX = null;
 function snd(kind) {
+  fxHit(kind);
   try {
     AX = AX || new (window.AudioContext || window.webkitAudioContext)();
     const t = AX.currentTime, o = AX.createOscillator(), g = AX.createGain();
@@ -80,9 +81,10 @@ function snd(kind) {
 const buzz = ms => { try { navigator.vibrate && navigator.vibrate(ms); } catch (e) {} };
 function toastK(m) { const t = $('#toast'); if (!t) return; t.textContent = m; t.className = 'show ok'; clearTimeout(t._k); t._k = setTimeout(() => t.className = '', 4200); }
 function confetti() {
-  if (RED) return; const C = ['#00d4ff', '#3fb950', '#facc15', '#a78bfa', '#fff'];
-  for (let i = 0; i < 50; i++) { const d = document.createElement('i'), a = Math.random() * 6.28, v = 100 + Math.random() * 260;
-    d.style.cssText = `position:fixed;left:${innerWidth / 2}px;top:${innerHeight * .3}px;width:7px;height:5px;background:${C[i % 5]};z-index:10000;pointer-events:none;border-radius:2px`;
+  if (RED) return; const C = ['#00d4ff', '#3fb950', '#facc15', '#a78bfa', '#fff'], G = fxGame(), EM = K.fxEmoji || ['⭐', '✨', '🎉'];
+  for (let i = 0; i < (G ? 110 : 50); i++) { const d = document.createElement('i'), a = Math.random() * 6.28, v = 100 + Math.random() * (G ? 380 : 260), em = G && i % 6 === 0;
+    if (em) d.textContent = EM[i % EM.length];
+    d.style.cssText = em ? `position:fixed;left:${innerWidth / 2}px;top:${innerHeight * .3}px;font-size:22px;font-style:normal;z-index:10000;pointer-events:none` : `position:fixed;left:${innerWidth / 2}px;top:${innerHeight * .3}px;width:7px;height:5px;background:${C[i % 5]};z-index:10000;pointer-events:none;border-radius:2px`;
     document.body.appendChild(d);
     d.animate([{ transform: 'translate(0,0) rotate(0)', opacity: 1 }, { transform: `translate(${Math.cos(a) * v}px,${Math.sin(a) * v + 220}px) rotate(${Math.random() * 600}deg)`, opacity: 0 }], { duration: 1200 + Math.random() * 600, easing: 'cubic-bezier(.2,.7,.4,1)' }).onfinish = () => d.remove(); }
 }
@@ -108,6 +110,7 @@ function pic(k) {
     case 'hv': return V(cellSvg(60, 22, 50, 86, .9, '4,2') + cellSvg(130, 22, 50, 86, 1, '4,35') + '<text x="85" y="118" class="kp-s2">LiPo</text><text x="155" y="118" class="kp-s2">LiHV</text>');
     case 'mob': return V('<g class="kfly"><rect x="92" y="54" width="56" height="18" rx="6" class="kp-d"/>' + [[72, 50], [168, 50], [72, 80], [168, 80]].map(p => `<circle cx="${p[0]}" cy="${p[1]}" r="16" class="kp-ring"/><ellipse cx="${p[0]}" cy="${p[1]}" rx="14" ry="3" class="kp-prop"/>`).join('') + '<rect x="110" y="40" width="20" height="12" rx="3" class="kp-blu"/></g><text x="120" y="116" class="kp-s2">Mobula 7: 75 мм, 1S</text>');
     case 'sim': return V('<rect x="40" y="20" width="160" height="84" rx="10" class="kp-g"/><path d="M60 88 Q100 30 140 60 T190 40" class="kp-path"/><circle r="5" class="kp-yel kdot"><animateMotion dur="3s" repeatCount="indefinite" path="M60 88 Q100 30 140 60 T190 40"/></circle>');
+    case 'osd1': return V('<rect x="30" y="16" width="180" height="92" rx="12" class="kp-g"/><text x="48" y="44" class="kp-osd">4,10V</text><text x="160" y="44" class="kp-osd">00:00</text><path d="M110 70h20M120 60v20" class="kp-l"/><text x="120" y="100" class="kp-s2">так видно в очках (1S)</text>');
     case 'osd': return V('<rect x="30" y="16" width="180" height="92" rx="12" class="kp-g"/><text x="48" y="44" class="kp-osd">14,8V</text><text x="160" y="44" class="kp-osd">02:31</text><path d="M110 70h20M120 60v20" class="kp-l"/><text x="120" y="100" class="kp-s2">так видно в очках</text>');
     case 'hose': return V('<rect x="30" y="40" width="60" height="50" rx="8" class="kp-g"/><path d="M90 52h70" class="kp-hose1"/><path d="M90 78h70" class="kp-hose2"/><text x="190" y="57" class="kp-s2">120C</text><text x="190" y="83" class="kp-s2">25C</text>');
     case 'sag': return V('<path d="M20 40 L70 42 L90 80 L120 82 L135 46 L220 50" class="kp-path"/><text x="105" y="106" class="kp-s2">газ: просадка</text><text x="40" y="28" class="kp-s2">спокойно</text>');
@@ -117,16 +120,27 @@ function pic(k) {
     case 'temp': return V('<text x="70" y="78" class="kp-big">☀️</text><text x="170" y="78" class="kp-big">❄️</text><path d="M95 30l50 64M145 30l-50 64" class="kp-x"/>');
     case 'swell': return V('<path d="M70 40 Q120 10 170 40 L170 90 Q120 118 70 90 Z" class="kp-sw"/><text x="120" y="72" class="kp-h">не летаем</text>');
     case 'hot': return V(cellSvg(96, 26, 48, 80, .4, '', 0) + '<path d="M80 30q6-10 0-20M120 18q6-10 0-20M160 30q6-10 0-20" class="kp-heat"/>');
-    case 'quad': return V('<path d="M78 30L162 90M162 30L78 90" class="kp-l" style="stroke-width:6"/><rect x="104" y="46" width="32" height="28" rx="6" class="kp-d"/><rect x="113" y="40" width="14" height="8" rx="2" class="kp-yel"/>' +
-      [[78, 30, 1], [162, 30, 0], [78, 90, 0], [162, 90, 1]].map(p => `<circle cx="${p[0]}" cy="${p[1]}" r="22" class="kp-ring"/><g class="${p[2] ? 'kspin' : 'kspin r'}" style="transform-origin:${p[0]}px ${p[1]}px"><path d="M${p[0] - 16} ${p[1]}h32" class="kp-w" style="stroke-width:4"/></g><text x="${p[0]}" y="${p[1] + 34 > 118 ? p[1] - 26 : p[1] + 36}" class="kp-s2">${p[2] ? '↺ против' : '↻ по часовой'}</text>`).join('') + '<text x="120" y="14" class="kp-s2">▲ вперёд</text>');
-    default: return '';
+    case 'quad': return V('<path d="M108 30L192 90M192 30L108 90" class="kp-l" style="stroke-width:6"/><rect x="134" y="46" width="32" height="28" rx="6" class="kp-d"/><rect x="143" y="40" width="14" height="8" rx="2" class="kp-yel"/>' +
+      [[108, 30, 1], [192, 30, 0], [108, 90, 0], [192, 90, 1]].map(p => `<circle cx="${p[0]}" cy="${p[1]}" r="22" class="kp-ring"/><g class="${p[2] ? 'kspin' : 'kspin r'}" style="transform-origin:${p[0]}px ${p[1]}px"><path d="M${p[0] - 16} ${p[1]}h32" class="kp-w" style="stroke-width:4"/></g><text x="${p[0] < 150 ? 44 : 256}" y="${p[1] + 4}" class="kp-s2">${p[2] ? '↺ против' : '↻ по часовой'}</text>`).join('') + '<text x="150" y="12" class="kp-s2">▲ вперёд</text>', 300);
+    default: return K.pic ? K.pic(k) || '' : '';   // свои картинки курса (zadaniya.js: pic)
   }
 }
+
+/* ---------- свои слова продукта: CFG.words [['тренер', 'педагог'], ...] - меняем в готовом тексте вкладки ---------- */
+const WORDS = (CFG.words || []).map(w => [new RegExp(w[0], 'g'), w[1]]);
+function wordsFix(root) {
+  if (!WORDS.length || !root) return;
+  const fix = v => WORDS.reduce((a, w) => a.replace(w[0], w[1]), v);
+  const tw = document.createTreeWalker(root, NodeFilter.SHOW_TEXT); let n;
+  while ((n = tw.nextNode())) { const v = fix(n.nodeValue); if (v !== n.nodeValue) n.nodeValue = v; }
+  if (root.querySelectorAll) root.querySelectorAll('[placeholder],[title],[aria-label]').forEach(e => ['placeholder', 'title', 'aria-label'].forEach(a => { const v = e.getAttribute(a); if (v && fix(v) !== v) e.setAttribute(a, fix(v)); }));
+}
+if (WORDS.length) new MutationObserver(ms => ms.forEach(m => m.type === 'characterData' ? wordsFix(m.target.parentNode) : m.addedNodes.forEach(n => n.nodeType === 1 ? wordsFix(n) : n.nodeType === 3 && wordsFix(n.parentNode)))).observe(document.body, { childList: true, subtree: true, characterData: true });
 
 /* ---------- стили ---------- */
 const css = document.createElement('style');
 css.textContent = `
-#t-kurs,#krRet,#krUndo,#krGp{--ka:#00d4ff;--kb:#a78bfa;--krgb:0,212,255}
+#t-kurs,#krTour,#krRet,#krUndo,#krGp,#krEye,#krBugD{--ka:#00d4ff;--kb:#a78bfa;--krgb:0,212,255}
 .kr{max-width:840px;margin:0 auto;padding:4px 0 90px;display:grid;gap:14px}
 .kr-card{position:relative;border:1px solid rgba(127,127,160,.28);background:rgba(12,13,30,.86);border-radius:20px;padding:16px;overflow:hidden}
 .kr-card.top:before{content:"";position:absolute;inset:0 0 auto;height:3px;background:linear-gradient(90deg,var(--ka),var(--kb))}
@@ -344,7 +358,7 @@ function navHtml() {
   /* у тренера своя навигация кнопками "←" на экранах; внизу только значок сохранения */
   if (isCoach() && !CO.as) return `<div class="kr-svc" id="krSv" role="status">${coSvHtml()}</div>`;
   const back = NAV.i > 0 || !!(VIEW.t || VIEW.m) || !!(CARD && CARD.c > 0), nx = navNext();
-  return `<div class="kr-gnav"><button class="kr-btn" data-k="nav-b" ${back ? '' : 'disabled'} aria-label="Назад">‹ Назад</button><div class="kr-gnc"><b>${E(navLabel(navCur()))}</b><span>${nx ? 'Дальше: ' + E(nx.label) : ''}</span></div><button class="kr-btn pri" data-k="nav-f" ${nx ? '' : 'disabled'} aria-label="Вперёд">Вперёд ›</button></div>`;
+  return `<div class="kr-gnav"><button class="kr-btn" data-k="nav-b" ${back ? '' : 'disabled'} aria-label="Назад">‹ Назад</button><div class="kr-gnc"><b>${E(navLabel(navCur()))}</b><span>${nx ? 'Дальше: ' + E(nx.label) : ''}</span></div><button class="kr-btn" data-k="nav-f" ${nx ? '' : 'disabled'} aria-label="Вперёд">Вперёд ›</button></div>`;
 }
 function navSync() { const g = box && $('.kr-gnav', box); if (g) g.outerHTML = navHtml(); }
 function navBack() {
@@ -359,7 +373,7 @@ function navFwd() {
   scrollTop();
 }
 function scrollTop() {
-  const nav = document.getElementById('vtb'), off = (nav ? Math.max(0, nav.getBoundingClientRect().bottom) : 0) + 10, r = box.getBoundingClientRect();
+  const nav = document.querySelector(CFG.bar || '#vtb'), off = (nav ? Math.max(0, nav.getBoundingClientRect().bottom) : 0) + 10, r = box.getBoundingClientRect();
   if (Math.abs(r.top - off) > 30) window.scrollTo({ top: scrollY + r.top - off, behavior: RED ? 'auto' : 'smooth' });
 }
 
@@ -382,17 +396,56 @@ function home() {
   VIEW = { m: null, t: null, step: null };
   const live = K.mods.filter(m => m.tasks), tot = live.reduce((a, m) => a + m.tasks.length, 0), dn = live.reduce((a, m) => a + m.tasks.filter(taskDone).length, 0);
   const go = contTarget();
-  let h = go ? `<button class="kr-btn pri kr-cont" data-k="task" data-t="${go.tid}"><span>${go.st ? '▶ Продолжить' : '▶ Начать'}: Модуль ${go.m.n} · "${E(K.lib[go.tid].t)}"</span><small>шаг ${go.st + 1} из ${K.lib[go.tid].steps.length}</small></button>` : '';
-  h += `<div class="kr-card top">${bugBtn()}<h3>🎓 Твой прогресс</h3><p class="mut">Внутри модуля шаги открываются сами. Следующий модуль открывает тренер, когда проверит задания.</p>
-    <div class="kr-bar"><i data-w="${tot ? dn / tot * 100 : 0}"></i></div><div class="kr-row"><span>Пройдено заданий: ${dn} из ${tot}</span><span>⭐ ${allPts()} очков</span></div></div>`;
-  h += (BETA ? betaGuide() : `<div class="kr-note">🧪 Пробная версия: наполнены все 6 модулей, они открыты для проверки. В каждом модуле 3 уровня сложности (по классу).</div>`) + `${isCoach() ? '<div class="kr-back"><button class="kr-btn sm pri" data-k="co-home">👥 К ученикам (окно тренера)</button><span class="mut">Вы тренер: здесь курс глазами ученика, всё открыто.</span></div>' : ''}`;
+  let h = go ? `<button class="kr-btn pri kr-cont" data-k="task" data-t="${go.tid}"><span>${go.st || dn ? '▶ Продолжить' : '▶ Начать'}: Модуль ${go.m.n} · "${E(K.lib[go.tid].t)}"</span><small>${go.st || dn ? 'с места, где остановился' : 'первое задание курса'}</small></button>` : '';
+  /* маршрут: все модули одной линией, видно где ты и что впереди */
+  const curM = go ? go.m.id : null, locked = live.some(m => !modOpen(m));
+  h += `<div class="kr-card top kr-way"><h3>🗺 Твой маршрут</h3><p class="mut">${live.length} ${plur(live.length, 'модуль', 'модуля', 'модулей').replace(/^\d+ /, '')}, ${tot} ${plur(tot, 'задание', 'задания', 'заданий').replace(/^\d+ /, '')}. Иди по порядку: задание за заданием, модуль за модулем.${locked ? ' Следующий модуль открывает тренер.' : ''}</p>
+    <ol class="kr-route">${live.map(m => { const p = modProg(m), st = p === 1 ? 'ok' : m.id === curM ? 'cur' : !modOpen(m) ? 'lock' : ''; return `<li class="${st}"><button data-k="mod" data-m="${m.id}" aria-label="Модуль ${m.n}: ${E(m.t)}"><i>${p === 1 ? '✓' : m.n}</i><span>${E(m.t)}</span></button></li>`; }).join('')}</ol>${curM ? `<p class="kr-now">Сейчас: <b>Модуль ${mOf(curM).n} · ${E(mOf(curM).t)}</b></p>` : ''}
+    <div class="kr-bar"><i data-w="${tot ? dn / tot * 100 : 0}"></i></div><div class="kr-row"><span>Пройдено: ${dn} из ${tot}</span><span>⭐ ${allPts()} очков</span></div></div>`;
+  h += (CFG.note ? `<div class="kr-note">${E(CFG.note)}</div>` : BETA ? betaGuide() : isCoach() ? `<div class="kr-note">🧪 Пробная версия: наполнены все модули (${live.length}), они открыты для проверки. В каждом модуле 3 уровня сложности (по классу).</div>` : '') + `${isCoach() ? '<div class="kr-back"><button class="kr-btn sm pri" data-k="co-home">👥 К ученикам (окно тренера)</button><span class="mut">Вы тренер: здесь курс глазами ученика, всё открыто.</span></div>' : ''}`;
   h += '<div class="kr-mods">' + K.mods.map((m, i) => {
     const op = modOpen(m), p = modProg(m), full = p === 1;
     const st = !m.tasks ? '🛠 готовится' : full ? '✓ модуль пройден' + (S.t[m.tasks[m.tasks.length - 1]] ? '' : '') : op ? '▶ ' + Math.round(p * 100) + '% пройдено' : '🔒 откроет тренер';
     return `<button class="kr-m ${op && !full ? 'on' : ''} ${!op ? 'lock' : ''}" data-k="mod" data-m="${m.id}" style="animation-delay:${i * 60}ms"><span class="e">${m.e}</span><span class="nn">МОДУЛЬ ${m.n}</span><b>${E(m.t)}</b><small>${E(m.sub)}</small>
       ${m.tasks ? `<div class="kr-bar"><i data-w="${p * 100}"></i></div>` : ''}<div class="st">${st}</div></button>`;
   }).join('') + '</div>';
+  if (CFG.role && !isCoach()) h += '<div class="kr-back"><button class="kr-btn sm" data-k="co-role">👥 Я тренер</button><span class="mut">Окно тренера: ученики и их прогресс, вход по PIN.</span></div>';
+  h += setHtml(live);
   mount(h); bars();
+  if (!isCoach()) tourStart();
+}
+/* настройки ученика: уровень (один на весь курс), вид, крупный текст, сообщить об ошибке */
+function setHtml(live) {
+  const lv = live.length ? lvlOf(live[0].id) : 1;
+  return `<details class="kr-card kr-set"><summary>⚙ Настройки</summary>
+    <div class="kr-sec">Уровень</div><div class="kr-lvs sm">${LV.map(v => `<button data-k="lvlall" data-v="${v.n}" class="${v.n === lv ? 'on' : ''}" aria-pressed="${v.n === lv}">${v.e} ${E(v.t)}<small>${E(v.s)}</small></button>`).join('')}</div>
+    <p class="mut">Задания те же, но глубже: больше подробностей, сложнее вопросы. Уровень ставится по классу, тренер может поменять.</p>
+    ${viewRow()}<button class="kr-btn sm" data-k="bug">⚠ Сообщить об ошибке</button><button class="kr-btn sm" data-k="tour">❔ Как пользоваться курсом</button></details>`;
+}
+/* тур при первом входе: подсвечиваем по очереди главные места экрана */
+const TOUR = [
+  ['.kr-cont', 'Главная кнопка. Начинаешь здесь, и она же возвращает туда, где ты остановился.'],
+  ['.kr-way', 'Твой маршрут: все модули по порядку. Видно, где ты сейчас и что впереди.'],
+  ['.kr-m', 'Модуль - это тема. Внутри задания, каждое из 2-4 частей: материал, тренажёр, проверка.'],
+  ['.kr-gnav', 'Внизу всегда есть "Назад" и "Вперёд": можно идти по курсу, не думая, куда нажать.'],
+  ['.kr-set', 'В настройках - уровень сложности, крупный текст и кнопка "Сообщить об ошибке".']
+];
+function tourStart(force) {
+  if (!box || box.hidden || !box.offsetParent) return;   /* курс не на экране (вход по коду, другая вкладка) - покажем позже */
+  if (!force) { try { if (localStorage.getItem('kursy_tour') === '1') return; } catch (e) { return; } }
+  let i = 0;
+  const old = document.getElementById('krTour'); if (old) old.remove();
+  const d = document.createElement('div'); d.id = 'krTour'; d.setAttribute('role', 'dialog'); d.setAttribute('aria-live', 'polite'); document.body.appendChild(d);
+  const end = () => { try { localStorage.setItem('kursy_tour', '1'); } catch (e) {} $$('.kr-hl').forEach(x => x.classList.remove('kr-hl')); d.remove(); };
+  const draw = () => {
+    while (i < TOUR.length && !$(TOUR[i][0], box)) i++;
+    if (i >= TOUR.length) return end();
+    $$('.kr-hl').forEach(x => x.classList.remove('kr-hl'));
+    const el = $(TOUR[i][0], box); el.classList.add('kr-hl'); el.scrollIntoView({ block: 'center', behavior: RED ? 'auto' : 'smooth' });
+    d.innerHTML = `<div class="kr-tb"><span class="mut">${i + 1} из ${TOUR.length}</span><p>${E(TOUR[i][1])}</p><div class="acts"><button class="kr-btn sm" data-t="x">Пропустить</button><button class="kr-btn pri" data-t="n">${i < TOUR.length - 1 ? 'Дальше' : 'Понятно'}</button></div></div>`;
+    $('[data-t="n"]', d).onclick = () => { i++; draw(); }; $('[data-t="x"]', d).onclick = end; $('[data-t="n"]', d).focus();
+  };
+  draw();
 }
 /* куда вернуться: первое незаконченное открытое задание (пропущенные - в конце) */
 function contTarget() {
@@ -421,7 +474,8 @@ function modView(id) {
   h += `<div class="kr-bar"><i data-w="${p * 100}"></i></div><div class="kr-row"><span>${m.tasks.filter(taskDone).length} из ${m.tasks.length} заданий${m.tasks.some(x => S.t[x] && S.t[x].skip && !taskDone(x)) ? ' · пропущено: ' + m.tasks.filter(x => S.t[x] && S.t[x].skip && !taskDone(x)).length : ''}</span><span>⭐ ${m.tasks.reduce((a, t) => a + taskPts(t), 0)} очков</span></div></div>`;
   if (!modOpen(m)) { h += '<div class="kr-wait">🔒 Этот модуль откроет тренер, когда проверит задания предыдущего.</div>'; return mount(h) || bars(); }
   const lv = lvlOf(m.id);
-  h += `<div class="kr-card kr-lvc"><div class="kr-lvr"><span class="kr-sec">Уровень</span><div class="kr-lvs sm">${LV.map(v => `<button data-k="lvl" data-m="${m.id}" data-v="${v.n}" class="${v.n === lv ? 'on' : ''}" title="${E(v.s)}" aria-pressed="${v.n === lv}">${v.e} ${E(v.t)}</button>`).join('')}</div></div>
+  if (!isCoach()) h += `<p class="mut kr-lvline">Уровень: ${lvChip(lv)} <span>поменять можно в "Настройках" на главной</span></p>`;
+  else h += `<div class="kr-card kr-lvc"><div class="kr-lvr"><span class="kr-sec">Уровень</span><div class="kr-lvs sm">${LV.map(v => `<button data-k="lvl" data-m="${m.id}" data-v="${v.n}" class="${v.n === lv ? 'on' : ''}" title="${E(v.s)}" aria-pressed="${v.n === lv}">${v.e} ${E(v.t)}</button>`).join('')}</div></div>
     <details class="kr-lvi"><summary>Что значит уровень?</summary><p class="mut">Задания те же, но глубже: больше подробностей, сложнее вопросы и расчёты. Уровень ставится по классу${S.lvl[m.id] ? '' : ' (сейчас: ' + E(lvInfo(lv).s) + ')'}, тренер может поменять. В пробной версии можно переключить самому.</p></details></div>`;
   if (p === 1) h += `<div class="kr-done">🎉 Модуль пройден! ${waitingCoach(m) ? 'Тренер проверит задания на занятии и откроет следующий модуль.' : 'Тренер откроет следующий модуль.'}</div>`;
   let curSet = false, lockN = 0;
@@ -429,13 +483,13 @@ function modView(id) {
   h += '<div class="kr-road">' + m.tasks.map((tid, k) => {
     const L = K.lib[tid], t = S.t[tid], done = taskDone(tid), op = taskOpen(m, k), sk = !!(t && t.skip && !done), cur = op && !done && !sk && !curSet; if (cur) curSet = true;
     /* закрытые: видно 2 следующих, остальные свёрнуты в одну строку */
-    const hid = !op && ++lockN > 2 && !showAll;
+    const hid = false;   /* все названия видны сразу, закрытые - серые с замком: ученик видит, что впереди */
     const dots = L.steps.map((st, i) => { const x = t && t.s[i]; return `<i class="${x && x.ok ? (x.viaX ? 'x' : 'ok') : ''}"></i>`; }).join('');
     const wait = t && coachWait(tid);
     const r = done ? `<span>✓ ${E(t.done)}<br>⭐ ${taskPts(tid)}</span>` : !op ? '🔒' : '';
     return `<button class="kr-t ${done ? 'ok' : ''} ${cur ? 'cur' : ''} ${!op ? 'lock' : ''}" data-k="task" data-t="${tid}" ${op ? '' : 'disabled'} ${hid ? 'hidden' : ''} style="animation-delay:${k * 45}ms">
       <span class="d">${done ? '✓' : k + 1}</span><span class="e">${L.e}</span><span style="min-width:0"><b>${E(L.t)}</b><small>${E(L.sub)}</small>${wait ? '<small class="wait">⏳ ждёт проверки тренера</small>' : ''}${sk ? '<small class="wait">⏭ пропущено, можно вернуться</small>' : ''}${t && t.cr ? '<small class="wait" style="color:#86efac">✓ засчитано тренером</small>' : ''}<span class="kr-steps">${dots}</span></span><span class="r">${r}</span></button>`;
-  }).join('') + (lockAll > 2 && !showAll ? `<button class="kr-lmore" data-k="lockmore" data-m="${m.id}">🔒 Ещё ${plur(lockAll - 2, 'задание откроется', 'задания откроются', 'заданий откроются')} по порядку</button>` : '') + '</div>';
+  }).join('') + (false ? `<button class="kr-lmore" data-k="lockmore" data-m="${m.id}">🔒 Ещё ${plur(lockAll - 2, 'задание откроется', 'задания откроются', 'заданий откроются')} по порядку</button>` : '') + '</div>';
   mount(h); bars();
 }
 const ROADALL = {};
@@ -454,14 +508,14 @@ function taskView(tid, step) {
 /* шапка задания: шаги, счётчик, пропуск. Обновляется на месте после каждого пройденного шага */
 function taskHead(tid, step) {
   const L = K.lib[tid], t = T(tid), m = modOf(tid);
-  return `<div class="kr-back"><button class="kr-btn sm" data-k="mod" data-m="${m.id}">← Модуль ${m.n}</button>${t.done ? '<span class="mut kr-dn" style="margin-left:auto">✓ пройдено</span>' : t.skip ? '<span class="mut" style="margin-left:auto">⏭ пропущено</span>' : `<button class="kr-btn sm" style="margin-left:auto" data-k="skip" data-t="${tid}">⏭ Пропустить</button>`}${bugBtn()}</div>
-    <div class="kr-card top"><span style="float:right;font-size:30px">${L.e}</span><h3>${E(L.t)}</h3><p class="mut">${E(L.sub)}</p><div style="margin-top:8px">${lvChip(lvlOf(m.id))} <span class="mut" style="margin-left:6px">${L.steps.filter((st, i) => t.s[i] && t.s[i].ok).length} из ${L.steps.length} шагов</span></div>
+  return `<div class="kr-back"><button class="kr-btn sm" data-k="mod" data-m="${m.id}">← Модуль ${m.n}</button>${t.done ? '<span class="mut kr-dn" style="margin-left:auto">✓ пройдено</span>' : t.skip ? '<span class="mut" style="margin-left:auto">⏭ пропущено</span>' : `<button class="kr-skip" style="margin-left:auto" data-k="skip" data-t="${tid}">пропустить</button>`}${bugBtn()}</div>
+    <div class="kr-card top"><span style="float:right;font-size:30px">${L.e}</span><h3>${E(L.t)}</h3><p class="mut">${E(L.sub)}</p><div style="margin-top:8px">${lvChip(lvlOf(m.id))} <span class="mut" style="margin-left:6px">пройдено частей: ${L.steps.filter((st, i) => t.s[i] && t.s[i].ok).length} из ${L.steps.length}</span></div>
     <div class="kr-stp" style="margin-top:12px">${L.steps.map((st, i) => { const ok = t.s[i] && t.s[i].ok, can = i === 0 || (t.s[i - 1] && t.s[i - 1].ok) || ok || isCoach();
       return `<button data-k="step" data-i="${i}" class="${i === step ? 'on' : ''} ${ok ? 'ok' : ''}" ${can ? '' : 'disabled'}>${ok ? '✓ ' : ''}${i + 1}. ${E(stepName(st))}</button>`; }).join('')}
       <button data-k="step" data-i="-1" class="${step === -1 ? 'on' : ''}" ${t.done ? '' : 'disabled'}>📊 Итог</button></div></div>`;
 }
 function headSync() { const h = box && VIEW.t && $('#krHead', box); if (h) h.innerHTML = taskHead(VIEW.t, VIEW.step); navSync(); }
-function stepName(st) { return { cards: 'Материал', game: 'Тренажёр', quiz: 'Проверка', fly: 'Полёт', coach: 'С тренером' }[st.s] || st.s; }
+function stepName(st) { if (st.name) return st.name; return { cards: 'Материал', game: 'Тренажёр', quiz: 'Проверка', fly: 'Полёт', coach: 'С тренером' }[st.s] || st.s; }
 
 /* шаг пройден: отмечаем, открываем следующий */
 function stepOk(tid, i, res) {
@@ -493,7 +547,7 @@ function summary(tid, stg) {
     const res = x.best != null ? Math.round(x.best * 100) + '%' + (x.att > 1 ? ' · ' + x.att + ' попыт.' : '') : x.ok ? '✓' : '-';
     const extra = x.viaX ? ' · 🔁 доп. задание' : '';
     const cw = st.s === 'coach' && x.ok ? (x.acc ? ' · ✓ тренер принял' : ' · ⏳ ждёт тренера') : '';
-    const fl = st.s === 'fly' && x.v ? ' · ' + E(x.v) : '';
+    const fl = (st.s === 'fly' || st.s === 'rec') && x.v ? ' · ' + E(x.v) : '';
     const lvT = x.lv ? ' · ' + lvInfo(x.lv).e : '';
     return `<li><span>${i + 1}. ${E(stepName(st))}</span><span>${x.date ? E(x.date) + ' · ' : ''}${res}${lvT}${extra}${cw}${fl}</span></li>`; }).join('');
   stg.innerHTML = `<div class="kr-end"><div style="font-size:42px">${L.e}</div><b style="font-size:18px">${t.done ? 'Задание пройдено ' + E(t.done) : 'Задание в процессе'}</b><div class="big">⭐ ${taskPts(tid)}</div><div class="mut">из ${L.pts} возможных очков. Пересдай проверки, чтобы набрать больше.</div><div class="mut" style="margin-top:6px">Уровень: ${lvChip(lvlOf(m.id))}</div></div>
@@ -503,7 +557,7 @@ function summary(tid, stg) {
 
 function runStep(tid, i, stg) {
   const st = K.lib[tid].steps[i];
-  const R = { cards: cardsStep, game: gameStep, quiz: quizStep, fly: flyStep, coach: coachStep }[st.s];
+  const R = { cards: cardsStep, game: gameStep, quiz: quizStep, fly: flyStep, rec: flyStep, coach: coachStep }[st.s];
   R(tid, i, st, stg);
 }
 
@@ -605,10 +659,10 @@ function quizStep(tid, i, st, stg, forceX) {
       const w = x.w = x.w || {}, key = it.g || qh(it.q); w[key] = (w[key] || 0) + 1;
       const wk = Object.keys(w); if (wk.length > 30) { wk.sort((a, b) => w[a] - w[b]); delete w[wk[0] === key ? wk[1] : wk[0]]; }
       /* ошибся: показываем пояснение и ждём "Дальше" (верный ответ подсвечен зелёным) */
-      const r = $('.kq-r', stg);
+      const r = $('.kq-r', stg); r.setAttribute('role', 'status');
       r.innerHTML = `<div class="kr-why"><b>✗ Не так.</b>${E(it.e || 'Верный ответ подсвечен зелёным.')}<button class="kr-btn pri">${k < qs.length - 1 ? 'Понятно, дальше →' : 'Понятно, к итогу →'}</button></div>`;
       $('button', r).onclick = nxt;
-      r.scrollIntoView({ behavior: RED ? 'auto' : 'smooth', block: 'center' });
+      r.scrollIntoView({ behavior: RED ? 'auto' : 'smooth', block: 'center' }); kbFocus($('button', r));
     });
   }
   const errList = () => wrong.length ? `<details class="kr-err" ${wrong.length <= 3 ? 'open' : ''}><summary>📝 Разбор ошибок (${wrong.length})</summary><ul>${wrong.map(w => `<li><b>${E(w.q)}</b><br>✓ ${E(w.right)}. ${E(w.e || '')}</li>`).join('')}</ul></details>` : '';
@@ -641,15 +695,16 @@ function quizStep(tid, i, st, stg, forceX) {
 function flyStep(tid, i, st, stg) {
   const x = stepSt(tid, i);
   if (x.ok) { stg.innerHTML = `<div class="kr-done">✓ Записано ${E(x.date)}: ${E(x.v || '')}</div><div class="kr-end"><div class="acts">${nextBtn(tid, i)}<button class="kr-btn" data-k="refly" data-i="${i}">✎ Записать новый результат</button></div></div>`; return; }
-  stg.innerHTML = `<div class="kr-sec">${E(st.h)}</div><form class="kr-in">
-    ${st.live ? '<label>Напряжение при посадке, В на банку<input name="v" inputmode="decimal" placeholder="например 3,5" required></label>' :
+  const R = st.rec;
+  stg.innerHTML = `<div class="kr-sec">${E(st.h)}</div>${R && R.p ? `<p style="font-size:15px;margin-bottom:12px">${E(R.p)}</p>` : ''}<form class="kr-in">
+    ${R ? `${R.opts ? `<label>${E(R.ot || 'Что')}<select name="sim">${R.opts.map(s => `<option>${E(s)}</option>`).join('')}</select></label>` : ''}<label>${E(R.v)}<input name="v" inputmode="decimal" placeholder="${E(R.ph || '')}" required></label>` : st.live ? '<label>Напряжение при посадке, В на банку<input name="v" inputmode="decimal" placeholder="например 3,5" required></label>' :
       `<label>Симулятор<select name="sim">${st.sims.map(s => `<option>${E(s)}</option>`).join('')}</select></label><label>Трасса<input name="tr" maxlength="40" placeholder="название трассы" required></label><label>Лучший круг, секунд<input name="v" inputmode="decimal" placeholder="например 42,5" required></label>`}
     <label>Комментарий (по желанию)<textarea name="c" rows="2" maxlength="140" placeholder="что получилось, что было трудно"></textarea></label>
     <button class="kr-btn pri">✓ Сделал</button></form>`;
   $('form', stg).onsubmit = e => {
     e.preventDefault(); const f = new FormData(e.target), v = String(f.get('v') || '').replace(',', '.'), n = parseFloat(v);
     if (!(n > 0)) { toastK('Впиши число'); return; }
-    const txt = st.live ? fx(n, 2) + ' В при посадке' : f.get('sim') + ', ' + f.get('tr') + ': ' + fx(n, 1) + ' с';
+    const txt = R ? (R.opts ? f.get('sim') + ': ' : '') + fx(n, n % 1 ? 1 : 0) + ' ' + (R.u || '') : st.live ? fx(n, 2) + ' В при посадке' : f.get('sim') + ', ' + f.get('tr') + ': ' + fx(n, 1) + ' с';
     stepOk(tid, i, { v: txt, c: String(f.get('c') || '').slice(0, 140) }); snd('ok'); flyStep(tid, i, st, stg);
   };
 }
@@ -668,7 +723,7 @@ function coachStep(tid, i, st, stg) {
 
 /* ---------- тренажёры (сложность растёт с уровнем модуля) ---------- */
 function gameStep(tid, i, st, stg, forceX) {
-  const x = stepSt(tid, i), G = { build: gBuild, light: gLight, calc: gCalc, compare: gCompare, label: gLabel, story: gStory, sort: gSort, order: gOrder, match: gMatch }[st.g];
+  const x = stepSt(tid, i), G = Object.assign({ build: gBuild, light: gLight, calc: gCalc, compare: gCompare, label: gLabel, story: gStory, sort: gSort, order: gOrder, match: gMatch }, K.games || {})[st.g];
   const needX = forceX || (x.needX && !x.ok), lv = lvlOf(modOf(tid).id);
   G(stg, st, needX, r => {   // r: доля верных (или 1 для тренажёров без оценки)
     const pass = st.pass || PASS, good = r >= pass, lvR = Math.max(x.lv || 0, lv);
@@ -682,9 +737,10 @@ function gameStep(tid, i, st, stg, forceX) {
 }
 /* общий блок "ошибся - пояснение - Дальше" для тренажёров */
 function whyBox(el, good, txt, last, go) {
+  el.setAttribute('role', 'status');
   el.innerHTML = `<div class="kr-why ${good ? 'ok' : ''}"><b>${good ? '✓ Верно!' : '✗ Не совсем.'}</b>${E(txt)}<button class="kr-btn pri">${last ? 'Итог' : 'Дальше →'}</button></div>`;
   $('button', el).onclick = go;
-  if (!good) el.scrollIntoView({ behavior: RED ? 'auto' : 'smooth', block: 'center' });
+  if (!good) { el.scrollIntoView({ behavior: RED ? 'auto' : 'smooth', block: 'center' }); kbFocus($('button', el)); }
 }
 
 /* ---------- общие тренажёры для любых модулей: все данные лежат в задании ---------- */
@@ -896,7 +952,7 @@ function gLabel(stg, st, hint, done, lv) {
 function gStory(stg, st, hint, done, lv) {
   const SRC = st.story || K.story, n = Math.min(SRC.length, [6, 7, 9][(lv || 1) - 1] - (hint ? 1 : 0));
   /* в каждой истории хотя бы 2 ошибки и 2 верных шага */
-  let L; do { L = shuf(SRC).slice(0, n); } while (L.filter(s => s[1]).length < 2 || L.filter(s => !s[1]).length < 2);
+  let L; do { L = shuf(SRC).slice(0, n).sort((a, b) => SRC.indexOf(a) - SRC.indexOf(b)); } while (L.filter(s => s[1]).length < 2 || L.filter(s => !s[1]).length < 2);
   const sel = new Set();
   stg.innerHTML = `<div class="kr-sec">${E(st.h)}</div><p class="mut" style="margin-bottom:10px">Нажми на предложения, где ${E(st.who || 'Петя')} ${st.she ? 'ошиблась' : 'ошибся'}, потом "Проверить".${hint ? ' Подсказка: ' + E(st.tip || 'ошибки про тепло, присмотр, вздутие и режим зарядки.') : ''}</p>
     <div class="kg-story">${L.map((s, j) => `<button data-j="${j}">${E(s[0])}</button>`).join('')}</div><div class="kr-end"><div class="acts"><button class="kr-btn pri" id="kgC">Проверить</button></div></div>`;
@@ -912,6 +968,8 @@ function gStory(stg, st, hint, done, lv) {
    Ученик (вошёл по коду в "🏆 Рейтинг"): прогресс курса уходит на сервер (op ksync), в ответ приходят решения тренера:
    открытые модули, принятые и возвращённые задания, уровень по модулям.
    Тренер (вход по PIN): видит всех учеников по модулям (slist), открывает модули, принимает задания (sset act kurs). */
+/* помощники для тренажёров курса (K.games): звук, вибро, пояснение после ответа */
+K.H = { snd: (...a) => snd(...a), buzz: (...a) => buzz(...a), whyBox: (...a) => whyBox(...a), toast: (...a) => toastK(...a), E, shuf, pick, RED };
 const SPK_API = CFG.api || 'https://functions.yandexcloud.net/d4e4vhndceg7scc0mh3b';
 const spkCall = q => fetch(SPK_API, { method: 'POST', body: JSON.stringify(q) }).then(r => r.json());
 const sesS = { get(k) { try { return sessionStorage.getItem(k); } catch (e) { return null; } }, set(k, v) { try { sessionStorage.setItem(k, v); } catch (e) {} } };
@@ -1119,15 +1177,18 @@ function coDemo() {
     return r;
   };
   /* по модулю - строка: o сдано, w ждёт тренера, x через доп. задание, n застрял, p начато, k пропущено, . нет */
+  /* модули примера: первые три модуля курса с заданиями (у FPV это m1-m3) */
+  const DM = K.mods.filter(m => m.tasks).slice(0, 3).map(m => m.id), dm = o => { const r = {}; Object.keys(o).forEach(k => { const id = DM[+k.slice(1) - 1]; if (id) r[id] = o[k]; }); return r; };
+  const dCoach = (mOf(DM[0]).tasks || []).find(id => K.lib[id].steps.some(x => x.s === 'coach'));
   const P = [['Артём', '6А', 1, { m1: 'ooooooooo', m2: 'oon' }],
     ['Маша', '7Б', 0, { m1: 'ooooooooo', m2: 'oooooooww', m3: 'oooox' }],
     ['Илья', '9А', 0, { m1: 'ooooooooo', m2: 'ooooooooo', m3: 'ooooooooooo'.slice(0, 10) + 'w' }],
     ['Соня', '8В', null, {}],
-    ['Даня', '5Б', 10, { m1: 'oookooop' }, { r: { m1_coach: [dd(9), 'Покажи полёт ещё раз'] } }],
+    ['Даня', '5Б', 10, { m1: 'oookooop' }, { r: dCoach ? { [dCoach]: [dd(9), K.demoRet || 'Покажи полёт ещё раз'] } : {} }],
     ['Лиза', '7А', 2, { m1: 'ooooooooo', m2: 'ooooooooo', m3: 'ooooooooooo' }]];
   CO.list = P.map((a, n) => { const t = {}, acc = {}, cl = parseInt(a[1]), lv = cl <= 6 ? 1 : cl <= 8 ? 2 : 3;
-    Object.keys(a[3]).forEach(mid => a[3][mid].split('').forEach((ch, i) => { const id = mOf(mid).tasks[i]; if (!id || ch === '.') return; t[id] = rec(id, ch, i, a[0], a[2] || 0, lv); if (ch === 'o' && K.lib[id].steps.some(x => x.s === 'coach')) acc[id] = t[id].d; }));
-    return { id: 'demo' + n, n: a[0], c: a[1], k: { v: 1, t }, kc: Object.assign({ o: ['m1', 'm2', 'm3'], v: {}, a: acc }, a[4] || {}), upd: up(a[2]) };
+    a[3] = dm(a[3]); Object.keys(a[3]).forEach(mid => a[3][mid].split('').forEach((ch, i) => { const id = mOf(mid).tasks[i]; if (!id || ch === '.') return; t[id] = rec(id, ch, i, a[0], a[2] || 0, lv); if (ch === 'o' && K.lib[id].steps.some(x => x.s === 'coach')) acc[id] = t[id].d; }));
+    return { id: 'demo' + n, n: a[0], c: a[1], k: { v: 1, t }, kc: Object.assign({ o: DM.slice(), v: {}, a: acc }, a[4] || {}), upd: up(a[2]) };
   });
 }
 function coApply(id, q) {
@@ -1365,6 +1426,7 @@ function coDraw(quiet) {
   if (CO.cm) return CO.ct ? coTaskView(quiet) : coModOver(quiet);
   const tab = CO.tab || 'gr';
   let h = coHead();
+  if (CFG.role) h += '<div class="kr-back"><button class="kr-btn sm" data-k="co-role">↩ Выйти из режима тренера</button></div>';
   if (CO.demo) {}
   else if (CO.st === 'load') h += '<div class="kr-note">⏳ Загружаю учеников...</div>';
   else if (CO.st === 'pin') h += `<div class="kr-card"><b>Вход для тренера</b><p class="mut" style="margin:4px 0 10px">${E(CFG.pinText || 'Нужен PIN портала СПЕКТР (тот же, что для заявок).')}${CO.err ? ' ' + E(CO.err) : ''}</p><form class="kr-in" id="coPin"><label>PIN<input name="pin" type="password" inputmode="numeric" autocomplete="off"></label><button class="kr-btn pri">Войти</button></form></div>`;
@@ -1420,7 +1482,7 @@ function coModView(quiet) {
   const hl = CO.hl; CO.hl = null;
   mount(h, quiet);
   const row = hl && $(`.co-tr[data-tid="${hl}"]`, box);
-  if (row) { row.classList.add('co-hl'); const nav = document.getElementById('vtb'), off = nav ? Math.max(0, nav.getBoundingClientRect().bottom) : 0, r = row.getBoundingClientRect();
+  if (row) { row.classList.add('co-hl'); const nav = document.querySelector(CFG.bar || '#vtb'), off = nav ? Math.max(0, nav.getBoundingClientRect().bottom) : 0, r = row.getBoundingClientRect();
     window.scrollTo({ top: Math.max(0, scrollY + r.top - off - Math.max(12, (innerHeight - off - r.height) / 3)), behavior: 'auto' }); }
 }
 function coTaskRow(s, id, k, mine) {
@@ -1534,6 +1596,31 @@ css.textContent += `
 .kr-back .kr-btn.sm+.kr-bug,.kr-back .mut+.kr-bug{margin-left:6px}
 .kr-cont{display:flex;flex-direction:column;align-items:flex-start;gap:2px;width:100%;min-height:64px;padding:10px 18px;text-align:left;font-size:16px;line-height:1.3;border-radius:18px;animation:krIn .45s both}
 .kr-cont small{font-size:12.5px;font-weight:700;opacity:.75}
+.kr-route{list-style:none;margin:12px 0 4px;padding:0;display:grid;grid-template-columns:repeat(auto-fit,minmax(0,1fr));gap:4px;position:relative}
+.kr-route li{position:relative;min-width:0}
+.kr-route li+li::before{content:"";position:absolute;top:17px;right:calc(50% + 18px);width:calc(100% - 32px);height:3px;border-radius:2px;background:rgba(127,127,160,.3)}
+.kr-route li.ok+li::before{background:var(--ka)}
+.kr-route button{display:flex;flex-direction:column;align-items:center;gap:4px;width:100%;padding:0;border:0;background:none;color:inherit;font:inherit;cursor:pointer}
+.kr-route i{display:grid;place-items:center;width:36px;height:36px;border-radius:50%;font-style:normal;font-weight:800;font-size:15px;border:2px solid rgba(127,127,160,.45);background:rgba(127,127,160,.1)}
+.kr-route span{font-size:11px;line-height:1.2;text-align:center;opacity:.75;overflow-wrap:anywhere;hyphens:auto}
+.kr-route .ok i{background:var(--ka);border-color:var(--ka);color:#0b0b18}
+.kr-route .cur i{border-color:var(--ka);box-shadow:0 0 0 4px rgba(var(--krgb),.25);color:var(--ka)}
+.kr-route .cur span{opacity:1;font-weight:700}
+.kr-route .lock{opacity:.5}
+.kr-now{margin:2px 0 10px;font-size:13px}.kr-now b{color:var(--ka)}
+@media (max-width:520px){.kr-route span{display:none}}
+@media (min-width:521px){.kr-now{display:none}}
+.kr-set{margin-top:12px}.kr-set summary{cursor:pointer;font-weight:700;min-height:28px}
+.kr-set[open] summary{margin-bottom:10px}.kr-set .kr-sec{margin-bottom:6px}.kr-set>p{margin:8px 0 10px;font-size:13px}
+.kr-set .kr-lvs button{display:inline-flex;flex-direction:column;align-items:center}.kr-set .kr-lvs small{font-size:11px;opacity:.7;font-weight:600}
+.kr-set>.kr-btn{margin:10px 8px 0 0}
+.kr-lvline{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:10px 2px}.kr-lvline span{font-size:12px;opacity:.7}
+.kr-back .kr-skip+.kr-bug{margin-left:4px}
+.kr-skip{border:0;background:none;color:inherit;opacity:.6;font:inherit;font-size:13px;text-decoration:underline;cursor:pointer;min-height:44px;padding:0 8px}
+.kr-hl{position:relative;z-index:61;box-shadow:0 0 0 3px var(--ka),0 0 0 9999px rgba(0,0,0,.55)!important;border-radius:18px}
+#krTour{position:fixed;left:0;right:0;bottom:0;z-index:62;padding:12px max(12px,env(safe-area-inset-left,0px)) calc(12px + env(safe-area-inset-bottom,0px));display:flex;justify-content:center;pointer-events:none}
+#krTour .kr-tb{pointer-events:auto;max-width:520px;width:100%;background:rgb(18,19,40);color:#eef;border:1px solid rgba(var(--krgb),.6);border-radius:18px;padding:14px 16px;box-shadow:0 10px 40px rgba(0,0,0,.5)}
+#krTour p{margin:4px 0 12px;font-size:15.5px;line-height:1.45}#krTour .acts{display:flex;gap:8px;justify-content:flex-end}
 .kr-lvc{padding:10px 12px}
 .kr-lvr{display:flex;align-items:center;gap:8px}.kr-lvr .kr-sec{margin:0;flex:none}
 .kr-lvs.sm{flex:1;margin:0;gap:6px}.kr-lvs.sm button{min-height:44px;padding:4px 2px;font-size:12.5px}
@@ -1733,6 +1820,7 @@ document.addEventListener('click', e => {
   else if (k === 'co-rt') { CO.rt = !CO.rt; coDraw(true); }
   else if (k === 'co-oped') { CO.opEd = !CO.opEd; if (!CO.opEd) CO.sel.clear(); coDraw(true); }
   else if (k === 'co-as') { CO.menu = false; CO.as = true; home(); scrollTop(); }
+  else if (k === 'co-role') { try { sessionStorage.setItem(CFG.role, isCoach() ? '' : 'coach'); } catch (e) {} location.hash = 'kurs'; location.reload(); }
   else if (k === 'co-home') { CO.as = false; home(); scrollTop(); }
   else if (k === 'co-back') { CO.who = null; CO.mod = null; CO.cm = null; CO.ct = null; coDraw(); scrollTop(); }
   else if (k === 'co-who') { CO.via = null; CO.who = sid; CO.mod = null; CO.cm = null; CO.ct = null; coDraw(); scrollTop(); }
@@ -1765,6 +1853,155 @@ document.addEventListener('submit', e => {
   const pin = String(new FormData(e.target).get('pin') || '').trim(); if (pin) coLoad(pin);
 });
 
+/* ---------- вид: графика "Спокойно / Как в игре" и крупный текст ----------
+   Выбор хранится на устройстве (kursy_fx, kursy_big). CFG.fx: 'game' - "как в игре" по умолчанию, CFG.view: false - без переключателя.
+   Если в системе включено "уменьшить движение" - всегда спокойно. */
+const lsG = k => { try { return localStorage.getItem(k); } catch (e) { return null; } }, lsS = (k, v) => { try { localStorage.setItem(k, v); } catch (e) {} };
+let FXM = lsG('kursy_fx') || CFG.fx || 'calm', BIG = lsG('kursy_big') === '1', STREAK = 0;
+function fxGame() { return FXM === 'game' && !RED; }
+function fxApply() { const B = document.body.classList; B.toggle('kfx-game', fxGame()); B.toggle('kfx-big', BIG); }
+function fxSet(v) {
+  FXM = v === 'game' ? 'game' : 'calm'; lsS('kursy_fx', FXM); fxApply();
+  $$('[data-k="fx"]', box).forEach(b => { const on = b.dataset.v === FXM; b.classList.toggle('on', on); b.setAttribute('aria-pressed', on); });
+  if (fxGame()) { confetti(); toastK('🎮 Как в игре: серии верных ответов, вспышки и салют'); } else toastK('🌿 Спокойная графика');
+}
+function bigSet(v) { BIG = !!v; lsS('kursy_big', BIG ? '1' : ''); fxApply(); const b = $('[data-k="big"]', box); if (b) { b.classList.toggle('on', BIG); b.setAttribute('aria-pressed', BIG); } }
+function viewRow() {
+  if (CFG.view === false) return '';
+  return `<div class="kr-view" role="group" aria-label="Вид курса"><span class="mut">Графика:</span><span class="kr-seg">${[['calm', '🌿 Спокойно'], ['game', '🎮 Как в игре']].map(([v, t]) => `<button data-k="fx" data-v="${v}" class="${FXM === v ? 'on' : ''}" aria-pressed="${FXM === v}"${RED && v === 'game' ? ' disabled title="В системе включено уменьшение движения"' : ''}>${t}</button>`).join('')}</span><button data-k="big" class="kr-aa ${BIG ? 'on' : ''}" aria-pressed="${BIG}" title="Крупный текст" aria-label="Крупный текст">Aa+</button></div>`;
+}
+/* верный ответ: "+1" из места нажатия, серия подряд; ошибка - серия с нуля, карточка вздрагивает */
+function fxHit(kind) {
+  if (kind === 'bad') {
+    STREAK = 0; const s = fxGame() && box && $('#krStage', box);
+    if (s && s.animate) s.animate([{ transform: 'none' }, { transform: 'translateX(-6px)' }, { transform: 'translateX(6px)' }, { transform: 'translateX(-3px)' }, { transform: 'none' }], { duration: 320 });
+    return;
+  }
+  if (kind !== 'ok' && kind !== 'win') return;
+  STREAK++; if (!fxGame()) return;
+  const d = document.createElement('div'); d.className = 'kfx-pop'; d.setAttribute('aria-hidden', 'true');
+  d.textContent = STREAK >= 3 ? '🔥 ' + STREAK : '+1'; d.style.left = (PX || innerWidth / 2) + 'px'; d.style.top = (PY || innerHeight / 2) + 'px';
+  document.body.appendChild(d); setTimeout(() => d.remove(), 1000);
+  if (STREAK === 3 || STREAK === 5 || STREAK % 10 === 0) { toastK('🔥 Серия: ' + plur(STREAK, 'верный ответ', 'верных ответа', 'верных ответов') + ' подряд!'); burst(); }
+}
+function burst() {
+  for (let i = 0; i < 16; i++) {
+    const d = document.createElement('i'), a = i / 16 * 6.283, r = 60 + Math.random() * 30; d.className = 'kfx-sp'; d.style.left = PX + 'px'; d.style.top = PY + 'px'; document.body.appendChild(d);
+    d.animate([{ transform: 'translate(-50%,-50%)', opacity: 1 }, { transform: `translate(calc(-50% + ${Math.cos(a) * r}px),calc(-50% + ${Math.sin(a) * r}px)) scale(.3)`, opacity: 0 }], { duration: 650, easing: 'cubic-bezier(.2,.7,.4,1)' }).onfinish = () => d.remove();
+  }
+}
+
+/* ---------- клавиатура (ГОСТ Р 52872: всё доступно без мыши) ----------
+   1-9 - выбрать ответ, стрелки влево и вправо - "Назад" и "Вперёд". После ошибки фокус встаёт на "Дальше". */
+function kbFocus(b) { if (b && gPT !== 'touch' && gPT !== 'pen') try { b.focus({ preventScroll: true }); } catch (e) {} }
+document.addEventListener('keydown', e => {
+  if (!box || box.hidden || e.ctrlKey || e.metaKey || e.altKey || document.getElementById('krEye') || document.getElementById('krBugD')) return;
+  const tg = e.target; if (tg && (/^(INPUT|TEXTAREA|SELECT)$/.test(tg.tagName) || tg.isContentEditable)) return;
+  let b = null;
+  if (/^[1-9]$/.test(e.key)) b = $$('#krStage .qa button:not([disabled]),#krStage .kg-opts .kr-opt:not([disabled])', box)[+e.key - 1];
+  else if (e.key === 'ArrowRight') b = $('[data-k="nav-f"]:not([disabled])', box);
+  else if (e.key === 'ArrowLeft') b = $('[data-k="nav-b"]:not([disabled])', box);
+  if (!b) return;
+  e.preventDefault(); const r = b.getBoundingClientRect(); PX = r.left + r.width / 2; PY = r.top + r.height / 2; gPT = 'key'; b.click();
+});
+
+/* ---------- пауза для глаз ----------
+   СанПиН 1.2.3685-21: время за экраном на уроке ограничено (для 5-11 классов - около 20 минут подряд).
+   CFG.pause - минуты работы во вкладке курса до напоминания (0 или нет - выключено). Считаем только, пока вкладка на экране. */
+const PAUSE = +CFG.pause || 0;
+let EYE = 0, EYEH = 0;
+function pauseInit() {
+  if (!PAUSE) return;
+  EYE = +(sesS.get('kursy_eye') || 0);
+  document.addEventListener('visibilitychange', () => { if (document.hidden) EYEH = Date.now(); else if (EYEH && Date.now() - EYEH > 5 * 60000) EYE = 0; });
+  setInterval(() => {
+    if (document.hidden || !box || box.hidden || isCoach() || document.getElementById('krEye')) return;
+    EYE += 5; sesS.set('kursy_eye', EYE);
+    if (EYE >= PAUSE * 60) { EYE = 0; sesS.set('kursy_eye', 0); eyeShow(); }
+  }, 5000);
+}
+function eyeShow() {
+  const d = document.createElement('div'); let n = 20;
+  d.id = 'krEye'; d.setAttribute('role', 'dialog'); d.setAttribute('aria-modal', 'true'); d.setAttribute('aria-labelledby', 'krEyeT');
+  d.innerHTML = `<div class="kr-eye"><div class="kr-eye-dot" aria-hidden="true"><i></i></div><h3 id="krEyeT">👀 Пауза для глаз</h3><p>Ты занимаешься уже ${plur(PAUSE, 'минуту', 'минуты', 'минут')}. Посмотри в окно или вдаль, поморгай. Можно следить глазами за точкой, не поворачивая головы.</p><div class="kr-eye-n" aria-live="polite">${n}</div><div class="acts"><button class="kr-btn pri" data-e="ok" disabled>Готово, продолжаем</button><button class="kr-btn sm" data-e="later">Напомнить через 5 минут</button></div></div>`;
+  document.body.appendChild(d);
+  const nb = $('.kr-eye-n', d), ok = $('[data-e="ok"]', d);
+  const iv = setInterval(() => { n--; nb.textContent = n > 0 ? n : '✓'; if (n <= 0) { clearInterval(iv); ok.disabled = false; ok.focus(); } }, 1000);
+  const close = () => { clearInterval(iv); d.remove(); };
+  ok.onclick = close;
+  $('[data-e="later"]', d).onclick = () => { close(); EYE = Math.max(0, PAUSE * 60 - 300); };
+  $('[data-e="later"]', d).focus();
+}
+
+/* ---------- "Нашёл ошибку?" без общего скрипта сайта: своё окно, сообщение уходит на сервер (op bugadd) ---------- */
+const BUGK = [['🚫', 'Не открывается'], ['✖️', 'Не засчитался ответ'], ['💫', 'Пропали очки'], ['👆', 'Не работает кнопка'], ['✏️', 'Ошибка в тексте'], ['💬', 'Другое']];
+function bugOpen() {
+  if (document.getElementById('krBugD')) return;
+  const where = (CFG.name || 'Курс') + ': ' + (VIEW.t ? K.lib[VIEW.t].t + (VIEW.step >= 0 ? ', часть ' + (VIEW.step + 1) : '') : VIEW.m ? mName(mOf(VIEW.m)) : 'модули');
+  const d = document.createElement('div'); let kind = '';
+  d.id = 'krBugD'; d.setAttribute('role', 'dialog'); d.setAttribute('aria-modal', 'true'); d.setAttribute('aria-labelledby', 'krBugT');
+  d.innerHTML = `<form class="kr-eye kr-in"><h3 id="krBugT">⚠ Нашёл ошибку?</h3><p class="mut">Где: ${E(where)}</p><div class="kr-bugk">${BUGK.map(k => `<button type="button" data-v="${k[1]}">${k[0]} ${k[1]}</button>`).join('')}</div>
+    <label>Что случилось? Коротко<textarea name="t" rows="3" maxlength="600" placeholder="Например: в вопросе про аккорд Am верный ответ не засчитался"></textarea></label>
+    <div class="acts"><button class="kr-btn pri">Отправить</button><button class="kr-btn sm" type="button" data-e="x">Закрыть</button></div></form>`;
+  document.body.appendChild(d);
+  const f = $('form', d), close = () => d.remove();
+  $$('.kr-bugk button', d).forEach(b => b.onclick = () => { kind = b.dataset.v; $$('.kr-bugk button', d).forEach(z => z.classList.toggle('on', z === b)); });
+  $('[data-e="x"]', d).onclick = close;
+  d.addEventListener('keydown', e => { if (e.key === 'Escape') close(); });
+  f.onsubmit = e => {
+    e.preventDefault(); const text = f.t.value.replace(/\s+/g, ' ').trim(), sb = $('.kr-btn.pri', f);
+    if (!kind && !text) { toastK('Выбери, что случилось, или напиши пару слов'); return; }
+    sb.disabled = true; sb.textContent = 'Отправляю...';
+    const dv = (navigator.userAgent.match(/Android|iPhone|iPad|Windows|Mac OS X|Linux/) || ['устройство'])[0] + ' · ' + innerWidth + 'px';
+    spkCall({ op: 'bugadd', site: CFG.bugSite || CLUB, kind: kind || 'Другое', text, page: where, dev: dv }).then(j => {
+      if (!j || !j.ok) throw new Error((j && j.error) || 'Не отправилось');
+      close(); toastK('Спасибо! Сообщение отправлено, ошибку поправим');
+    }).catch(er => { sb.disabled = false; sb.textContent = 'Отправить'; toastK(/fetch|network/i.test(er.message) ? 'Нет связи с сервером, попробуй позже' : er.message); });
+  };
+  $('textarea', d).focus();
+}
+css.textContent += `
+/* вид: переключатель графики и крупный текст */
+.kr-view{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:12px;font-size:13px}
+.kr-seg{display:inline-flex;padding:3px;border-radius:12px;background:rgba(127,127,160,.14);border:1px solid rgba(127,127,160,.25)}
+.kr-seg button,.kr-aa{min-height:36px;padding:0 12px;border-radius:9px;border:0;background:none;color:inherit;font:inherit;font-weight:700;font-size:13px;cursor:pointer;transition:background .2s,color .2s}
+.kr-seg button.on{background:linear-gradient(135deg,var(--ka),var(--kb));color:#0b0b18}.kr-seg button[disabled]{opacity:.4;cursor:default}
+.kr-aa{border:1px solid rgba(127,127,160,.3);background:rgba(127,127,160,.1)}.kr-aa.on{border-color:var(--ka);background:rgba(var(--krgb),.2)}
+body.kfx-big .kr{zoom:1.16}
+/* фокус с клавиатуры виден всегда */
+#t-kurs :focus-visible,#krEye :focus-visible,#krBugD :focus-visible{outline:3px solid #facc15;outline-offset:2px}
+/* "как в игре" */
+.kfx-pop{position:fixed;z-index:10001;pointer-events:none;transform:translate(-50%,-50%);font:900 22px system-ui;color:#facc15;text-shadow:0 2px 10px rgba(0,0,0,.6),0 0 16px rgba(250,204,21,.7);animation:kfxUp .95s cubic-bezier(.2,.8,.2,1) forwards}
+.kfx-sp{position:fixed;z-index:10001;pointer-events:none;width:8px;height:8px;border-radius:50%;background:#facc15;box-shadow:0 0 10px #facc15}
+@keyframes kfxUp{0%{opacity:0;transform:translate(-50%,-30%) scale(.6)}20%{opacity:1;transform:translate(-50%,-80%) scale(1.15)}100%{opacity:0;transform:translate(-50%,-260%) scale(1)}}
+body.kfx-game #t-kurs .kr-card.top:before{height:4px;background:linear-gradient(90deg,var(--ka),var(--kb),var(--ka));background-size:200% 100%;animation:kfxSl 3s linear infinite}
+body.kfx-game #t-kurs .kr-bar i{background:linear-gradient(90deg,var(--ka),var(--kb),var(--ka));background-size:200% 100%;animation:kfxSl 2.4s linear infinite;box-shadow:0 0 12px rgba(var(--krgb),.6)}
+body.kfx-game #t-kurs .kr-m.on,body.kfx-game #t-kurs .kr-t.cur{animation:krIn .55s cubic-bezier(.2,.8,.2,1) both,kfxGlow 2.6s ease-in-out .6s infinite}
+@media (hover:hover){body.kfx-game #t-kurs .kr-m:not(.lock):hover,body.kfx-game #t-kurs .kr-t:not(.lock):hover{transform:translateY(-3px);border-color:rgba(var(--krgb),.7)}}
+body.kfx-game #t-kurs .kr-btn.pri{background-size:200% 100%;background-image:linear-gradient(110deg,var(--ka),var(--kb) 45%,#fff8 50%,var(--kb) 55%,var(--ka));animation:kfxSl 3.5s linear infinite}
+body.kfx-game #t-kurs .kr-q .qa button:not([disabled]):hover,body.kfx-game #t-kurs .kr-opt:not([disabled]):hover{border-color:var(--ka);box-shadow:0 0 0 1px var(--ka) inset}
+body.kfx-game #t-kurs .y{animation:kfxOk .5s cubic-bezier(.2,1.6,.4,1)}
+body.kfx-game #t-kurs .kr-end .big{animation:krPop .6s cubic-bezier(.2,1.6,.4,1) both}
+body.kfx-game:before{content:"";position:fixed;inset:-20%;z-index:-1;pointer-events:none;background:radial-gradient(40% 35% at 20% 25%,rgba(var(--krgb,0,212,255),.13),transparent 70%),radial-gradient(35% 30% at 80% 70%,rgba(167,139,250,.13),transparent 70%);animation:kfxBg 18s ease-in-out infinite alternate}
+@keyframes kfxSl{to{background-position:-200% 0}}
+@keyframes kfxGlow{50%{box-shadow:0 0 0 1px rgba(var(--krgb),.5),0 0 26px -4px rgba(var(--krgb),.75)}}
+@keyframes kfxOk{50%{transform:scale(1.04)}}
+@keyframes kfxBg{to{transform:translate(4%,-3%) rotate(8deg)}}
+/* пауза для глаз и окно ошибки */
+#krEye,#krBugD{position:fixed;inset:0;z-index:10002;display:grid;place-items:center;padding:16px;background:rgba(4,5,14,.78);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);animation:kfxFade .3s both}
+.kr-eye{width:100%;max-width:440px;max-height:90vh;overflow:auto;box-sizing:border-box;padding:20px;border-radius:20px;background:#0c0d1e;border:1px solid rgba(var(--krgb,0,212,255),.45);color:#e6edf3;text-align:center;font-family:inherit;box-shadow:0 20px 60px -20px rgba(0,0,0,.8)}
+.kr-eye h3{margin:6px 0 8px;font-size:20px}.kr-eye p{margin:0 0 10px;line-height:1.5;font-size:14.5px}.kr-eye .acts{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:12px}
+.kr-eye-dot{position:relative;height:60px;margin:4px 0 8px;border-radius:30px;background:rgba(127,127,160,.1)}
+.kr-eye-dot i{position:absolute;top:50%;left:8%;width:22px;height:22px;margin-top:-11px;border-radius:50%;background:radial-gradient(circle,#fff,var(--ka,#00d4ff));box-shadow:0 0 16px var(--ka,#00d4ff);animation:kfxEye 4s ease-in-out infinite alternate}
+.kr-eye-n{font:900 44px ui-monospace,monospace;color:#4ade80}
+#krBugD .kr-eye{text-align:left}#krBugD .kr-eye h3{text-align:center}
+.kr-bugk{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 10px}.kr-bugk button{min-height:38px;padding:0 10px;border-radius:10px;border:1px solid rgba(127,127,160,.35);background:rgba(127,127,160,.1);color:inherit;font:inherit;font-size:13px;font-weight:600;cursor:pointer}
+.kr-bugk button.on{border-color:#facc15;background:rgba(250,204,21,.16)}
+@keyframes kfxEye{to{left:calc(92% - 22px)}}
+@keyframes kfxFade{from{opacity:0}}
+@media (prefers-reduced-motion:reduce){.kr-eye-dot i{animation:none;left:calc(50% - 11px)}#krEye,#krBugD{animation:none}}
+`;
+
 /* ---------- клики ---------- */
 document.addEventListener('click', e => {
   if (!box || !box.contains(e.target)) return;
@@ -1782,7 +2019,11 @@ document.addEventListener('click', e => {
   else if (k === 'game' || k === 'gamex') { const L = K.lib[VIEW.t]; gameStep(VIEW.t, +b.dataset.i, L.steps[+b.dataset.i], $('#krStage', box), k === 'gamex'); }
   else if (k === 'refly') { const x = stepSt(VIEW.t, +b.dataset.i); x.ok = false; flyStep(VIEW.t, +b.dataset.i, K.lib[VIEW.t].steps[+b.dataset.i], $('#krStage', box)); }
   else if (k === 'reread') { const L = K.lib[VIEW.t], c = L.steps.findIndex(s => s.s === 'cards'); taskView(VIEW.t, c < 0 ? 0 : c); }
-  else if (k === 'bug') { const s = document.querySelector('.spkbug'); if (s) s.click(); else toastK('Окно сообщения ещё загружается, попробуй через пару секунд'); }
+  else if (k === 'bug') { const s = document.querySelector('.spkbug'); if (s) s.click(); else bugOpen(); }
+  else if (k === 'fx') { fxSet(b.dataset.v); snd('tap'); }
+  else if (k === 'big') { bigSet(!BIG); snd('tap'); }
+  else if (k === 'lvlall') { K.mods.forEach(m => { S.lvl[m.id] = +b.dataset.v; }); save(); snd('tap'); home(); toastK('Уровень: ' + lvInfo(+b.dataset.v).t); const st = $('.kr-set', box); if (st) st.open = true; }
+  else if (k === 'tour') tourStart(true);
   else if (k === 'lockmore') { ROADALL[b.dataset.m] = 1; modView(b.dataset.m); }
   else if (k === 'lvl') { S.lvl[b.dataset.m] = +b.dataset.v; save(); snd('tap'); modView(b.dataset.m); toastK('Уровень: ' + lvInfo(+b.dataset.v).t); }
   else if (k === 'fb') { const t = T(b.dataset.t), ta = document.getElementById('fb-' + b.dataset.t), v = ta ? ta.value.replace(/\s+/g, ' ').trim().slice(0, 140) : ''; t.fb = v; save(); b.textContent = v ? '✓ Отправлено, изменить' : 'Отправить тренеру'; snd('tap'); toastK(v ? 'Спасибо! Тренер увидит комментарий' : 'Комментарий убран'); }
@@ -1793,10 +2034,10 @@ document.addEventListener('click', e => {
 /* ---------- старт ---------- */
 function init() {
   box = document.getElementById('t-kurs'); if (!box) return;
-  home(); kSync();
+  fxApply(); home(); kSync(); pauseInit();
   bodyCls(); try { new MutationObserver(bodyCls).observe(box, { attributes: true, attributeFilter: ['hidden'] }); } catch (e) {}
   setInterval(coUpd, 30000);
-  const nav = document.getElementById('vt');
+  const nav = document.querySelector(CFG.tabs || '#vt');
   if (nav) nav.addEventListener('click', e => { const b = e.target.closest('button[data-t="kurs"]'); if (b && VIEW.t == null && VIEW.m == null) home(); });
 }
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
