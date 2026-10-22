@@ -33,6 +33,9 @@
   #labels{position:fixed;inset:0;pointer-events:none;overflow:hidden;z-index:3}
   .lb{position:absolute;left:0;top:0;max-width:min(240px,70vw);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font:700 13px var(--body);color:#fff;padding:7px 13px;border-radius:99px;background:var(--glass);border:1px solid var(--pc,var(--line));cursor:pointer;opacity:0;transition:opacity .35s;will-change:transform}
   .lb.big{font-size:15px;padding:9px 16px}
+  /* начало дороги модуля: "Старт" светится и мигает */
+  .lb.start{font-family:var(--display);letter-spacing:.08em;color:#eafff0;border-color:#9dff7c;animation:lb-start 1.6s ease-in-out infinite}
+  @keyframes lb-start{0%,100%{box-shadow:0 0 6px rgba(157,255,124,.35);text-shadow:0 0 4px #9dff7c}50%{box-shadow:0 0 22px rgba(157,255,124,.9),0 0 4px #9dff7c inset;text-shadow:0 0 14px #9dff7c}}
   .lb.sh{min-width:30px;padding:5px 10px;font-size:12px;text-align:center}
   .lb.s-done:before{content:"✓ ";color:#4ade80}
   .lb.s-wait{border-color:#facc15}.lb.s-wait:before{content:"";display:inline-block;width:8px;height:8px;border-radius:50%;background:#facc15;margin-right:6px;vertical-align:1px}
