@@ -97,6 +97,31 @@
   .wtop{position:sticky;top:-12px;z-index:3;display:flex;align-items:center;gap:12px;margin:-12px -14px 12px;padding:12px 14px;border-radius:22px 22px 0 0;background:rgba(10,13,30,.96);border-bottom:1px solid rgba(var(--mr),.25)}
   #winX{flex:none;min-height:40px;padding:0 16px;border-radius:99px;border:1px solid var(--line);background:var(--glass);color:var(--fg);font-weight:700;cursor:pointer}
   #winT{flex:1;min-width:0;font:700 13px var(--display);color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  /* экран задания (22.10): окно растёт из экрана у зоны; за стеклом живая крыша и космос; сверху печатается задание с голосом */
+  .wbg.live{background:radial-gradient(120% 90% at 50% 50%,rgba(4,5,13,0) 40%,rgba(4,5,13,.55));animation:none}
+  body.livebg #c{filter:blur(2.5px) brightness(.72)}
+  body.livebg.mobi #c{filter:brightness(.6)}
+  body.livebg .wbox{background:rgba(6,12,30,.66);box-shadow:0 0 0 1px rgba(var(--mr),.35),0 0 40px rgba(var(--mr),.35),0 30px 80px -30px rgba(0,0,0,.9)}
+  body.livebg .wtop{background:rgba(6,12,30,.9)}
+  #brief{position:relative;margin:0 0 12px;padding:14px 16px;border-radius:16px;border:1px solid rgba(var(--mr),.45);background:rgba(var(--mr),.06);overflow:hidden}
+  #brief:before{content:"";position:absolute;inset:0;background:repeating-linear-gradient(0deg,rgba(var(--mr),.06) 0 2px,transparent 2px 5px);pointer-events:none}
+  #brief[hidden]{display:none}
+  .bh{display:flex;align-items:center;gap:8px;font:800 11.5px var(--body);letter-spacing:.16em;color:rgb(var(--mr))}
+  .bh i{width:8px;height:8px;border-radius:50%;background:#ff4d6d;box-shadow:0 0 8px #ff4d6d}
+  #brief.talk .bh i{animation:bl 1s infinite}
+  .bwave{display:inline-flex;gap:2px;align-items:flex-end;height:12px}
+  .bwave b{width:3px;height:3px;border-radius:2px;background:rgb(var(--mr))}
+  #brief.talk .bwave b{animation:wv .5s ease-in-out infinite alternate}
+  .bwave b:nth-child(2){animation-delay:.1s}.bwave b:nth-child(3){animation-delay:.2s}.bwave b:nth-child(4){animation-delay:.3s}
+  @keyframes wv{to{height:12px}} @keyframes bl{50%{opacity:.2}}
+  #sndB{margin-left:auto;min-height:32px;padding:0 12px;border-radius:99px;border:1px solid var(--line);background:var(--glass);color:var(--fg);font:700 12px var(--body);letter-spacing:0;cursor:pointer}
+  #bT{margin:8px 0 6px;font:700 clamp(17px,4.4vw,24px) var(--display);min-height:1.25em;text-wrap:balance}
+  #bX{margin:0;color:#dfe4ff;font-size:15px;line-height:1.5;min-height:1.5em}
+  #brief.typing #bX:after{content:"▍";color:rgb(var(--mr));animation:bl .8s infinite}
+  #bSkip{margin-top:10px;min-height:36px;padding:0 14px;border-radius:99px;border:1px solid var(--line);background:var(--glass);color:var(--dim);font:700 12.5px var(--body);cursor:pointer}
+  #bSkip[hidden]{display:none}
+  #t-kurs{transition:opacity .5s}
+  #t-kurs.hold{opacity:0;pointer-events:none;max-height:40vh;overflow:hidden}
   #toast{position:fixed;bottom:20px;left:50%;transform:translate(-50%,20px);background:var(--glass);border:1px solid var(--line);color:var(--fg);padding:10px 18px;border-radius:99px;font-size:14px;opacity:0;transition:.25s;pointer-events:none;z-index:99;max-width:90vw}
   #toast.show{opacity:1;transform:translate(-50%,0)}
   .lb:focus-visible,#back:focus-visible,#goB:focus-visible,#gBtn:focus-visible,#winX:focus-visible,#plainB:focus-visible,#arrow:focus-visible{outline:2px solid #7cf3ff;outline-offset:2px}
@@ -116,7 +141,7 @@
   #osd .x{left:50%;top:50%;transform:translate(-50%,-50%);color:#f1f3ff;font-size:22px}
   #osd .rec{color:#ff4d6d}
   @media (prefers-reduced-motion:reduce){#lvl.on{animation:none;opacity:0}}
-  @media (prefers-reduced-motion:reduce){.wbg,#ptr i,#goB b{animation:none}}
+  @media (prefers-reduced-motion:reduce){.wbg,#ptr i,#goB b,#brief .bwave b,#brief .bh i{animation:none}}
 </style>
 </head>
 <body>
@@ -150,6 +175,8 @@
   <div class="wbg" id="wbg"></div>
   <div class="wpane" id="wpane"><div class="wbox">
     <div class="wtop"><button id="winX" type="button">← К карте</button><div id="winT"></div></div>
+    <div id="brief" hidden aria-live="polite"><div class="bh"><i></i>ПЕРЕДАЧА ЗАДАНИЯ <span class="bwave"><b></b><b></b><b></b><b></b></span><button id="sndB" type="button">Звук: вкл</button></div>
+      <h2 id="bT"></h2><p id="bX"></p><button id="bSkip" type="button">Показать всё сразу</button></div>
     <div id="t-kurs"></div>
   </div></div>
 </div>
@@ -169,6 +196,7 @@ document.getElementById('hudC').textContent = (window.KURSY && KURSY.name) || '�
 <script src="modeli.js" defer></script>
 <script src="zadaniya.js" defer></script>
 <script src="../engine/moduli.js" defer></script>
+<script src="../engine/golos.js" defer></script>
 <script src="../engine/kosmos-kurs.js" defer></script>
 </body>
 </html>

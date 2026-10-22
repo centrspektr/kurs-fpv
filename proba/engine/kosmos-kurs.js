@@ -271,20 +271,45 @@ function building(L,n){ var b=new THREE.Group(), w=n.s*2.1, c=new THREE.Color(n.
     var pts=[]; for(var k=0;k<=80;k++){ var u=k/80; pts.push(V(Math.cos(u*18)*w*(.9-u*.6),13+u*13,Math.sin(u*18)*w*(.9-u*.6))); }
     var sp=add(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts),120,.12,5,false),glow({color:0xffd36e}),0,0,0); n.anim.push(function(t){ sp.rotation.y=t*.5; }); }
   n.body=b.children.slice(k0); useModel(n,b,MODELI[st],TOPH[st]-1,w*(n.zone?2.6:2.8),1);
+  if(n.kind==='task') taskScreen(n,b,w,L0);
   var hb=new THREE.Mesh(new THREE.BoxGeometry(w*2.6,TOPH[st]+2,w*2.6),new THREE.MeshBasicMaterial({visible:false})); hb.position.y=TOPH[st]/2; hb.userData.id=n.id; b.add(hb); L.hits.push(hb); }
 function hTex(col){ return tex(function(x,w){ var c=w/2; x.strokeStyle=col; x.lineWidth=w*.04; x.beginPath(); x.arc(c,c,c*.86,0,6.283); x.stroke();
   x.font='900 '+(w*.5)+'px Manrope, system-ui'; x.textAlign='center'; x.textBaseline='middle'; x.fillStyle=col; x.fillText('H',c,c+w*.03); },256); }
 function holoTex(col){ return tex(function(x,w,h){ x.fillStyle='rgba(10,20,40,.35)'; x.fillRect(0,0,w,h); x.strokeStyle=col; x.lineWidth=4; x.strokeRect(4,4,w-8,h-8);
   x.fillStyle=col; for(var i=0;i<7;i++){ x.globalAlpha=.35+Math.random()*.5; x.fillRect(22,26+i*20,(w-44)*(.4+Math.random()*.6),8); } x.globalAlpha=1; },256,180); }
+/* экран задания (22.10): у каждого задания сбоку от зоны стоит экран на стойке, на нём номер и название.
+   Дрон у зоны разворачивается к экрану; "Начать" - камера подлетает к экрану, он вырастает в окно задания */
+function wrapTxt(x,t,x0,y0,mw,lh,max){ var ws=String(t||'').split(' '), ln='', n=0;
+  for(var i=0;i<ws.length;i++){ var tt=ln?ln+' '+ws[i]:ws[i]; if(x.measureText(tt).width>mw&&ln){ if(++n>=max){ x.fillText(ln+'…',x0,y0); return; } x.fillText(ln,x0,y0); y0+=lh; ln=ws[i]; } else ln=tt; }
+  if(ln) x.fillText(ln,x0,y0); }
+function scrTex(n){ var T0=K.lib[n.tid]||{}; return tex(function(x,w,h){ x.fillStyle='rgba(6,14,32,.9)'; x.fillRect(0,0,w,h);
+  x.fillStyle=n.c; x.globalAlpha=.07; for(var y=0;y<h;y+=5) x.fillRect(0,y,w,2); x.globalAlpha=1;
+  x.strokeStyle=n.c; x.lineWidth=6; x.strokeRect(5,5,w-10,h-10);
+  x.fillStyle=n.c; x.font='800 22px Manrope, system-ui, sans-serif'; x.fillText('ЗАДАНИЕ '+n.num,30,50);
+  x.fillStyle='#ffffff'; x.font='700 36px Manrope, system-ui, sans-serif'; wrapTxt(x,T0.t,30,104,w-60,42,2);
+  x.fillStyle='rgba(223,228,255,.8)'; x.font='500 25px Manrope, system-ui, sans-serif'; wrapTxt(x,T0.sub,30,200,w-60,32,3); },512,320); }
+function taskScreen(n,b,w,L0){ var sg=new THREE.Group(); sg.position.set(w*2.1,0,-w*.5); sg.rotation.y=-.6; b.add(sg); /* сбоку от дороги, чуть повёрнут к ней */
+  var pm=L0(0x2a3358,.15), po=new THREE.Mesh(new THREE.CylinderGeometry(.14,.2,3.6,8),pm); po.position.y=1.8; sg.add(po);
+  var fr=new THREE.Mesh(new THREE.BoxGeometry(6.7,4.3,.3),L0(0x1b2240,.3)); fr.position.y=5.6; sg.add(fr);
+  var pl=new THREE.Mesh(new THREE.PlaneGeometry(6.3,3.94),new THREE.MeshBasicMaterial({map:scrTex(n),transparent:true,opacity:.85})); pl.position.set(0,5.6,.16); sg.add(pl); n.mats.push(pl.material);
+  n.scr=pl; n.scrW=6.3; n.scrH=3.94;
+  n.anim.push(function(t){ if(n.st!=='lock') pl.material.opacity=.88+.1*Math.sin(t*7)*Math.sin(t*1.3); }); }
+/* где экран в мире и откуда на него смотреть, чтобы он занял почти весь вид */
+var SQ=new THREE.Quaternion();
+function scrView(n){ var p=n.scr.getWorldPosition(V()), nm=V(0,0,1).applyQuaternion(n.scr.getWorldQuaternion(SQ)); nm.y=0; nm.normalize();
+  var tv=Math.tan(C.fov*Math.PI/360), th=tv*C.aspect, f=Math.min(.92,800/innerWidth), D=Math.max(n.scrH/.95/(2*tv),n.scrW/f/(2*th)); /* экран по ширине совпадает с окном задания */
+  return {p:p.clone().addScaledVector(nm,D),l:p,c:p,nm:nm}; }
+function scrRect(n){ var hw=n.scrW/2, hh=n.scrH/2, xs=[], ys=[]; [[-hw,-hh],[hw,-hh],[-hw,hh],[hw,hh]].forEach(function(q){ var v=n.scr.localToWorld(V(q[0],q[1],0)).project(C); xs.push((v.x+1)/2*innerWidth); ys.push((1-v.y)/2*innerHeight); });
+  var l=Math.min.apply(0,xs), t=Math.min.apply(0,ys); return {l:l,t:t,w:Math.max.apply(0,xs)-l,h:Math.max.apply(0,ys)-t}; }
 /* зоны заданий внутри модуля: вид зависит от типа задания */
 var ZONE={
   zs:function(o){ /* вход в модуль: арка */ var h=8, r=o.w*1.4; [-1,1].forEach(function(sx){ o.add(new THREE.BoxGeometry(.9,h,.9),o.L0(0x2a3358,.2),sx*r,h/2,0); });
     var ar=o.add(new THREE.TorusGeometry(r,.35,8,40,Math.PI),o.glow(),0,h,0); var ln=o.add(new THREE.PlaneGeometry(r*2,1.2),o.glow({opacity:.35,side:THREE.DoubleSide}),0,h-1.6,0);
     o.n.anim.push(function(t){ ar.material.opacity=.6+.3*Math.sin(t*2); }); },
   zc:function(o){ /* материал: голограмма-стенд */ o.add(new THREE.CylinderGeometry(.9,1.2,1.6,12),o.L0(0x2a3358,.2),0,.8,0);
-    var bd=o.add(new THREE.PlaneGeometry(o.w*1.7,o.w*1.2),new THREE.MeshBasicMaterial({map:holoTex(o.n.c),transparent:true,opacity:.85,side:THREE.DoubleSide,depthWrite:false}),0,4.6,0); o.n.mats.push(bd.material);
+    var bd=o.add(new THREE.PlaneGeometry(o.w*1.1,o.w*.8),new THREE.MeshBasicMaterial({map:holoTex(o.n.c),transparent:true,opacity:.85,side:THREE.DoubleSide,depthWrite:false}),0,3.6,0); o.n.mats.push(bd.material);
     var rg=o.add(new THREE.TorusGeometry(1.1,.08,6,30),o.glow(),0,1.8,0); rg.rotation.x=Math.PI/2;
-    o.n.anim.push(function(t){ bd.position.y=4.6+Math.sin(t*1.3)*.25; bd.material.opacity=.7+.2*Math.sin(t*9)*Math.sin(t*1.7); rg.scale.setScalar(1+.15*Math.sin(t*2)); }); },
+    o.n.anim.push(function(t){ bd.position.y=3.6+Math.sin(t*1.3)*.25; bd.rotation.y=t*.6; bd.material.opacity=.7+.2*Math.sin(t*9)*Math.sin(t*1.7); rg.scale.setScalar(1+.15*Math.sin(t*2)); }); },
   zg:function(o){ /* тренажёр: игровая площадка с летающими кубиками */ var pd=o.add(new THREE.CylinderGeometry(o.w*1.3,o.w*1.35,.4,6),o.L0(0x1d2547,.25),0,.2,0);
     var ed=o.add(new THREE.TorusGeometry(o.w*1.3,.12,4,6),o.glow(),0,.45,0); ed.rotation.x=Math.PI/2;
     var cubes=[0,1,2].map(function(j){ var cb=o.add(new THREE.BoxGeometry(1.2,1.2,1.2),o.L0(MC[(j*2+1)%6],.6),Math.cos(j*2.1)*o.w*.7,3,Math.sin(j*2.1)*o.w*.7); return cb; });
@@ -579,7 +604,8 @@ function spunP(P,Lk){ var l=spun(Lk); if(!curL) return P.clone(); var o=P.clone(
   setElev(o,Math.max(.1,Math.min(1.4,elevOf(o)+tilt))).multiplyScalar(zoom); return l.add(o); }
 var camP=V(0,0,46), camL=V(0,0,-30), fly=null, speed=0, diveBack=null, guideT=0;
 function viewOf(n){ var p=n.g.position; if(n.zone){ var f=n.from==='me'?n.L.me:n.L.by[n.from].g.position, dz=V(f.x-p.x,0,f.z-p.z); if(dz.lengthSq()<1) dz.set(0,0,1); dz.normalize();
-    return {p:V(p.x+dz.x*17,PY+9.5,p.z+dz.z*17),l:V(p.x,PY+3.5,p.z)}; }
+    var l=V(p.x,PY+3.5,p.z); if(n.scr){ var sp=n.scr.getWorldPosition(V()); l.lerp(sp.setY(PY+4.5),.4); } /* в кадре и зона, и её экран */
+    return {p:V(p.x+dz.x*(n.scr?19:17),PY+9.5,p.z+dz.z*(n.scr?19:17)),l:l}; }
   if(n.city){ var d=V(p.x,0,p.z-CZ).normalize(); if(!isFinite(d.x)) d.set(0,0,1); var H=TOPH[n.st0]||n.h, D=Math.max(15,H*1.25+8); return {p:V(p.x+d.x*D,PY+Math.max(8,H*.8),p.z+d.z*D),l:V(p.x,PY+H*.5,p.z)}; }
   return {p:V(p.x,p.y+n.s*1.1,p.z+n.s*(n.kind==='center'||n.kind==='mod'?7:6.5)),l:p.clone()}; }
 function startFly(toP,toL,curve,dur,done,rev){ fly={a:camP.clone(),al:camL.clone(),b:toP,bl:toL,cv:curve,rev:!!rev,t:0,d:red?.6:dur,done:done}; guideUI(); }
@@ -668,6 +694,7 @@ function enter(n){
   if(n.kind==='center'){ var t=targetOf(curL); if(t) goTo(t); else goUp(); return; }
   hideCap(); st='fly'; var p=n.g.position.clone(), d=p.clone().sub(camP).normalize(); diveBack={p:camP.clone(),l:camL.clone()};
   if(n.kind==='mod'){ modTrans(n); return; }
+  if(n.kind==='task'&&n.scr){ var sv=scrView(n); startFly(sv.p,sv.l,null,red?.4:1.5,function(){ openWin('task',n,scrRect(n)); }); return; }
   startFly(p.clone().addScaledVector(d,-n.s*.2),p.clone().addScaledVector(d,60),null,red?.4:1.2,function(){
     flashOn(n.c+'dd',function(){ camP.copy(diveBack.p); camL.copy(diveBack.l); openWin(n.kind==='tab'?'prog':'task',n); flashOff(); }); }); }
 /* правка 7: переход в модуль, у модулей разные (MOD_TRANS): portal, fpv, hyper. В конце - заставка модуля и новая локация */
@@ -704,11 +731,32 @@ function osdOff(){ if(!osdEl) return; osdEl.classList.remove('on'); document.bod
 function bgKind(tid){ var L=K.lib[tid]; if(!L) return 'aur'; var ss=L.steps.map(function(s){ return s.s; });
   if(L.fly||ss.indexOf('fly')>=0) return 'sky'; if(/final|_as$/.test(tid)) return 'neb'; if(/coach|_day$/.test(tid)) return 'shop';
   if(ss.indexOf('game')>=0) return 'grid'; if(/rep$/.test(tid)) return 'neb'; return 'aur'; }
-function setBg(n){ var kd=n.kind==='task'?bgKind(n.tid):'aur'; wbg.className='wbg bg-'+kd; win.style.setProperty('--mr',rgb(n.c)); wbg.style.backgroundImage=n.tid&&FONY[n.tid]?'url("'+FONY[n.tid]+'")':'';
+/* live - окно выросло из экрана у зоны: вместо картинки за стеклом живая крыша и космос (если для задания нет своего фона KURS_FONY) */
+var LIVE=false; document.body.classList.toggle('mobi',mob);
+function setBg(n,live){ var kd=n.kind==='task'?bgKind(n.tid):'aur'; LIVE=!!live&&!(n.tid&&FONY[n.tid]); document.body.classList.toggle('livebg',LIVE); wbg.className='wbg '+(LIVE?'live':'bg-'+kd); win.style.setProperty('--mr',rgb(n.c)); wbg.style.backgroundImage=n.tid&&FONY[n.tid]?'url("'+FONY[n.tid]+'")':'';
   $('winT').textContent=n.kind==='task'?'Модуль '+(mods.find(function(m){ return m.id===n.mid; })||{}).n+' · '+n.n:n.n; }
-function openWin(mode,n){ winOn=true; winMode=mode; st='win'; cur=n; winTask=n.tid||null; wasDone=n.st==='done'; setBg(n); hud.classList.remove('on'); backB.classList.remove('on'); guideUI(); win.classList.add('on'); pane.scrollTop=0;
-  lvlStars(); if(mode==='task') I.go.task(n.tid); else I.go.home(); }
-function closeWin(after){ if(!winOn) return; var c=cur?cur.c+'cc':null; flashOn(c,function(){ win.classList.remove('on'); winOn=false; hud.classList.add('on'); backB.classList.add('on'); refresh(); lvlStars();
+function openWin(mode,n,from){ winOn=true; winMode=mode; st='win'; cur=n; winTask=n.tid||null; wasDone=n.st==='done'; setBg(n,!!from); hud.classList.remove('on'); backB.classList.remove('on'); guideUI(); win.classList.add('on'); pane.scrollTop=0;
+  lvlStars(); if(mode==='task') I.go.task(n.tid); else I.go.home(); brief(mode==='task'?n:null);
+  /* окно вырастает из экрана у зоны: стартует ровно на месте экрана и раскрывается */
+  var bx=win.querySelector('.wbox'); if(from&&bx.animate&&!red){ var r=bx.getBoundingClientRect(), vh=Math.min(r.height,innerHeight-r.top), sx=from.w/r.width, sy=from.h/Math.max(1,vh);
+    bx.animate([{transform:'translate('+(from.l-r.left)+'px,'+(from.t-r.top)+'px) scale('+sx+','+sy+')',transformOrigin:'0 0',opacity:.6},{transform:'none',transformOrigin:'0 0',opacity:1}],{duration:650,easing:'cubic-bezier(.3,0,.2,1)'}); } }
+/* передача задания: сверху окна печатается номер, название и план задания, голос читает (engine/golos.js). Пройденное - без голоса */
+var bEl=$('brief'), bT=$('bT'), bX=$('bX'), tk=$('t-kurs'), bTm=0, GL=window.GOLOS;
+function sndUI(){ $('sndB').textContent=GL&&GL.on?'Звук: вкл':'Звук: выкл'; $('sndB').hidden=!GL||!GL.can(); }
+$('sndB').onclick=function(){ if(!GL) return; GL.setOn(!GL.on); sndUI(); if(!GL.on) briefEnd(); };
+function briefEnd(){ clearInterval(bTm); if(GL) GL.stop(); if(bEl._full){ bT.textContent=bEl._t; bX.textContent=bEl._x; } bEl.classList.remove('typing','talk'); $('bSkip').hidden=true; tk.classList.remove('hold'); }
+$('bSkip').onclick=briefEnd;
+function brief(n){ clearInterval(bTm); if(GL) GL.stop(); var T0=n&&K.lib[n.tid]; if(!T0){ bEl.hidden=true; tk.classList.remove('hold'); return; }
+  var t='Задание '+n.num+'. '+T0.t, x=(T0.sub?T0.sub.replace(/[.!?]*$/,'. '):'')+'В задании: '+T0.steps.map(function(q){ return ({cards:'материал',game:'тренажёр',quiz:'проверка',fly:'полёт',coach:'занятие с тренером'})[q.s]||q.name||q.s; }).join(', ')+'.';
+  bEl._t=t; bEl._x=x; bEl._full=1; bEl.hidden=false; sndUI();
+  if(n.st==='done'||red){ briefEnd(); return; }
+  bT.textContent=''; bX.textContent=''; bEl.classList.add('typing'); $('bSkip').hidden=false; tk.classList.add('hold');
+  var full=t+'. '+x, pos=0, said=0, spoke=GL&&GL.say(full,{onb:function(i){ said=i; },onend:function(){ if(pos<full.length) pos=full.length; }});
+  if(spoke) bEl.classList.add('talk');
+  bTm=setInterval(function(){ pos=Math.max(pos+1,said); var a=Math.min(pos,t.length); bT.textContent=t.slice(0,a); bX.textContent=pos>t.length+2?x.slice(0,pos-t.length-2):'';
+    if(pos>=full.length){ clearInterval(bTm); bEl.classList.remove('typing'); $('bSkip').hidden=!spoke; tk.classList.remove('hold'); if(!spoke) bEl.classList.remove('talk'); } },spoke?55:28);
+  if(spoke){ var w0=setInterval(function(){ if(!speechSynthesis.speaking&&pos>=full.length){ clearInterval(w0); bEl.classList.remove('talk'); $('bSkip').hidden=true; } },400); } }
+function closeWin(after){ if(!winOn) return; var c=cur?cur.c+'cc':null; clearInterval(bTm); if(GL) GL.stop(); flashOn(c,function(){ win.classList.remove('on'); winOn=false; LIVE=false; document.body.classList.remove('livebg'); hud.classList.add('on'); backB.classList.add('on'); refresh(); lvlStars();
   if(after) after(); else if(cur){ var n=cur, B=viewOf(n); camP.copy(B.p); camL.copy(B.l); arrive(n);
     /* задание только что пройдено - сразу ведём к следующему */
     if(n.kind==='task'&&!wasDone&&n.st==='done'){ burst(n); starFly(n); if(target&&target!==n){ passGate=true; guideSoon(1400); } } }
@@ -718,7 +766,7 @@ $('winX').onclick=function(){ closeWin(); };
 /* экраны курса внутри окна: следующее задание - узел на карте тоже меняется; "К модулю" и "Все модули" - назад в космос */
 document.addEventListener('kurs-view',function(e){ var d=e.detail||{}; if(!winOn) return; pane.scrollTop=0;
   if(d.t){ winMode='task'; var mm=mods.find(function(m){ return m.tasks.indexOf(d.t)>=0; }), L=mm&&LBY[mm.id]; if(!L) return;
-    if(L!==curL) setLevel(L); var n=L.by[d.t]; if(n&&n!==cur){ cur=n; winTask=n.tid; wasDone=n.st==='done'; var B=viewOf(n); camP.copy(B.p); camL.copy(B.l); setBg(n); } hud.classList.remove('on'); backB.classList.remove('on'); return; }
+    if(L!==curL) setLevel(L); var n=L.by[d.t]; if(n&&n!==cur){ cur=n; winTask=n.tid; wasDone=n.st==='done'; var B=n.scr?scrView(n):viewOf(n); camP.copy(B.p); camL.copy(B.l); setBg(n,LIVE); brief(n); } hud.classList.remove('on'); backB.classList.remove('on'); return; }
   if(d.m){ closeWin(function(){ var L=LBY[d.m]; if(L!==curL) setLevel(L); var c=L.by['c_'+d.m], B=viewOf(c); camP.copy(B.p).add(V(0,4,30)); camL.copy(B.l); flyOver(L,true); }); return; }
   if(winMode!=='prog') closeWin(function(){ setLevel(LK); flyOver(LK,true); }); });
 document.addEventListener('kurs-save',function(){ if(!winOn) refresh(); });
@@ -809,7 +857,7 @@ var ttl=$('ttl'); setTimeout(function(){ ttl.classList.add('on'); },300); setTim
   requestAnimationFrame(step); })();
 
 /* ---- кадр ---- */
-var GT=V(0,0,0), BURST=[];
+var GT=V(0,0,0), GT2=V(0,0,0), BURST=[];
 function burst(n){ if(red) return; for(var i=0;i<28;i++){ var sp=new THREE.Sprite(new THREE.SpriteMaterial({map:glowTex(i%3?n.c:'#ffd36e'),blending:THREE.AdditiveBlending,depthWrite:false,transparent:true})); sp.scale.setScalar(1.2); sp.position.copy(n.g.position); n.L.g.add(sp);
   BURST.push({sp:sp,L:n.L,t:0,v:V((Math.random()-.5)*12,6+Math.random()*10,(Math.random()-.5)*12)}); } }
 var fc=0, clock=new THREE.Clock(), tm=0, v=V(0,0,0), fw=V(0,0,0), hc2=new THREE.Color(), pa2=V(0,0,0), pb2=V(0,0,0);
@@ -839,7 +887,7 @@ function life(L,dt){
   if(L.blink) L.blink.forEach(function(q){ q.s.material.opacity=Math.sin(tm*q.f+q.p)>-.2?1:.15; });
 }
 function frame(){ var dt=Math.min(clock.getDelta(),.05); tm+=dt; fc++;
-  if(winOn&&!fly){ requestAnimationFrame(frame); return; } /* под окном задания космос стоит: бережём батарею */
+  if(winOn&&!fly&&(!LIVE||(mob&&fc%2))){ requestAnimationFrame(frame); return; } /* под окном задания космос стоит: бережём батарею; за стеклом экрана - живой, на телефоне через кадр */
   if(fly) stepFly(dt);
   else if(st==='gate'){ camP.lerp(V(0,0,46-gp*62),Math.min(1,dt*4)); camL.set(0,0,-30); speed=Math.abs(46-gp*62-camP.z)*6; }
   else if(st==='over'&&curL){ camP.lerp(spunP(topOn?curL.tP:curL.oP,topOn?curL.tL:curL.oL),Math.min(1,dt*3)); camL.lerp(spun(topOn?curL.tL:curL.oL),Math.min(1,dt*3)); speed*=.9; }
@@ -872,8 +920,11 @@ function frame(){ var dt=Math.min(clock.getDelta(),.05); tm+=dt; fc++;
     life(L,dt); if(L.city){ life(LK,dt); syncCity(L); }
     /* дрон-проводник в локации: на полёте летит впереди по нити, у зоны висит рядом */
     if(L.gd){ var q=L.gd, tg=GT; if(fly&&fly.cv){ var u2=fly.rev?1-ease(fly.t):ease(fly.t); fly.cv.getPoint(Math.min(1,Math.max(0,u2+(fly.rev?-.22:.22))),tg); tg.y+=1.2; }
+      else if(cur&&cur.scr){ var sv2=scrView(cur); tg.copy(sv2.c).addScaledVector(sv2.nm,4.2); tg.y=sv2.c.y-1.3+Math.sin(tm*1.5)*.35; }
       else if(cur){ tg.set(cur.g.position.x-camP.x,0,cur.g.position.z-camP.z).normalize().multiplyScalar(5).add(cur.g.position); tg.y=PY+5.5+Math.sin(tm*1.5)*.6; } else tg.set(Math.sin(tm*.5)*3,PY+6+Math.sin(tm)*.5,-14);
-      var ddx=tg.x-q.g.position.x, ddz=tg.z-q.g.position.z; q.g.position.lerp(tg,Math.min(1,dt*(fly?5:2))); if(ddx*ddx+ddz*ddz>.02) q.g.rotation.set(Math.min(.35,Math.hypot(ddx,ddz)*.06),Math.atan2(ddx,ddz),0,'YXZ');
+      var ddx=tg.x-q.g.position.x, ddz=tg.z-q.g.position.z; q.g.position.lerp(tg,Math.min(1,dt*(fly?5:2)));
+      if(!fly&&cur&&cur.scr&&ddx*ddx+ddz*ddz<4){ var sc2=cur.scr.getWorldPosition(GT2), ya=Math.atan2(sc2.x-q.g.position.x,sc2.z-q.g.position.z), dy=ya-q.g.rotation.y; dy=Math.atan2(Math.sin(dy),Math.cos(dy)); q.g.rotation.set(q.g.rotation.x*.9,q.g.rotation.y+dy*Math.min(1,dt*3),0,'YXZ'); } /* развернулся к экрану */
+      else if(ddx*ddx+ddz*ddz>.02) q.g.rotation.set(Math.min(.35,Math.hypot(ddx,ddz)*.06),Math.atan2(ddx,ddz),0,'YXZ');
       for(var pj=1;pj<q.props.length;pj+=2) q.props[pj].rotation.y+=dt*40; q.lt.material.opacity=Math.sin(tm*6)>.3?1:.2; }
     /* искры: задание пройдено */
     if(HYP) HYP.material.opacity=Math.min(1,HYP.material.opacity+dt*2.5);
