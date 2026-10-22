@@ -136,10 +136,13 @@
   #brief.talk .bwave b{animation:wv .5s ease-in-out infinite alternate}
   .bwave b:nth-child(2){animation-delay:.1s}.bwave b:nth-child(3){animation-delay:.2s}.bwave b:nth-child(4){animation-delay:.3s}
   @keyframes wv{to{height:12px}} @keyframes bl{50%{opacity:.2}}
-  #vB{margin-left:auto}
+  #gearB{flex:none;width:40px;height:40px;border-radius:50%;border:1px solid var(--line);background:var(--glass);color:var(--fg);font-size:18px;cursor:pointer}
+  #gearM{position:absolute;right:10px;top:58px;z-index:5;width:min(280px,calc(100vw - 48px));padding:8px;border-radius:16px;border:1px solid var(--line);background:rgba(10,13,30,.97);display:grid;gap:6px}
+  #gearM[hidden]{display:none}
+  #gearM>button{text-align:left;min-height:42px!important}
   #vB,#vTry{min-height:32px;padding:0 12px;border-radius:99px;border:1px solid var(--line);background:var(--glass);color:var(--fg);font:700 12px var(--body);letter-spacing:0;cursor:pointer}
   #vB[hidden]{display:none}
-  #vRow{display:flex;gap:8px;margin-top:10px;position:relative;z-index:1}#vRow[hidden]{display:none}
+  #vRow{display:flex;gap:8px;margin-top:0;position:relative;z-index:1}#vRow[hidden]{display:none}
   #vSel{flex:1;min-width:0;min-height:36px;border-radius:10px;border:1px solid var(--line);background:#0b0f26;color:var(--fg);font:600 13px var(--body);padding:0 8px}
   #sndB{min-height:32px;padding:0 12px;border-radius:99px;border:1px solid var(--line);background:var(--glass);color:var(--fg);font:700 12px var(--body);letter-spacing:0;cursor:pointer}
   #bT{margin:8px 0 6px;font:700 clamp(17px,4.4vw,24px) var(--display);min-height:1.25em;text-wrap:balance}
@@ -148,7 +151,29 @@
   #bSkip{margin-top:10px;min-height:36px;padding:0 14px;border-radius:99px;border:1px solid var(--line);background:var(--glass);color:var(--dim);font:700 12.5px var(--body);cursor:pointer}
   #bSkip[hidden]{display:none}
   #t-kurs{transition:opacity .5s}
-  #t-kurs.hold{opacity:0;pointer-events:none;max-height:40vh;overflow:hidden}
+  #t-kurs.hold{display:none}
+  /* задание слайдами (22.10, вариант А): шапка курса спрятана, сверху полоски, справа внизу большая стрелка */
+  #winX{width:44px;height:44px;padding:0!important;border-radius:50%!important;font-size:20px!important}
+  #winT{text-align:center}
+  #slBars{display:flex;gap:4px;margin:-4px 0 14px}#slBars[hidden]{display:none}
+  #slBars i{flex:1;height:4px;border-radius:2px;background:rgba(255,255,255,.16);overflow:hidden}
+  #slBars b{display:block;height:100%;background:rgb(var(--mr));box-shadow:0 0 8px rgb(var(--mr));transition:width .4s}
+  #t-kurs #krHead,#t-kurs .kr-gnav,#t-kurs .kr-dots{display:none!important}
+  /* большая стрелка внизу справа заменяет "Понятно, дальше" и "Дальше: ..." внутри задания */
+  #t-kurs .kr-nav,#t-kurs .kr-end .acts>[data-k="step"]{display:none!important}
+  #t-kurs .kr-done{font-size:17px;padding:22px 16px;text-align:center}
+  #t-kurs .kr-fbd{display:none}#t-kurs.com .kr-fbd{display:block}
+  #t-kurs .kr{padding-bottom:96px}
+  #brief{min-height:min(52vh,420px);display:flex;flex-direction:column;justify-content:center;padding:22px 18px}
+  #brief #bT{font-size:clamp(20px,5vw,30px)}#brief #bX{font-size:16.5px}
+  #nxB{position:fixed;right:max(18px,calc(50vw - 390px + 18px));bottom:calc(20px + env(safe-area-inset-bottom,0px));z-index:22;width:76px;height:76px;border-radius:50%;border:0;background:linear-gradient(135deg,#7cf3ff,#a78bfa);color:#0b0820;font:900 34px var(--body);cursor:pointer;animation:nxp 1.6s infinite;transition:opacity .3s,transform .2s}
+  #nxB:active{transform:scale(.94)}
+  #nxB[hidden]{display:none}
+  #nxB[disabled]{opacity:.22;cursor:default;animation:none}
+  #nxB.wait{opacity:.55;animation:none}
+  @keyframes nxp{0%{box-shadow:0 0 0 0 rgba(124,243,255,.55)}70%{box-shadow:0 0 0 18px rgba(124,243,255,0)}100%{box-shadow:0 0 0 0 rgba(124,243,255,0)}}
+  #gearM button{min-height:42px;padding:0 12px;border-radius:10px;border:0;background:none;color:var(--fg);font:700 14px var(--body);cursor:pointer;text-align:left}
+  #gearM button:hover{background:rgba(255,255,255,.06)}#gearM button[hidden]{display:none}
   #toast{position:fixed;bottom:20px;left:50%;transform:translate(-50%,20px);background:var(--glass);border:1px solid var(--line);color:var(--fg);padding:10px 18px;border-radius:99px;font-size:14px;opacity:0;transition:.25s;pointer-events:none;z-index:99;max-width:90vw}
   #toast.show{opacity:1;transform:translate(-50%,0)}
   .lb:focus-visible,#back:focus-visible,#goB:focus-visible,#gBtn:focus-visible,#winX:focus-visible,#plainB:focus-visible,#arrow:focus-visible{outline:2px solid #7cf3ff;outline-offset:2px}
@@ -168,7 +193,7 @@
   #osd .x{left:50%;top:50%;transform:translate(-50%,-50%);color:#f1f3ff;font-size:22px}
   #osd .rec{color:#ff4d6d}
   @media (prefers-reduced-motion:reduce){#lvl.on{animation:none;opacity:0}}
-  @media (prefers-reduced-motion:reduce){.wbg,#ptr i,#goB b,#brief .bwave b,#brief .bh i,#intro .cur{animation:none}#ttl.on .t1{animation:tw-fill .3s forwards}}
+  @media (prefers-reduced-motion:reduce){#nxB,.wbg,#ptr i,#goB b,#brief .bwave b,#brief .bh i,#intro .cur{animation:none}#ttl.on .t1{animation:tw-fill .3s forwards}}
 </style>
 </head>
 <body>
@@ -202,12 +227,16 @@
 <div id="win" role="dialog" aria-modal="true" aria-labelledby="winT">
   <div class="wbg" id="wbg"></div>
   <div class="wpane" id="wpane"><div class="wbox">
-    <div class="wtop"><button id="winX" type="button">← К карте</button><div id="winT"></div></div>
-    <div id="brief" hidden aria-live="polite"><div class="bh"><i></i>ПЕРЕДАЧА ЗАДАНИЯ <span class="bwave"><b></b><b></b><b></b><b></b></span><button id="vB" type="button">Голос ▾</button><button id="sndB" type="button">Звук: вкл</button></div>
-      <div id="vRow" hidden><select id="vSel" aria-label="Голос"></select><button id="vTry" type="button">▶ Проба</button></div>
+    <div class="wtop"><button id="winX" type="button" aria-label="Назад">←</button><div id="winT"></div><button id="gearB" type="button" aria-label="Настройки">⚙</button>
+      <div id="gearM" hidden><button id="sndB" type="button">🔊 Звук: вкл</button><button id="vB" type="button">🎙 Голос ▾</button>
+        <div id="vRow" hidden><select id="vSel" aria-label="Голос"></select><button id="vTry" type="button">▶ Проба</button></div>
+        <button id="gSkip" type="button">⏭ Пропустить задание</button><button id="gCom" type="button">💬 Комментарий к заданию</button><button id="gBug" type="button">⚠ Сообщить об ошибке</button></div></div>
+    <div id="slBars" hidden aria-hidden="true"></div>
+    <div id="brief" hidden aria-live="polite"><div class="bh"><i></i>ПЕРЕДАЧА ЗАДАНИЯ <span class="bwave"><b></b><b></b><b></b><b></b></span></div>
       <h2 id="bT"></h2><p id="bX"></p><button id="bSkip" type="button">Показать всё сразу</button></div>
     <div id="t-kurs"></div>
   </div></div>
+  <button id="nxB" type="button" hidden aria-label="Дальше">➜</button>
 </div>
 <div id="lvl" aria-hidden="true"><span id="lvlT"></span></div>
 <div id="stars" aria-label="Пройдено заданий в модуле">★ <span id="starsN"></span></div>

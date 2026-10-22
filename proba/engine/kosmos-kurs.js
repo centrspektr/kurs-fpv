@@ -301,6 +301,7 @@ function taskScreen(n,b,w,L0){ var sg=new THREE.Group(); sg.position.set(w*2.1,0
   var pm=L0(0x2a3358,.15), po=new THREE.Mesh(new THREE.CylinderGeometry(.14,.2,3.6,8),pm); po.position.y=1.8; sg.add(po);
   var fr=new THREE.Mesh(new THREE.BoxGeometry(6.7,4.3,.3),L0(0x1b2240,.3)); fr.position.y=5.6; sg.add(fr);
   var pl=new THREE.Mesh(new THREE.PlaneGeometry(6.3,3.94),new THREE.MeshBasicMaterial({map:scrTex(n),transparent:true,opacity:.85})); pl.position.set(0,5.6,.16); sg.add(pl); n.mats.push(pl.material);
+  pl.userData.id=n.id; pl.userData.scr=1; n.L.hits.push(pl); /* нажатие на экран - сразу в задание (22.10, правка 13) */
   n.scr=pl; n.stex=pl.material.map; n.scrW=6.3; n.scrH=3.94;
   n.anim.push(function(t){ if(n.st!=='lock') pl.material.opacity=.88+.1*Math.sin(t*7)*Math.sin(t*1.3); }); }
 /* где экран в мире и откуда на него смотреть, чтобы он занял почти весь вид */
@@ -678,13 +679,13 @@ function showCap(n){ $('capT').textContent=n.n; $('capS').textContent=n.sub||'';
 function hideCap(){ cap.classList.remove('on'); }
 $('capT').onclick=function(){ if(cur) tapNode(cur.id); };
 function shake(){ if(cap.animate) cap.animate([{transform:'translate(-50%,0)'},{transform:'translate(calc(-50% - 8px),0)'},{transform:'translate(calc(-50% + 8px),0)'},{transform:'translate(-50%,0)'}],{duration:350}); }
-function arrive(n){ cur=n; acc=0; st='node'; showCap(n); guideUI(); if(tour){ clearTimeout(tourT); tourT=setTimeout(tourNext,red?900:1900); } }
+function arrive(n){ cur=n; acc=0; st='node'; showCap(n); guideUI(); if(n._go){ n._go=0; enter(n); return; } if(tour){ clearTimeout(tourT); tourT=setTimeout(tourNext,red?900:1900); } }
 /* знакомство с курсом: при первом входе камера сама облетает главную нить и все боковые, потом ведёт к заданию */
 var TKEY=(CFG.store||'kursy')+'_tour', tour=null, tourT=0;
 function tourStart(){ if(curL!==LK||fly) return; tour=[mods[0]&&LK.by[mods[0].id]].concat(['prog','code','bug','shp','trn'].map(function(id){ return LK.by[id]; })).filter(Boolean); tourNext(); }
 function tourNext(){ if(!tour||st==='win'||curL!==LK) { tour=null; return; } var n=tour.shift(); if(!n){ tourEnd(); return; } goTo(n); }
 function tourEnd(){ tour=null; clearTimeout(tourT); lsS(TKEY,'1'); back=[]; if(cur) showCap(cur); guideUI(); guideSoon(400); }
-function tapNode(id){ if(fly||(st!=='over'&&st!=='node')) return; if(tour){ tour=null; clearTimeout(tourT); lsS(TKEY,'1'); } var n=curL.by[id]; if(!n) return; if(cur===n) enter(n); else goTo(n); }
+function tapNode(id,now){ if(fly||(st!=='over'&&st!=='node')) return; if(tour){ tour=null; clearTimeout(tourT); lsS(TKEY,'1'); } var n=curL.by[id]; if(!n) return; if(cur===n) enter(n); else { if(now&&n.st!=='lock') n._go=1; goTo(n); } }
 function goTo(n,isBack){ if(topOn){ topOn=false; topUI(); } hideCap(); if(!isBack) back.push(cur?cur.id:null);
   /* летим плавной дугой прямо к точке обзора узла, не повторяя изгибы нити: так камера не дёргается */
   var B=viewOf(n), fwd=cur&&n.from===cur.id;
@@ -781,32 +782,59 @@ function openWin(mode,n,from){ winOn=true; winMode=mode; st='win'; cur=n; winTas
     bx.animate([{transform:'translate('+(from.l-r.left)+'px,'+(from.t-r.top)+'px) scale('+sx+','+sy+')',transformOrigin:'0 0',opacity:.6},{transform:'none',transformOrigin:'0 0',opacity:1}],{duration:650,easing:'cubic-bezier(.3,0,.2,1)'}); } }
 /* передача задания: сверху окна печатается номер, название и план задания, голос читает (engine/golos.js). Пройденное - без голоса */
 var bEl=$('brief'), bT=$('bT'), bX=$('bX'), tk=$('t-kurs'), bTm=0, GL=window.GOLOS;
-function sndUI(){ var ok=!!GL&&GL.can(); $('sndB').textContent=GL&&GL.on?'Звук: вкл':'Звук: выкл'; $('sndB').hidden=$('vB').hidden=!ok; if(!ok) $('vRow').hidden=true; }
+/* шестерёнка в окне задания (22.10, правка 12): звук всегда виден; голос - если на устройстве есть русские голоса (список может появиться не сразу) */
+function sndUI(){ var ok=!!GL&&GL.can(); $('sndB').textContent=GL&&GL.on?'🔊 Звук: вкл':'🔇 Звук: выкл'; $('sndB').hidden=!GL; $('vB').hidden=!ok; if(!ok) $('vRow').hidden=true; }
+$('gearB').onclick=function(){ var m=$('gearM'); m.hidden=!m.hidden; sndUI(); };
+document.addEventListener('pointerdown',function(e){ var m=$('gearM'); if(!m.hidden&&!m.contains(e.target)&&e.target!==$('gearB')) m.hidden=true; });
 /* выбор голоса: все русские голоса устройства, живые (Natural) первыми */
 $('vB').onclick=function(){ var r=$('vRow'); r.hidden=!r.hidden; if(r.hidden) return; var c=GL.cur();
   $('vSel').innerHTML=GL.list().map(function(v){ return '<option'+(c&&v.name===c.name?' selected':'')+'>'+esc(v.name)+'</option>'; }).join('').replace(/<option([^>]*)>([^<]*)/g,function(m,a,nm){ return '<option'+a+' value="'+nm+'">'+nm.replace(/^Microsoft |^Google /,'')+(GL.live({name:nm})?' - живой':''); }); };
 function vTry(){ GL.pick($('vSel').value); briefEnd(); GL.say('Привет! Я буду читать тебе задания.'); }
 $('vSel').onchange=vTry; $('vTry').onclick=vTry;
 $('sndB').onclick=function(){ if(!GL) return; GL.setOn(!GL.on); sndUI(); if(!GL.on) briefEnd(); };
-function briefEnd(){ clearInterval(bTm); if(GL) GL.stop(); if(bEl._full){ bT.textContent=bEl._t; bX.textContent=bEl._x; } bEl.classList.remove('typing','talk'); $('bSkip').hidden=true; tk.classList.remove('hold'); }
+function briefEnd(){ clearInterval(bTm); if(GL) GL.stop(); if(bEl._full){ bT.textContent=bEl._t; bX.textContent=bEl._x; } bEl.classList.remove('typing','talk'); $('bSkip').hidden=true; slUpd(); }
+/* слайд "Передача задания" пройден: прячем его, открываем задание */
+function briefGo(){ briefEnd(); bEl.hidden=true; tk.classList.remove('hold'); win.querySelector('.wpane').scrollTop=0; slUpd(); }
 $('bSkip').onclick=briefEnd;
-function brief(n){ clearInterval(bTm); if(GL) GL.stop(); var T0=n&&K.lib[n.tid]; if(!T0){ bEl.hidden=true; tk.classList.remove('hold'); return; }
+function brief(n){ clearInterval(bTm); if(GL) GL.stop(); var T0=n&&K.lib[n.tid]; if(!T0){ bEl.hidden=true; tk.classList.remove('hold'); slUpd(); return; }
   var t='Задание '+n.num+'. '+T0.t, x=(T0.sub?T0.sub.replace(/[.!?]*$/,'. '):'')+'В задании: '+T0.steps.map(function(q){ return ({cards:'материал',game:'тренажёр',quiz:'проверка',fly:'полёт',coach:'занятие с тренером'})[q.s]||q.name||q.s; }).join(', ')+'.';
   bEl._t=t; bEl._x=x; bEl._full=1; bEl.hidden=false; sndUI();
-  if(n.st==='done'||red){ briefEnd(); return; }
-  bT.textContent=''; bX.textContent=''; bEl.classList.add('typing'); $('bSkip').hidden=false; tk.classList.add('hold');
+  if(n.st==='done'){ bEl.hidden=true; tk.classList.remove('hold'); slUpd(); return; } /* пройденное - сразу к материалу */
+  tk.classList.add('hold'); if(red){ briefEnd(); return; }
+  bT.textContent=''; bX.textContent=''; bEl.classList.add('typing'); $('bSkip').hidden=false; slUpd();
   var full=t+'. '+x, pos=0, said=0, spoke=GL&&GL.say(full,{onb:function(i){ said=i; },onend:function(){ if(pos<full.length) pos=full.length; }});
   if(spoke) bEl.classList.add('talk');
   bTm=setInterval(function(){ pos=Math.max(pos+1,said); var a=Math.min(pos,t.length); bT.textContent=t.slice(0,a); bX.textContent=pos>t.length+2?x.slice(0,pos-t.length-2):'';
-    if(pos>=full.length){ clearInterval(bTm); bEl.classList.remove('typing'); $('bSkip').hidden=!spoke; tk.classList.remove('hold'); if(!spoke) bEl.classList.remove('talk'); } },spoke?55:28);
+    if(pos>=full.length){ clearInterval(bTm); bEl.classList.remove('typing'); $('bSkip').hidden=!spoke; if(!spoke) bEl.classList.remove('talk'); slUpd(); } },spoke?55:28);
   if(spoke){ var w0=setInterval(function(){ if(!speechSynthesis.speaking&&pos>=full.length){ clearInterval(w0); bEl.classList.remove('talk'); $('bSkip').hidden=true; } },400); } }
+/* ---- задание слайдами (22.10, вариант А): одна мысль - один экран. Сверху полоски (первая - "Передача задания", дальше по шагу задания),
+   слева вверху "←", справа внизу большая стрелка "дальше". Шапка задания из moduli.js (шаги, "← Модуль", пропуск, ⚠) спрятана: пропуск и ошибка - в шестерёнке.
+   Стрелки нажимают кнопки "Назад"/"Вперёд" самого курса (moduli.js), поэтому прогресс сохраняется как раньше */
+var slBars=$('slBars'), nxB=$('nxB'), slT=0;
+function q1(sel){ return tk.querySelector(sel); }
+function slUpd(){ cancelAnimationFrame(slT); slT=requestAnimationFrame(function(){ var br=!bEl.hidden, f=q1('[data-k="nav-f"]'), steps=[].slice.call(tk.querySelectorAll('#krHead [data-k="step"]')).filter(function(b){ return b.dataset.i!=='-1'; });
+  var part=0, dots=tk.querySelectorAll('#krStage .kr-dots i'), on=tk.querySelector('#krStage .kr-dots i.on'), pr=q1('#krStage .kr-q .pr i');
+  if(dots.length&&on) part=([].indexOf.call(dots,on)+1)/dots.length; else if(pr) part=parseFloat(pr.style.width)/100||0;
+  var h='<i class="'+(br?'cur':'ok')+'"><b style="width:'+(br?(bEl.classList.contains('typing')?50:100):100)+'%"></b></i>';
+  steps.forEach(function(b){ var ok=b.classList.contains('ok'), cu=b.classList.contains('on'); h+='<i class="'+(ok?'ok':cu?'cur':'')+'"><b style="width:'+(ok?100:cu&&!br?Math.max(8,part*100):0)+'%"></b></i>'; });
+  slBars.innerHTML=winMode==='task'?h:''; slBars.hidden=winMode!=='task';
+  nxB.hidden=winMode!=='task'; nxB.disabled=!br&&!(f&&!f.disabled); nxB.classList.toggle('wait',br&&bEl.classList.contains('typing'));
+  var sk=q1('#krHead [data-k="skip"]'); $('gSkip').hidden=!sk; $('gCom').hidden=!q1('.kr-fbd'); }); }
+nxB.onclick=function(){ if(!bEl.hidden){ briefGo(); return; } var f=q1('[data-k="nav-f"]'); if(f&&!f.disabled) f.click(); win.querySelector('.wpane').scrollTop=0; };
+$('winX').onclick=function(){ if(winMode==='task'&&bEl.hidden){ var b=q1('[data-k="nav-b"]'); if(b&&!b.disabled){ b.click(); return; } } closeWin(); };
+$('gSkip').onclick=function(){ $('gearM').hidden=true; var b=q1('#krHead [data-k="skip"]'); if(b) b.click(); };
+$('gBug').onclick=function(){ $('gearM').hidden=true; var b=q1('#krHead [data-k="bug"]'); if(b) b.click(); else if(I.go.bug) I.go.bug(); };
+$('gCom').onclick=function(){ $('gearM').hidden=true; var d=q1('.kr-fbd'); if(d){ tk.classList.add('com'); d.open=true; d.scrollIntoView({behavior:'smooth'}); } };
+if(window.MutationObserver) new MutationObserver(slUpd).observe(tk,{childList:true,subtree:true,attributes:true,attributeFilter:['class','style','disabled']});
+/* листание пальцем: влево - дальше, вправо - назад (не в тренажёрах, где тянут предметы) */
+(function(){ var x0=null,y0=0; pane.addEventListener('touchstart',function(e){ if(winMode!=='task'||e.target.closest('input,textarea,select,.kg-lbl,.kg-stack')) { x0=null; return; } x0=e.touches[0].clientX; y0=e.touches[0].clientY; },{passive:true});
+  pane.addEventListener('touchend',function(e){ if(x0==null) return; var dx=e.changedTouches[0].clientX-x0, dy=e.changedTouches[0].clientY-y0; x0=null; if(Math.abs(dx)<60||Math.abs(dy)>Math.abs(dx)) return; if(dx<0){ if(!nxB.disabled) nxB.click(); } else if(bEl.hidden){ var b=q1('[data-k="nav-b"]'); if(b&&!b.disabled) b.click(); } }); })();
 function closeWin(after){ if(!winOn) return; var c=cur?cur.c+'cc':null; clearInterval(bTm); if(GL) GL.stop(); scrBack(cur); flashOn(c,function(){ win.classList.remove('on'); winOn=false; LIVE=false; document.body.classList.remove('livebg'); hud.classList.add('on'); backB.classList.add('on'); refresh(); lvlStars();
   if(after) after(); else if(cur){ var n=cur, B=viewOf(n); camP.copy(B.p); camL.copy(B.l); arrive(n);
     /* задание только что пройдено - сразу ведём к следующему */
     if(n.kind==='task'&&!wasDone&&n.st==='done'){ burst(n); starFly(n); if(target&&target!==n){ passGate=true; guideSoon(1400); } } }
   else { st='over'; }
   flashOff(); }); }
-$('winX').onclick=function(){ closeWin(); };
 /* экраны курса внутри окна: следующее задание - узел на карте тоже меняется; "К модулю" и "Все модули" - назад в космос */
 document.addEventListener('kurs-view',function(e){ var d=e.detail||{}; if(!winOn) return; pane.scrollTop=0;
   if(d.t){ winMode='task'; var mm=mods.find(function(m){ return m.tasks.indexOf(d.t)>=0; }), L=mm&&LBY[mm.id]; if(!L) return;
@@ -882,7 +910,7 @@ addEventListener('pointercancel',function(e){ delete pts2[e.pointerId]; pts2.len
 addEventListener('pointerup',function(e){ var was=moved; ty=null; if(was>=8||e.target!==cv||winOn) return;
   var r=new THREE.Raycaster(), m=new THREE.Vector2(e.clientX/innerWidth*2-1,-(e.clientY/innerHeight)*2+1); r.setFromCamera(m,C);
   if(st==='gate'){ if(r.intersectObject(hit).length) fall(); return; }
-  if(!curL) return; var h=r.intersectObjects(curL.hits,false)[0]; if(h) tapNode(h.object.userData.id); });
+  if(!curL) return; var h=r.intersectObjects(curL.hits,false)[0]; if(h) tapNode(h.object.userData.id,h.object.userData.scr); });
 addEventListener('keydown',function(e){ if(winOn) return; if(e.key==='ArrowDown'||e.key===' '){ e.preventDefault(); scrollBy(300); } if(e.key==='ArrowUp') scrollBy(-300); if(curL&&(e.key==='ArrowLeft'||e.key==='ArrowRight')) turnCity(e.key==='ArrowLeft'?.25:-.25); if(e.key==='Escape'||e.key==='Backspace') goBack(); if(e.key==='Enter'&&st==='gate') fall(); else if(e.key==='Enter'&&cur) tapNode(cur.id); });
 
 /* приветствие: имя ученика, если вошёл по коду (только имя) */
