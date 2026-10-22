@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Курс FPV</title>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#0d1117">
+<link rel="icon" type="image/png" href="favicon.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+
+<script src="config.js"></script>
+<script src="perenos.js"></script>
+<style>
+  :root{
+    --bg:#0d1117; --panel:#161b22; --panel2:#1c2330;
+    --line:#2a3441; --text:#e6edf3; --dim:#8b98a5;
+    --accent:#00d4ff; --ok:#3fb950; --warn:#d29922; --bad:#f85149;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{background:var(--bg); color:var(--text); font-family:'Segoe UI',system-ui,sans-serif; padding:20px; line-height:1.5; max-width:1100px; margin:0 auto;}
+  @media(max-width:600px){ body{padding:12px 16px;} }
+  header{display:flex; justify-content:space-between; align-items:center; padding:14px 18px; background:var(--panel);
+    border:1px solid var(--line); border-radius:14px; margin-bottom:16px; flex-wrap:wrap; gap:12px;}
+  .logo{display:flex; align-items:center; gap:12px;}
+  .logo-badge{width:44px; height:44px; border-radius:10px; background:linear-gradient(135deg,var(--accent),#0077ff);
+    display:grid; place-items:center; font-weight:800; font-size:18px; color:#04121b;}
+  .logo h1{font-size:20px;} .logo p{color:var(--dim); font-size:13px;}
+  .toolbar{display:flex; gap:8px; flex-wrap:wrap; align-items:center;}
+  .who{font-size:13px; color:var(--dim);} .who b{color:var(--text);}
+  .btn{cursor:pointer; font:inherit; font-size:13px; padding:8px 14px; background:var(--panel2); color:var(--text);
+    border:1px solid var(--line); border-radius:8px; transition:.15s; text-decoration:none;}
+  .btn:hover{border-color:var(--accent); color:var(--accent);}
+  .btn.primary{background:linear-gradient(135deg,#00d4ff,#0077ff); color:#04121b; border-color:transparent; font-weight:600;}
+  .btn.primary:hover{color:#04121b; opacity:.9;}
+  .mut,.muted{color:var(--dim); font-size:13px;}
+  .enter{background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:22px; margin-bottom:16px; max-width:520px;}
+  .enter h2{font-size:18px; margin-bottom:6px;}
+  .enter p{color:var(--dim); font-size:14px; margin-bottom:14px;}
+  .enter .about{color:var(--text); font-size:15px;} .enter h3{font-size:15px; margin:4px 0 4px;}
+  .enter .row{display:flex; gap:8px; flex-wrap:wrap;}
+  .enter input{flex:1; min-width:150px; padding:10px 12px; border-radius:8px; border:1px solid var(--line); background:var(--bg);
+    color:var(--text); font:inherit; font-size:16px; letter-spacing:2px; text-transform:uppercase;}
+  .enter .err{color:var(--bad); font-size:13px; margin-top:8px; min-height:18px;}
+  .enter .alt{margin-top:14px; font-size:13px;} .enter .alt a{color:var(--accent); cursor:pointer;}
+  #toast{position:fixed; bottom:20px; left:50%; transform:translate(-50%,20px); background:var(--panel2); border:1px solid var(--line); color:var(--text);
+    padding:10px 18px; border-radius:10px; font-size:14px; opacity:0; transition:.25s; pointer-events:none; z-index:99; max-width:90vw;}
+  #toast.show{opacity:1; transform:translate(-50%,0);} #toast.bad{border-color:var(--bad);} #toast.ok{border-color:var(--ok);}
+</style>
+</head>
+<body>
+<header>
+  <div class="logo"><div class="logo-badge" id="badge">К</div><div><h1 id="ttl">Курс</h1><p id="org"></p></div></div>
+  <div class="toolbar"><span class="who" id="who"></span><button class="btn" id="roleBtn">Я педагог</button></div>
+</header>
+
+<div class="enter" id="enter" hidden>
+  <h2>Курс юного FPV-пилота</h2>
+  <p class="about">6 модулей: от правил безопасности и устройства дрона до гонок и зачёта Аса. Учишься на телефоне или компьютере, летаешь в симуляторе и в зале с тренером.</p>
+  <h3>Вход по коду</h3>
+  <p>Код из 6 букв и цифр даёт педагог на занятии. С кодом педагог видит твой прогресс и открывает новые модули.</p>
+  <div class="row"><input id="code" maxlength="8" placeholder="КОД" autocomplete="off"><button class="btn primary" id="joinBtn">Войти</button></div>
+  <div class="err" id="err"></div>
+  <div class="alt">Кода пока нет? <a id="guest">Посмотреть курс без входа</a> (прогресс сохранится только на этом устройстве).</div>
+</div>
+
+<div id="t-kurs"></div>
+<div id="toast"></div>
+
+<script>
+/* Роль на этом устройстве: педагог (coach) или ученик. Движок курса читает MODE. */
+const MODE = (() => { try { return sessionStorage.getItem('kursy_role') === 'coach' ? 'coach' : 'public'; } catch (e) { return 'public'; } })();
+(function () {
+  const C = window.KURSY || {}, $ = id => document.getElementById(id);
+  const ls = { get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }, set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }, del(k) { try { localStorage.removeItem(k); } catch (e) {} } };
+  const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  document.title = C.name || 'Курс';
+  $('ttl').textContent = C.name || 'Курс'; $('org').textContent = C.org || ''; $('badge').textContent = (C.name || 'К').replace(/^Курс\s*/i, '').charAt(0) || 'К';
+
+  const me = (() => { try { return JSON.parse(ls.get(C.meKey) || 'null'); } catch (e) { return null; } })();
+  const guest = ls.get(C.meKey + '_guest') === '1';
+
+  if (MODE === 'coach') {
+    $('who').innerHTML = '<b>Режим педагога</b>';
+    $('roleBtn').textContent = 'Выйти из режима педагога';
+  } else if (me && me.code) {
+    $('who').innerHTML = 'Ученик: <b>' + esc(me.first) + '</b>' + (me.cls ? ', ' + esc(me.cls) : '');
+    $('roleBtn').insertAdjacentHTML('beforebegin', '<button class="btn" id="outBtn">Выйти</button>');
+    $('outBtn').onclick = () => { ls.del(C.meKey); location.reload(); };
+  } else if (!guest) {
+    $('enter').hidden = false; $('t-kurs').hidden = true;
+  } else {
+    $('who').innerHTML = 'Без входа · <a style="color:var(--accent);cursor:pointer" id="toCode">ввести код</a>';
+    $('toCode').onclick = () => { ls.del(C.meKey + '_guest'); location.reload(); };
+  }
+
+  $('roleBtn').onclick = () => { try { sessionStorage.setItem('kursy_role', MODE === 'coach' ? '' : 'coach'); } catch (e) {} location.reload(); };
+  $('guest').onclick = () => { ls.set(C.meKey + '_guest', '1'); location.reload(); };
+  $('code').onkeydown = e => { if (e.key === 'Enter') $('joinBtn').click(); };
+  $('joinBtn').onclick = function () {
+    const code = $('code').value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+    if (code.length < 5) { $('err').textContent = 'Код - 6 букв и цифр'; return; }
+    const b = this; b.disabled = true; b.textContent = 'Проверяю...'; $('err').textContent = '';
+    fetch(C.api, { method: 'POST', body: JSON.stringify({ op: 'sjoin', code: code, club: C.club }) }).then(r => r.json()).then(j => {
+      if (!j.ok) throw new Error(j.error || 'Код не подошёл');
+      ls.set(C.meKey, JSON.stringify({ status: 'принят', code: j.code, first: j.first, cls: j.cls }));
+      location.reload();
+    }).catch(e => { b.disabled = false; b.textContent = 'Войти'; $('err').textContent = /fetch|network/i.test(e.message) ? 'Нет связи с сервером, попробуй позже' : e.message; });
+  };
+})();
+</script>
+<script src="zadaniya.js" defer></script>
+<script src="moduli.js" defer></script>
+<script src="trener-panel.js" defer></script>
+<script>if('serviceWorker' in navigator && location.protocol==='https:') navigator.serviceWorker.register('sw.js').catch(()=>{});</script>
+</body>
+</html>
