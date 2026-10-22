@@ -2,116 +2,235 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Курс FPV</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Курс FPV - карта</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Marck+Script&family=Unbounded:wght@500;700&family=Manrope:wght@400;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="#0d1117">
 <link rel="icon" type="image/png" href="favicon.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
-
 <script src="config.js"></script>
-<script src="perenos.js"></script>
+<script>window.PLAIN_URL = 'prosto.html';   /* обычная страница курса (слабый телефон, окно педагога) */</script>
 <style>
+  /* Вид как у портала "Иртыш": стекло, шрифты Unbounded и Manrope, рукописное название */
   :root{
-    --bg:#0d1117; --panel:#161b22; --panel2:#1c2330;
-    --line:#2a3441; --text:#e6edf3; --dim:#8b98a5;
-    --accent:#00d4ff; --ok:#3fb950; --warn:#d29922; --bad:#f85149;
+    --bg:#04050d; --fg:#f1f3ff; --dim:#a7acd2; --glass:rgba(14,18,40,.62); --line:rgba(170,180,255,.24);
+    --display:'Unbounded','Arial Black',system-ui,sans-serif; --body:'Manrope',system-ui,-apple-system,sans-serif;
+    color-scheme:dark;
   }
-  *{box-sizing:border-box; margin:0; padding:0;}
-  body{background:var(--bg); color:var(--text); font-family:'Segoe UI',system-ui,sans-serif; padding:20px; line-height:1.5; max-width:1100px; margin:0 auto;}
-  @media(max-width:600px){ body{padding:12px 16px;} }
-  header{display:flex; justify-content:space-between; align-items:center; padding:14px 18px; background:var(--panel);
-    border:1px solid var(--line); border-radius:14px; margin-bottom:16px; flex-wrap:wrap; gap:12px;}
-  .logo{display:flex; align-items:center; gap:12px;}
-  .logo-badge{width:44px; height:44px; border-radius:10px; background:linear-gradient(135deg,var(--accent),#0077ff);
-    display:grid; place-items:center; font-weight:800; font-size:18px; color:#04121b;}
-  .logo h1{font-size:20px;} .logo p{color:var(--dim); font-size:13px;}
-  .toolbar{display:flex; gap:8px; flex-wrap:wrap; align-items:center;}
-  .who{font-size:13px; color:var(--dim);} .who b{color:var(--text);}
-  .btn{cursor:pointer; font:inherit; font-size:13px; padding:8px 14px; background:var(--panel2); color:var(--text);
-    border:1px solid var(--line); border-radius:8px; transition:.15s; text-decoration:none;}
-  .btn:hover{border-color:var(--accent); color:var(--accent);}
-  .btn.primary{background:linear-gradient(135deg,#00d4ff,#0077ff); color:#04121b; border-color:transparent; font-weight:600;}
-  .btn.primary:hover{color:#04121b; opacity:.9;}
-  .mut,.muted{color:var(--dim); font-size:13px;}
-  .enter{background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:22px; margin-bottom:16px; max-width:520px;}
-  .enter h2{font-size:18px; margin-bottom:6px;}
-  .enter p{color:var(--dim); font-size:14px; margin-bottom:14px;}
-  .enter .about{color:var(--text); font-size:15px;} .enter h3{font-size:15px; margin:4px 0 4px;}
-  .enter .row{display:flex; gap:8px; flex-wrap:wrap;}
-  .enter input{flex:1; min-width:150px; padding:10px 12px; border-radius:8px; border:1px solid var(--line); background:var(--bg);
-    color:var(--text); font:inherit; font-size:16px; letter-spacing:2px; text-transform:uppercase;}
-  .enter .err{color:var(--bad); font-size:13px; margin-top:8px; min-height:18px;}
-  .enter .alt{margin-top:14px; font-size:13px;} .enter .alt a{color:var(--accent); cursor:pointer;}
-  #toast{position:fixed; bottom:20px; left:50%; transform:translate(-50%,20px); background:var(--panel2); border:1px solid var(--line); color:var(--text);
-    padding:10px 18px; border-radius:10px; font-size:14px; opacity:0; transition:.25s; pointer-events:none; z-index:99; max-width:90vw;}
-  #toast.show{opacity:1; transform:translate(-50%,0);} #toast.bad{border-color:var(--bad);} #toast.ok{border-color:var(--ok);}
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;overflow:hidden;background:var(--bg);color:var(--fg);font-family:var(--body);-webkit-tap-highlight-color:transparent;overscroll-behavior:none}
+  #c{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none}
+  #cm{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:2}
+  button{font:inherit}
+  /* вход (21.10, вариант А "Бортовой компьютер"): цвета и шрифт входа - в переменных --ia, --it, --mono */
+  :root{--ia:#5effc4;--ia2:94,255,196;--it:#eafff8;--mono:'JetBrains Mono',ui-monospace,Menlo,Consolas,monospace}
+  #ttl{position:fixed;left:50%;top:calc(16% + env(safe-area-inset-top,0px));transform:translateX(-50%);width:min(92vw,620px);text-align:center;pointer-events:none;z-index:4;transition:opacity .6s}
+  #ttl .t1{font:700 clamp(54px,15vw,104px)/1 var(--display);letter-spacing:.06em;color:var(--it);text-shadow:0 0 22px rgba(var(--ia2),.8),0 0 2px #fff;opacity:0}
+  #ttl .t2{margin-top:14px;font:500 clamp(11px,3vw,14px) var(--mono);letter-spacing:.32em;color:var(--ia);opacity:0}
+  #ttl.on .t1{animation:boot 1.3s .2s steps(1) forwards}
+  #ttl.on .t2{animation:tw-fill .8s 1.3s forwards}
+  @keyframes boot{0%{opacity:.9}8%{opacity:0}16%{opacity:.6}24%{opacity:.1}34%{opacity:1}44%{opacity:.3}52%,100%{opacity:1}}
+  @keyframes tw-fill{to{opacity:1}}
+  /* подписи узлов */
+  #leads{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:3;overflow:visible}
+  #leads polyline,#leads circle{transition:opacity .35s;filter:drop-shadow(0 0 3px rgba(0,0,0,.8))}
+  #labels{position:fixed;inset:0;pointer-events:none;overflow:hidden;z-index:3}
+  .lb{position:absolute;left:0;top:0;max-width:min(240px,70vw);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:left;font:700 13px var(--body);color:#fff;padding:7px 13px;border-radius:99px;background:var(--glass);border:1px solid var(--pc,var(--line));cursor:pointer;opacity:0;transition:opacity .35s,border-radius .2s,box-shadow .2s;will-change:transform}
+  .lb.big{font-size:15px;padding:9px 16px}
+  /* начало дороги модуля: "Старт" светится и мигает */
+  .lb.start{font-family:var(--display);letter-spacing:.08em;color:#eafff0;border-color:#9dff7c;animation:lb-start 1.6s ease-in-out infinite}
+  @keyframes lb-start{0%,100%{box-shadow:0 0 6px rgba(157,255,124,.35);text-shadow:0 0 4px #9dff7c}50%{box-shadow:0 0 22px rgba(157,255,124,.9),0 0 4px #9dff7c inset;text-shadow:0 0 14px #9dff7c}}
+  .lb.sh{min-width:30px;padding:5px 10px;font-size:12px;text-align:center}
+  .lb .lo,.lb .lm{display:none}
+  .lb.s-done .lt:before{content:"✓ ";color:#4ade80}
+  .lb.s-wait{border-color:#facc15}.lb.s-wait .lt:before{content:"";display:inline-block;width:8px;height:8px;border-radius:50%;background:#facc15;margin-right:6px;vertical-align:1px}
+  .lb.s-lock{border-style:dashed;border-color:var(--line);color:#d6d3ff;font-weight:600}
+  /* сноска раскрыта (наведение на ПК, следующий узел - всегда): надпись сверху, название, состояние снизу */
+  .lb.ex{white-space:normal;max-width:min(270px,62vw);border-radius:14px;padding:8px 14px 9px;background:rgba(10,13,32,.86);box-shadow:0 0 18px -4px var(--pc,#7cf3ff)}
+  .lb.ex .lo{display:block;font:800 10.5px var(--body);letter-spacing:.16em;text-transform:uppercase;color:var(--pc,#7cf3ff);margin-bottom:2px}
+  .lb.ex .lm{display:block;font:600 12px/1.35 var(--body);color:var(--dim);margin-top:3px}
+  .lb.ex.s-lock .lo{color:#a7acd2}
+  /* надпись при подлёте */
+  #cap{position:fixed;left:0;right:0;bottom:calc(96px + env(safe-area-inset-bottom,0px));text-align:center;z-index:5;opacity:0;transform:translateY(10px);transition:opacity .5s,transform .5s;pointer-events:none;padding:0 16px}
+  #cap.on{opacity:1;transform:none;pointer-events:auto}
+  #capT{font-family:var(--display);font-weight:700;font-size:clamp(20px,5.6vw,32px);margin:0 0 4px;text-shadow:0 0 22px var(--pc,#7cf3ff);cursor:pointer;text-wrap:balance}
+  #cap.lock #capT{text-shadow:none;color:#d6d3ff}
+  #capS{margin:0 0 6px;color:var(--dim);font-size:13px}
+  #capP{margin:0;color:var(--dim);font-size:14px}#capP b{color:var(--fg)}
+  /* верх: где ты; низ: что дальше */
+  #hud{position:fixed;left:calc(max(16px,env(safe-area-inset-left,0px)) + 56px);top:calc(14px + env(safe-area-inset-top,0px));z-index:6;opacity:0;transition:opacity .4s;pointer-events:none;max-width:calc(100vw - 210px)}
+  #hud.on{opacity:1}
+  #hud small{display:block;color:var(--dim);font:700 11px var(--body);letter-spacing:.2em;text-transform:uppercase}
+  #hudL{font:700 14px var(--display);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #back{position:fixed;top:calc(12px + env(safe-area-inset-top,0px));left:max(16px,env(safe-area-inset-left,0px));z-index:6;width:44px;height:44px;border-radius:50%;border:1px solid var(--line);background:var(--glass);color:var(--fg);font:700 20px var(--body);cursor:pointer;opacity:0;pointer-events:none;transition:opacity .4s}
+  #back.on{opacity:1;pointer-events:auto}
+  #topB{position:fixed;top:calc(64px + env(safe-area-inset-top,0px));left:max(16px,env(safe-area-inset-left,0px));z-index:6;min-height:40px;padding:0 14px;border-radius:99px;border:1px solid var(--line);background:var(--glass);color:var(--fg);font:700 13px var(--body);cursor:pointer;opacity:0;pointer-events:none;transition:opacity .4s}
+  #topB.on{opacity:1;pointer-events:auto}#topB.act{border-color:#7cf3ff;box-shadow:0 0 0 2px rgba(124,243,255,.35),0 0 18px rgba(124,243,255,.4)}
+  #plainB{position:fixed;top:calc(14px + env(safe-area-inset-top,0px));right:max(16px,env(safe-area-inset-right,0px));z-index:6;min-height:36px;padding:0 14px;border-radius:99px;border:1px solid var(--line);background:var(--glass);color:var(--dim);font:700 12.5px var(--body);cursor:pointer}
+  #tourB{position:fixed;top:calc(58px + env(safe-area-inset-top,0px));right:max(16px,env(safe-area-inset-right,0px));z-index:6;min-height:36px;padding:0 14px;border-radius:99px;border:1px solid rgba(167,139,250,.55);background:var(--glass);color:var(--fg);font:700 12.5px var(--body);cursor:pointer}
+  #tourB[hidden]{display:none}
+  #autoB{position:fixed;top:calc(102px + env(safe-area-inset-top,0px));right:max(16px,env(safe-area-inset-right,0px));z-index:6;min-height:36px;padding:0 14px;border-radius:99px;border:1px solid var(--line);background:var(--glass);color:var(--dim);font:700 12.5px var(--body);cursor:pointer}
+  #autoB.act{color:var(--fg);border-color:#9dff7c;box-shadow:0 0 14px rgba(157,255,124,.35)}
+  #autoB[hidden]{display:none}
+  #guide{position:fixed;left:50%;bottom:calc(16px + env(safe-area-inset-bottom,0px));transform:translate(-50%,10px);z-index:6;width:min(calc(100vw - 32px),520px);display:flex;align-items:center;gap:10px;padding:8px 8px 8px 18px;border-radius:99px;background:rgba(20,16,48,.62);border:1px solid rgba(167,139,250,.55);box-shadow:0 0 22px rgba(167,139,250,.3);opacity:0;pointer-events:none;transition:opacity .35s,transform .35s}
+  #guide.on{opacity:1;pointer-events:auto;transform:translate(-50%,0)}
+  #gTxt{flex:1;min-width:0;font-size:13.5px;line-height:1.3;color:var(--dim)}#gTxt b{color:var(--fg)}
+  #gBtn{flex:none;min-height:42px;padding:0 18px;border-radius:99px;border:0;background:linear-gradient(135deg,#7cf3ff,#a78bfa 55%,#ff7ce0);color:#0b0820;font-weight:800;cursor:pointer}
+  #ptr{position:fixed;left:0;top:0;z-index:3;pointer-events:none;opacity:0;transition:opacity .3s;color:#facc15;font:800 13px var(--body);letter-spacing:.06em;text-align:center;text-shadow:0 0 10px rgba(250,204,21,.8)}
+  #ptr i{display:block;font-style:normal;font-size:20px;line-height:1;animation:bob 1.6s ease-in-out infinite}
+  @keyframes bob{50%{transform:translateY(5px)}}
+  #arrow{position:fixed;left:0;top:0;z-index:4;width:46px;height:46px;border-radius:50%;border:1px solid rgba(250,204,21,.8);background:var(--glass);color:#facc15;font-size:22px;font-weight:900;cursor:pointer;opacity:0;transition:opacity .3s;box-shadow:0 0 18px rgba(250,204,21,.45)}
+  /* вход: кнопка "Начать обучение" */
+  #wel{position:fixed;left:50%;bottom:calc(14% + env(safe-area-inset-bottom,0px));transform:translate(-50%,12px);z-index:6;width:min(calc(100vw - 32px),460px);text-align:center;opacity:0;pointer-events:none;transition:opacity .6s,transform .6s}
+  #wel.on{opacity:1;pointer-events:auto;transform:translate(-50%,0)}
+  #welHi{color:var(--ia);font:700 15px var(--mono);margin-bottom:14px}
+  #goB{color:#04140f;font:700 16px var(--mono);letter-spacing:.06em;padding:15px 30px;border-radius:8px;border:0;background:var(--ia);box-shadow:0 0 28px rgba(var(--ia2),.6);cursor:pointer}
+  #goB b{display:inline-block;animation:blink 1.1s steps(1) infinite}
+  @keyframes blink{50%{opacity:0}}
+  #codeL{display:block;margin:16px auto 0;background:none;border:0;color:var(--dim);text-decoration:underline;cursor:pointer;font-size:13px}
+  /* полёт ко входу в город: рамка бортового экрана, печатается приветствие */
+  #intro{position:fixed;inset:max(14px,env(safe-area-inset-top,0px)) max(14px,env(safe-area-inset-right,0px)) max(14px,env(safe-area-inset-bottom,0px)) max(14px,env(safe-area-inset-left,0px));z-index:7;pointer-events:none;opacity:0;transition:opacity .6s;font-family:var(--mono);color:var(--ia)}
+  #intro.on{opacity:1}
+  #intro i{position:absolute;width:28px;height:28px;border:0 solid var(--ia)}
+  #intro .c1{left:0;top:0;border-width:2px 0 0 2px}#intro .c2{right:0;top:0;border-width:2px 2px 0 0}#intro .c3{left:0;bottom:0;border-width:0 0 2px 2px}#intro .c4{right:0;bottom:0;border-width:0 2px 2px 0}
+  #intro .bl,#intro .br{position:absolute;font-size:12px;font-weight:500;letter-spacing:.06em;text-shadow:0 0 6px rgba(0,0,0,.9)}
+  #intro .bl{left:22px;bottom:10px}#intro .br{right:22px;bottom:10px}
+  #introBox{position:absolute;left:50%;top:13%;transform:translateX(-50%);width:min(calc(100% - 40px),640px)}
+  #introPre{font-size:13px;letter-spacing:.2em;margin-bottom:12px;min-height:1em}
+  #introT{font:700 clamp(24px,6.4vw,40px)/1.3 var(--mono);color:var(--it);text-shadow:0 0 14px rgba(var(--ia2),.8),0 0 30px rgba(0,0,0,.9);min-height:1.3em}
+  #introS{margin-top:16px;font:500 clamp(14px,3.6vw,17px)/1.5 var(--mono);color:var(--it);opacity:.85;text-shadow:0 0 10px rgba(0,0,0,.95)}
+  #intro .cur{display:inline-block;width:.55em;height:1em;background:var(--ia);vertical-align:-.12em;margin-left:3px;animation:blink 1s steps(1) infinite}
+  body.intro #plainB,body.intro #back,body.intro #topB,body.intro #hud,body.intro #tourB,body.intro #autoB,body.intro #labels,body.intro #leads,body.intro #guide,body.intro #ptr,body.intro #arrow,body.intro #stars,body.intro #cap{opacity:0!important;pointer-events:none!important}
+  /* вспышка при провале и заставка модуля */
+  #flash{position:fixed;inset:0;background:radial-gradient(circle,#fff,var(--fl,rgba(255,255,255,.85)) 40%,rgba(255,255,255,0) 78%);opacity:0;pointer-events:none;z-index:30}
+  #warp{position:fixed;inset:0;z-index:29;display:grid;place-items:center;opacity:0;pointer-events:none;transition:opacity .5s;background:radial-gradient(circle at 50% 55%,color-mix(in srgb,var(--wc,#7cf3ff) 55%,#fff) 0%,var(--wc,#7cf3ff) 30%,#05030f 85%)}
+  #warp.on{opacity:1}
+  #warp b{font:700 clamp(26px,8vw,48px) var(--display);color:#fff;text-align:center;padding:0 16px;text-shadow:0 0 30px var(--wc,#7cf3ff);transform:scale(.9);transition:transform 1.1s}
+  #warp.on b{transform:scale(1.06)}
+  /* окно задания: плоское, читаемое, под ним свой фон */
+  #win{position:fixed;inset:0;z-index:20;display:none;--mr:124,243,255}
+  #win.on{display:block}
+  .wbg{position:absolute;inset:-4%;background-size:cover;background-position:center;animation:drift 40s ease-in-out infinite alternate}
+  @keyframes drift{to{transform:scale(1.06) translate(1.5%,-1%)}}
+  .bg-aur{background-color:#070a1c;background-image:radial-gradient(55% 45% at 18% 22%,rgba(var(--mr),.38),transparent 70%),radial-gradient(50% 40% at 85% 78%,rgba(167,139,250,.3),transparent 70%),radial-gradient(1px 1px at 30% 60%,#fff,transparent),radial-gradient(1px 1px at 70% 30%,#fff,transparent),radial-gradient(1.5px 1.5px at 85% 15%,#fff,transparent),linear-gradient(160deg,#070a1c,#0b0620)}
+  .bg-sky{background-color:#0a1a3a;background-image:radial-gradient(14% 18% at 78% 74%,rgba(255,214,140,.9),rgba(255,170,90,.25) 60%,transparent),linear-gradient(180deg,#0b2a4a 0%,#2b6d8f 40%,#f2b880 72%,#f7d9a8 82%,#3b2414 82.4%,#1a120c 100%)}
+  .bg-grid{background-color:#060818;background-image:radial-gradient(60% 50% at 50% 100%,rgba(var(--mr),.35),transparent 70%),linear-gradient(rgba(var(--mr),.18) 1px,transparent 1px),linear-gradient(90deg,rgba(var(--mr),.18) 1px,transparent 1px);background-size:100% 100%,44px 44px,44px 44px}
+  .bg-shop{background-color:#140c06;background-image:radial-gradient(60% 50% at 50% 0%,rgba(255,170,80,.42),transparent 70%),radial-gradient(40% 30% at 15% 90%,rgba(var(--mr),.22),transparent 70%),repeating-linear-gradient(90deg,rgba(255,255,255,.035) 0 2px,transparent 2px 64px),linear-gradient(#1c1209,#0c0805)}
+  .bg-neb{background-color:#0b0418;background-image:radial-gradient(45% 40% at 25% 35%,rgba(255,90,200,.38),transparent 70%),radial-gradient(45% 45% at 78% 65%,rgba(var(--mr),.32),transparent 70%),radial-gradient(1px 1px at 12% 20%,#fff,transparent),radial-gradient(1px 1px at 52% 80%,#fff,transparent),radial-gradient(1.5px 1.5px at 66% 12%,#fff,transparent),radial-gradient(1px 1px at 90% 44%,#fff,transparent),linear-gradient(200deg,#120624,#05030d)}
+  .wpane{position:absolute;inset:0;overflow:auto;-webkit-overflow-scrolling:touch;padding:calc(12px + env(safe-area-inset-top,0px)) 16px 48px}
+  .wbox{max-width:780px;margin:0 auto;background:rgba(10,13,30,.9);border:1px solid rgba(var(--mr),.4);border-radius:22px;padding:12px 14px 16px;box-shadow:0 30px 80px -30px rgba(0,0,0,.9);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+  .wtop{position:sticky;top:-12px;z-index:3;display:flex;align-items:center;gap:12px;margin:-12px -14px 12px;padding:12px 14px;border-radius:22px 22px 0 0;background:rgba(10,13,30,.96);border-bottom:1px solid rgba(var(--mr),.25)}
+  #winX{flex:none;min-height:40px;padding:0 16px;border-radius:99px;border:1px solid var(--line);background:var(--glass);color:var(--fg);font-weight:700;cursor:pointer}
+  #winT{flex:1;min-width:0;font:700 13px var(--display);color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  /* экран задания (22.10): окно растёт из экрана у зоны; за стеклом живая крыша и космос; сверху печатается задание с голосом */
+  .wbg.live{background:radial-gradient(120% 90% at 50% 50%,rgba(4,5,13,0) 40%,rgba(4,5,13,.55));animation:none}
+  body.livebg #c{filter:blur(2.5px) brightness(.72)}
+  body.livebg.mobi #c{filter:brightness(.6)}
+  body.livebg .wbox{background:rgba(6,12,30,.66);box-shadow:0 0 0 1px rgba(var(--mr),.35),0 0 40px rgba(var(--mr),.35),0 30px 80px -30px rgba(0,0,0,.9)}
+  body.livebg .wtop{background:rgba(6,12,30,.9)}
+  #brief{position:relative;margin:0 0 12px;padding:14px 16px;border-radius:16px;border:1px solid rgba(var(--mr),.45);background:rgba(var(--mr),.06);overflow:hidden}
+  #brief:before{content:"";position:absolute;inset:0;background:repeating-linear-gradient(0deg,rgba(var(--mr),.06) 0 2px,transparent 2px 5px);pointer-events:none}
+  #brief[hidden]{display:none}
+  .bh{display:flex;align-items:center;gap:8px;font:800 11.5px var(--body);letter-spacing:.16em;color:rgb(var(--mr))}
+  .bh i{width:8px;height:8px;border-radius:50%;background:#ff4d6d;box-shadow:0 0 8px #ff4d6d}
+  #brief.talk .bh i{animation:bl 1s infinite}
+  .bwave{display:inline-flex;gap:2px;align-items:flex-end;height:12px}
+  .bwave b{width:3px;height:3px;border-radius:2px;background:rgb(var(--mr))}
+  #brief.talk .bwave b{animation:wv .5s ease-in-out infinite alternate}
+  .bwave b:nth-child(2){animation-delay:.1s}.bwave b:nth-child(3){animation-delay:.2s}.bwave b:nth-child(4){animation-delay:.3s}
+  @keyframes wv{to{height:12px}} @keyframes bl{50%{opacity:.2}}
+  #vB{margin-left:auto}
+  #vB,#vTry{min-height:32px;padding:0 12px;border-radius:99px;border:1px solid var(--line);background:var(--glass);color:var(--fg);font:700 12px var(--body);letter-spacing:0;cursor:pointer}
+  #vB[hidden]{display:none}
+  #vRow{display:flex;gap:8px;margin-top:10px;position:relative;z-index:1}#vRow[hidden]{display:none}
+  #vSel{flex:1;min-width:0;min-height:36px;border-radius:10px;border:1px solid var(--line);background:#0b0f26;color:var(--fg);font:600 13px var(--body);padding:0 8px}
+  #sndB{min-height:32px;padding:0 12px;border-radius:99px;border:1px solid var(--line);background:var(--glass);color:var(--fg);font:700 12px var(--body);letter-spacing:0;cursor:pointer}
+  #bT{margin:8px 0 6px;font:700 clamp(17px,4.4vw,24px) var(--display);min-height:1.25em;text-wrap:balance}
+  #bX{margin:0;color:#dfe4ff;font-size:15px;line-height:1.5;min-height:1.5em}
+  #brief.typing #bX:after{content:"▍";color:rgb(var(--mr));animation:bl .8s infinite}
+  #bSkip{margin-top:10px;min-height:36px;padding:0 14px;border-radius:99px;border:1px solid var(--line);background:var(--glass);color:var(--dim);font:700 12.5px var(--body);cursor:pointer}
+  #bSkip[hidden]{display:none}
+  #t-kurs{transition:opacity .5s}
+  #t-kurs.hold{opacity:0;pointer-events:none;max-height:40vh;overflow:hidden}
+  #toast{position:fixed;bottom:20px;left:50%;transform:translate(-50%,20px);background:var(--glass);border:1px solid var(--line);color:var(--fg);padding:10px 18px;border-radius:99px;font-size:14px;opacity:0;transition:.25s;pointer-events:none;z-index:99;max-width:90vw}
+  #toast.show{opacity:1;transform:translate(-50%,0)}
+  .lb:focus-visible,#back:focus-visible,#goB:focus-visible,#gBtn:focus-visible,#winX:focus-visible,#plainB:focus-visible,#arrow:focus-visible{outline:2px solid #7cf3ff;outline-offset:2px}
+  /* правка 6: "Уровень N" при пролёте ворот и счётчик звёзд модуля */
+  #lvl{position:fixed;left:50%;top:calc(18% + env(safe-area-inset-top,0px));transform:translateX(-50%);z-index:7;pointer-events:none;opacity:0;font:700 clamp(22px,6vw,38px) var(--display);color:#fff;text-shadow:0 0 24px var(--lc,#7cf3ff);white-space:nowrap}
+  #lvl.on{animation:lvl 1.5s ease forwards}
+  @keyframes lvl{0%{opacity:0;transform:translateX(-50%) scale(.7)}20%{opacity:1;transform:translateX(-50%) scale(1.05)}75%{opacity:1;transform:translateX(-50%) scale(1)}100%{opacity:0;transform:translateX(-50%) scale(1.1)}}
+  #stars{position:fixed;left:50%;top:calc(66px + env(safe-area-inset-top,0px));transform:translateX(-50%);z-index:6;padding:6px 14px;border-radius:99px;background:var(--glass);border:1px solid rgba(255,211,110,.55);color:#ffd36e;font:800 14px var(--body);font-variant-numeric:tabular-nums;opacity:0;transition:opacity .4s;pointer-events:none;white-space:nowrap}
+  #stars.on{opacity:1}
+  .starfly{position:fixed;left:0;top:0;z-index:8;pointer-events:none;color:#ffd36e;font-size:26px;line-height:1;text-shadow:0 0 14px rgba(255,211,110,.9)}
+  /* правка 7: экран пилота FPV, пока ныряем в здание модуля */
+  #osd{position:fixed;inset:max(12px,env(safe-area-inset-top,0px)) max(12px,env(safe-area-inset-right,0px)) max(12px,env(safe-area-inset-bottom,0px)) max(12px,env(safe-area-inset-left,0px));z-index:7;pointer-events:none;opacity:0;transition:opacity .3s;border:2px solid rgba(241,243,255,.75);border-radius:26px;font:800 13px ui-monospace,Menlo,Consolas,monospace;color:#9dff7c;text-shadow:0 0 6px rgba(0,0,0,.9)}
+  #osd.on{opacity:1}
+  body.osd #back,body.osd #topB,body.osd #hud,body.osd #plainB,body.osd #tourB,body.osd #autoB,body.osd #labels,body.osd #leads{opacity:0!important;pointer-events:none}
+  #osd span{position:absolute}
+  #osd .tl{left:20px;top:16px}#osd .tr{right:20px;top:16px}#osd .bl{left:20px;bottom:16px}#osd .br{right:20px;bottom:16px}
+  #osd .x{left:50%;top:50%;transform:translate(-50%,-50%);color:#f1f3ff;font-size:22px}
+  #osd .rec{color:#ff4d6d}
+  @media (prefers-reduced-motion:reduce){#lvl.on{animation:none;opacity:0}}
+  @media (prefers-reduced-motion:reduce){.wbg,#ptr i,#goB b,#brief .bwave b,#brief .bh i,#intro .cur{animation:none}#ttl.on .t1{animation:tw-fill .3s forwards}}
 </style>
 </head>
 <body>
-<header>
-  <div class="logo"><div class="logo-badge" id="badge">К</div><div><h1 id="ttl">Курс</h1><p id="org"></p></div></div>
-  <div class="toolbar"><span class="who" id="who"></span><button class="btn" id="roleBtn">Я педагог</button></div>
-</header>
+<canvas id="c" aria-label="Карта курса: город Взлёт, модули и задания"></canvas>
+<canvas id="cm" aria-hidden="true"></canvas>
+<div id="ttl" role="img" aria-label="Взлёт, учебный курс пилота"><div class="t1">ВЗЛЁТ</div><div class="t2">УЧЕБНЫЙ КУРС ПИЛОТА</div></div>
+<svg id="leads" aria-hidden="true"></svg>
+<div id="labels"></div>
 
-<div class="enter" id="enter" hidden>
-  <h2>Курс юного FPV-пилота</h2>
-  <p class="about">6 модулей: от правил безопасности и устройства дрона до гонок и зачёта Аса. Учишься на телефоне или компьютере, летаешь в симуляторе и в зале с тренером.</p>
-  <h3>Вход по коду</h3>
-  <p>Код из 6 букв и цифр даёт педагог на занятии. С кодом педагог видит твой прогресс и открывает новые модули.</p>
-  <div class="row"><input id="code" maxlength="8" placeholder="КОД" autocomplete="off"><button class="btn primary" id="joinBtn">Войти</button></div>
-  <div class="err" id="err"></div>
-  <div class="alt">Кода пока нет? <a id="guest">Посмотреть курс без входа</a> (прогресс сохранится только на этом устройстве).</div>
+<button id="back" type="button" aria-label="Назад">←</button>
+<button id="topB" type="button">☀ Сверху</button>
+<div id="hud"><small id="hudC"></small><div id="hudL"></div></div>
+<button id="plainB" type="button">Обычный вид</button>
+<button id="tourB" type="button" hidden>Что где?</button>
+<button id="autoB" type="button" hidden>Автополёт: выкл</button>
+
+<div id="wel">
+  <div id="welHi"></div>
+  <button id="goB" type="button">&gt; НАЧАТЬ ОБУЧЕНИЕ<b>_</b></button>
+  <button id="codeL" type="button" hidden>У меня есть код от педагога</button>
 </div>
 
-<div id="t-kurs"></div>
+<div id="intro" aria-live="polite"><i class="c1"></i><i class="c2"></i><i class="c3"></i><i class="c4"></i>
+  <div id="introBox"><div id="introPre"></div><div id="introT"></div><div id="introS"></div></div>
+  <span class="bl" id="introSpd"></span><span class="br" id="introD"></span></div>
+<div id="cap" aria-live="polite"><h2 id="capT"></h2><div id="capS"></div><p id="capP"></p></div>
+<div id="ptr"><i>▼</i>сюда</div>
+<button id="arrow" type="button" aria-label="К следующему заданию">➜</button>
+<div id="guide" role="status"><div id="gTxt"></div><button id="gBtn" type="button"></button></div>
+
+<div id="win" role="dialog" aria-modal="true" aria-labelledby="winT">
+  <div class="wbg" id="wbg"></div>
+  <div class="wpane" id="wpane"><div class="wbox">
+    <div class="wtop"><button id="winX" type="button">← К карте</button><div id="winT"></div></div>
+    <div id="brief" hidden aria-live="polite"><div class="bh"><i></i>ПЕРЕДАЧА ЗАДАНИЯ <span class="bwave"><b></b><b></b><b></b><b></b></span><button id="vB" type="button">Голос ▾</button><button id="sndB" type="button">Звук: вкл</button></div>
+      <div id="vRow" hidden><select id="vSel" aria-label="Голос"></select><button id="vTry" type="button">▶ Проба</button></div>
+      <h2 id="bT"></h2><p id="bX"></p><button id="bSkip" type="button">Показать всё сразу</button></div>
+    <div id="t-kurs"></div>
+  </div></div>
+</div>
+<div id="lvl" aria-hidden="true"><span id="lvlT"></span></div>
+<div id="stars" aria-label="Пройдено заданий в модуле">★ <span id="starsN"></span></div>
+<div id="osd" aria-hidden="true"><span class="tl rec">● REC</span><span class="tr" id="osdB">BAT 96%</span><span class="bl" id="osdA">ALT 0 м</span><span class="br" id="osdS">SPD 0 км/ч</span><span class="x">+</span></div>
+<div id="warp" aria-hidden="true"><b id="warpT"></b></div>
+<div id="flash"></div>
 <div id="toast"></div>
 
 <script>
-/* Роль на этом устройстве: педагог (coach) или ученик. Движок курса читает MODE. */
-const MODE = (() => { try { return sessionStorage.getItem('kursy_role') === 'coach' ? 'coach' : 'public'; } catch (e) { return 'public'; } })();
-(function () {
-  const C = window.KURSY || {}, $ = id => document.getElementById(id);
-  const ls = { get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }, set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }, del(k) { try { localStorage.removeItem(k); } catch (e) {} } };
-  const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-  document.title = C.name || 'Курс';
-  $('ttl').textContent = C.name || 'Курс'; $('org').textContent = C.org || ''; $('badge').textContent = (C.name || 'К').replace(/^Курс\s*/i, '').charAt(0) || 'К';
-
-  const me = (() => { try { return JSON.parse(ls.get(C.meKey) || 'null'); } catch (e) { return null; } })();
-  const guest = ls.get(C.meKey + '_guest') === '1';
-
-  if (MODE === 'coach') {
-    $('who').innerHTML = '<b>Режим педагога</b>';
-    $('roleBtn').textContent = 'Выйти из режима педагога';
-  } else if (me && me.code) {
-    $('who').innerHTML = 'Ученик: <b>' + esc(me.first) + '</b>' + (me.cls ? ', ' + esc(me.cls) : '');
-    $('roleBtn').insertAdjacentHTML('beforebegin', '<button class="btn" id="outBtn">Выйти</button>');
-    $('outBtn').onclick = () => { ls.del(C.meKey); location.reload(); };
-  } else if (!guest) {
-    $('enter').hidden = false; $('t-kurs').hidden = true;
-  } else {
-    $('who').innerHTML = 'Без входа · <a style="color:var(--accent);cursor:pointer" id="toCode">ввести код</a>';
-    $('toCode').onclick = () => { ls.del(C.meKey + '_guest'); location.reload(); };
-  }
-
-  $('roleBtn').onclick = () => { try { sessionStorage.setItem('kursy_role', MODE === 'coach' ? '' : 'coach'); } catch (e) {} location.reload(); };
-  $('guest').onclick = () => { ls.set(C.meKey + '_guest', '1'); location.reload(); };
-  $('code').onkeydown = e => { if (e.key === 'Enter') $('joinBtn').click(); };
-  $('joinBtn').onclick = function () {
-    const code = $('code').value.toUpperCase().replace(/[^A-Z0-9]/g, '');
-    if (code.length < 5) { $('err').textContent = 'Код - 6 букв и цифр'; return; }
-    const b = this; b.disabled = true; b.textContent = 'Проверяю...'; $('err').textContent = '';
-    fetch(C.api, { method: 'POST', body: JSON.stringify({ op: 'sjoin', code: code, club: C.club }) }).then(r => r.json()).then(j => {
-      if (!j.ok) throw new Error(j.error || 'Код не подошёл');
-      ls.set(C.meKey, JSON.stringify({ status: 'принят', code: j.code, first: j.first, cls: j.cls }));
-      location.reload();
-    }).catch(e => { b.disabled = false; b.textContent = 'Войти'; $('err').textContent = /fetch|network/i.test(e.message) ? 'Нет связи с сервером, попробуй позже' : e.message; });
-  };
-})();
+/* карта - для учеников; окно педагога остаётся на обычной странице */
+const MODE = 'public';
+document.getElementById('hudC').textContent = (window.KURSY && KURSY.name) || 'Курс';
 </script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js" defer></script>
+<script src="modeli.js" defer></script>
 <script src="zadaniya.js" defer></script>
 <script src="moduli.js" defer></script>
-<script src="trener-panel.js" defer></script>
-<script>if('serviceWorker' in navigator && location.protocol==='https:') navigator.serviceWorker.register('sw.js').catch(()=>{});</script>
+<script src="golos.js" defer></script>
+<script src="kosmos-kurs.js" defer></script>
 </body>
 </html>
