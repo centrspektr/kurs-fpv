@@ -68,10 +68,16 @@
   #back.on{opacity:1;pointer-events:auto}
   #topB{position:fixed;top:calc(64px + env(safe-area-inset-top,0px));left:max(16px,env(safe-area-inset-left,0px));z-index:6;min-height:40px;padding:0 14px;border-radius:99px;border:1px solid var(--line);background:var(--glass);color:var(--fg);font:700 13px var(--body);cursor:pointer;opacity:0;pointer-events:none;transition:opacity .4s}
   #topB.on{opacity:1;pointer-events:auto}#topB.act{border-color:#7cf3ff;box-shadow:0 0 0 2px rgba(124,243,255,.35),0 0 18px rgba(124,243,255,.4)}
-  #plainB{position:fixed;top:calc(14px + env(safe-area-inset-top,0px));right:max(16px,env(safe-area-inset-right,0px));z-index:6;min-height:36px;padding:0 14px;border-radius:99px;border:1px solid var(--line);background:var(--glass);color:var(--dim);font:700 12.5px var(--body);cursor:pointer}
-  #tourB{position:fixed;top:calc(58px + env(safe-area-inset-top,0px));right:max(16px,env(safe-area-inset-right,0px));z-index:6;min-height:36px;padding:0 14px;border-radius:99px;border:1px solid rgba(167,139,250,.55);background:var(--glass);color:var(--fg);font:700 12.5px var(--body);cursor:pointer}
+  /* шестерёнка (правка 22.10): "Обычный вид", "Что где?", "Автополёт" спрятаны под ней и выкатываются по нажатию */
+  #cityG{position:fixed;top:calc(14px + env(safe-area-inset-top,0px));right:max(16px,env(safe-area-inset-right,0px));z-index:7;width:42px;height:42px;border-radius:50%;border:1px solid var(--line);background:var(--glass);color:var(--fg);font:400 21px/1 var(--body);cursor:pointer;display:grid;place-items:center;transition:transform .35s,border-color .3s}
+  body.gear #cityG{transform:rotate(90deg);border-color:#7cf3ff}
+  #plainB,#tourB,#autoB{opacity:0;pointer-events:none;transform:translateY(-14px) scale(.92);transition:opacity .25s,transform .3s}
+  body.gear #plainB,body.gear #tourB,body.gear #autoB{opacity:1;pointer-events:auto;transform:none}
+  body.gear #tourB{transition-delay:.05s} body.gear #autoB{transition-delay:.1s}
+  #plainB{position:fixed;top:calc(64px + env(safe-area-inset-top,0px));right:max(16px,env(safe-area-inset-right,0px));z-index:6;min-height:36px;padding:0 14px;border-radius:99px;border:1px solid var(--line);background:var(--glass);color:var(--dim);font:700 12.5px var(--body);cursor:pointer}
+  #tourB{position:fixed;top:calc(108px + env(safe-area-inset-top,0px));right:max(16px,env(safe-area-inset-right,0px));z-index:6;min-height:36px;padding:0 14px;border-radius:99px;border:1px solid rgba(167,139,250,.55);background:var(--glass);color:var(--fg);font:700 12.5px var(--body);cursor:pointer}
   #tourB[hidden]{display:none}
-  #autoB{position:fixed;top:calc(102px + env(safe-area-inset-top,0px));right:max(16px,env(safe-area-inset-right,0px));z-index:6;min-height:36px;padding:0 14px;border-radius:99px;border:1px solid var(--line);background:var(--glass);color:var(--dim);font:700 12.5px var(--body);cursor:pointer}
+  #autoB{position:fixed;top:calc(152px + env(safe-area-inset-top,0px));right:max(16px,env(safe-area-inset-right,0px));z-index:6;min-height:36px;padding:0 14px;border-radius:99px;border:1px solid var(--line);background:var(--glass);color:var(--dim);font:700 12.5px var(--body);cursor:pointer}
   #autoB.act{color:var(--fg);border-color:#9dff7c;box-shadow:0 0 14px rgba(157,255,124,.35)}
   #autoB[hidden]{display:none}
   #guide{position:fixed;left:50%;bottom:calc(16px + env(safe-area-inset-bottom,0px));transform:translate(-50%,10px);z-index:6;width:min(calc(100vw - 32px),520px);display:flex;align-items:center;gap:10px;padding:8px 8px 8px 18px;border-radius:99px;background:rgba(20,16,48,.62);border:1px solid rgba(167,139,250,.55);box-shadow:0 0 22px rgba(167,139,250,.3);opacity:0;pointer-events:none;transition:opacity .35s,transform .35s}
@@ -93,6 +99,8 @@
   /* полёт ко входу в город: рамка бортового экрана, печатается приветствие */
   #intro{position:fixed;inset:max(14px,env(safe-area-inset-top,0px)) max(14px,env(safe-area-inset-right,0px)) max(14px,env(safe-area-inset-bottom,0px)) max(14px,env(safe-area-inset-left,0px));z-index:7;pointer-events:none;opacity:0;transition:opacity .6s;font-family:var(--mono);color:var(--ia)}
   #intro.on{opacity:1}
+  #introSnd{position:absolute;right:16px;top:12px;pointer-events:auto;min-height:36px;padding:0 14px;border-radius:8px;border:1px solid rgba(var(--ia2),.6);background:rgba(4,20,15,.6);color:var(--ia);font:700 12.5px var(--mono);cursor:pointer}
+  #intro:not(.on) #introSnd{pointer-events:none}
   #intro i{position:absolute;width:28px;height:28px;border:0 solid var(--ia)}
   #intro .c1{left:0;top:0;border-width:2px 0 0 2px}#intro .c2{right:0;top:0;border-width:2px 2px 0 0}#intro .c3{left:0;bottom:0;border-width:0 0 2px 2px}#intro .c4{right:0;bottom:0;border-width:0 2px 2px 0}
   #intro .bl,#intro .br{position:absolute;font-size:12px;font-weight:500;letter-spacing:.06em;text-shadow:0 0 6px rgba(0,0,0,.9)}
@@ -102,7 +110,7 @@
   #introT{font:700 clamp(24px,6.4vw,40px)/1.3 var(--mono);color:var(--it);text-shadow:0 0 14px rgba(var(--ia2),.8),0 0 30px rgba(0,0,0,.9);min-height:1.3em}
   #introS{margin-top:16px;font:500 clamp(14px,3.6vw,17px)/1.5 var(--mono);color:var(--it);opacity:.85;text-shadow:0 0 10px rgba(0,0,0,.95)}
   #intro .cur{display:inline-block;width:.55em;height:1em;background:var(--ia);vertical-align:-.12em;margin-left:3px;animation:blink 1s steps(1) infinite}
-  body.intro #plainB,body.intro #back,body.intro #topB,body.intro #hud,body.intro #tourB,body.intro #autoB,body.intro #labels,body.intro #leads,body.intro #guide,body.intro #ptr,body.intro #arrow,body.intro #stars,body.intro #cap{opacity:0!important;pointer-events:none!important}
+  body.intro #cityG,body.intro #plainB,body.intro #back,body.intro #topB,body.intro #hud,body.intro #tourB,body.intro #autoB,body.intro #labels,body.intro #leads,body.intro #guide,body.intro #ptr,body.intro #arrow,body.intro #stars,body.intro #cap{opacity:0!important;pointer-events:none!important}
   /* вспышка при провале и заставка модуля */
   #flash{position:fixed;inset:0;background:radial-gradient(circle,#fff,var(--fl,rgba(255,255,255,.85)) 40%,rgba(255,255,255,0) 78%);opacity:0;pointer-events:none;z-index:30}
   #warp{position:fixed;inset:0;z-index:29;display:grid;place-items:center;opacity:0;pointer-events:none;transition:opacity .5s;background:radial-gradient(circle at 50% 55%,color-mix(in srgb,var(--wc,#7cf3ff) 55%,#fff) 0%,var(--wc,#7cf3ff) 30%,#05030f 85%)}
@@ -141,10 +149,13 @@
   #brief.talk .bwave b{animation:wv .5s ease-in-out infinite alternate}
   .bwave b:nth-child(2){animation-delay:.1s}.bwave b:nth-child(3){animation-delay:.2s}.bwave b:nth-child(4){animation-delay:.3s}
   @keyframes wv{to{height:12px}} @keyframes bl{50%{opacity:.2}}
-  #vB{margin-left:auto}
+  #gearB{flex:none;width:40px;height:40px;border-radius:50%;border:1px solid var(--line);background:var(--glass);color:var(--fg);font-size:18px;cursor:pointer}
+  #gearM{position:absolute;right:10px;top:58px;z-index:5;width:min(280px,calc(100vw - 48px));padding:8px;border-radius:16px;border:1px solid var(--line);background:rgba(10,13,30,.97);display:grid;gap:6px}
+  #gearM[hidden]{display:none}
+  #gearM>button{text-align:left;min-height:42px!important}
   #vB,#vTry{min-height:32px;padding:0 12px;border-radius:99px;border:1px solid var(--line);background:var(--glass);color:var(--fg);font:700 12px var(--body);letter-spacing:0;cursor:pointer}
   #vB[hidden]{display:none}
-  #vRow{display:flex;gap:8px;margin-top:10px;position:relative;z-index:1}#vRow[hidden]{display:none}
+  #vRow{display:flex;gap:8px;margin-top:0;position:relative;z-index:1}#vRow[hidden]{display:none}
   #vSel{flex:1;min-width:0;min-height:36px;border-radius:10px;border:1px solid var(--line);background:#0b0f26;color:var(--fg);font:600 13px var(--body);padding:0 8px}
   #sndB{min-height:32px;padding:0 12px;border-radius:99px;border:1px solid var(--line);background:var(--glass);color:var(--fg);font:700 12px var(--body);letter-spacing:0;cursor:pointer}
   #bT{margin:8px 0 6px;font:700 clamp(17px,4.4vw,24px) var(--display);min-height:1.25em;text-wrap:balance}
@@ -153,7 +164,29 @@
   #bSkip{margin-top:10px;min-height:36px;padding:0 14px;border-radius:99px;border:1px solid var(--line);background:var(--glass);color:var(--dim);font:700 12.5px var(--body);cursor:pointer}
   #bSkip[hidden]{display:none}
   #t-kurs{transition:opacity .5s}
-  #t-kurs.hold{opacity:0;pointer-events:none;max-height:40vh;overflow:hidden}
+  #t-kurs.hold{display:none}
+  /* задание слайдами (22.10, вариант А): шапка курса спрятана, сверху полоски, справа внизу большая стрелка */
+  #winX{width:44px;height:44px;padding:0!important;border-radius:50%!important;font-size:20px!important}
+  #winT{text-align:center}
+  #slBars{display:flex;gap:4px;margin:-4px 0 14px}#slBars[hidden]{display:none}
+  #slBars i{flex:1;height:4px;border-radius:2px;background:rgba(255,255,255,.16);overflow:hidden}
+  #slBars b{display:block;height:100%;background:rgb(var(--mr));box-shadow:0 0 8px rgb(var(--mr));transition:width .4s}
+  #t-kurs #krHead,#t-kurs .kr-gnav,#t-kurs .kr-dots{display:none!important}
+  /* большая стрелка внизу справа заменяет "Понятно, дальше" и "Дальше: ..." внутри задания */
+  #t-kurs .kr-nav,#t-kurs .kr-end .acts>[data-k="step"]{display:none!important}
+  #t-kurs .kr-done{font-size:17px;padding:22px 16px;text-align:center}
+  #t-kurs .kr-fbd{display:none}#t-kurs.com .kr-fbd{display:block}
+  #t-kurs .kr{padding-bottom:96px}
+  #brief{min-height:min(52vh,420px);display:flex;flex-direction:column;justify-content:center;padding:22px 18px}
+  #brief #bT{font-size:clamp(20px,5vw,30px)}#brief #bX{font-size:16.5px}
+  #nxB{position:fixed;right:max(18px,calc(50vw - 390px + 18px));bottom:calc(20px + env(safe-area-inset-bottom,0px));z-index:22;width:76px;height:76px;border-radius:50%;border:0;background:linear-gradient(135deg,#7cf3ff,#a78bfa);color:#0b0820;font:900 34px var(--body);cursor:pointer;animation:nxp 1.6s infinite;transition:opacity .3s,transform .2s}
+  #nxB:active{transform:scale(.94)}
+  #nxB[hidden]{display:none}
+  #nxB[disabled]{opacity:.22;cursor:default;animation:none}
+  #nxB.wait{opacity:.55;animation:none}
+  @keyframes nxp{0%{box-shadow:0 0 0 0 rgba(124,243,255,.55)}70%{box-shadow:0 0 0 18px rgba(124,243,255,0)}100%{box-shadow:0 0 0 0 rgba(124,243,255,0)}}
+  #gearM button{min-height:42px;padding:0 12px;border-radius:10px;border:0;background:none;color:var(--fg);font:700 14px var(--body);cursor:pointer;text-align:left}
+  #gearM button:hover{background:rgba(255,255,255,.06)}#gearM button[hidden]{display:none}
   #toast{position:fixed;bottom:20px;left:50%;transform:translate(-50%,20px);background:var(--glass);border:1px solid var(--line);color:var(--fg);padding:10px 18px;border-radius:99px;font-size:14px;opacity:0;transition:.25s;pointer-events:none;z-index:99;max-width:90vw}
   #toast.show{opacity:1;transform:translate(-50%,0)}
   .lb:focus-visible,#back:focus-visible,#goB:focus-visible,#gBtn:focus-visible,#winX:focus-visible,#plainB:focus-visible,#arrow:focus-visible{outline:2px solid #7cf3ff;outline-offset:2px}
@@ -167,13 +200,13 @@
   /* правка 7: экран пилота FPV, пока ныряем в здание модуля */
   #osd{position:fixed;inset:max(12px,env(safe-area-inset-top,0px)) max(12px,env(safe-area-inset-right,0px)) max(12px,env(safe-area-inset-bottom,0px)) max(12px,env(safe-area-inset-left,0px));z-index:7;pointer-events:none;opacity:0;transition:opacity .3s;border:2px solid rgba(241,243,255,.75);border-radius:26px;font:800 13px ui-monospace,Menlo,Consolas,monospace;color:#9dff7c;text-shadow:0 0 6px rgba(0,0,0,.9)}
   #osd.on{opacity:1}
-  body.osd #back,body.osd #topB,body.osd #hud,body.osd #plainB,body.osd #tourB,body.osd #autoB,body.osd #labels,body.osd #leads{opacity:0!important;pointer-events:none}
+  body.osd #back,body.osd #topB,body.osd #hud,body.osd #cityG,body.osd #plainB,body.osd #tourB,body.osd #autoB,body.osd #labels,body.osd #leads{opacity:0!important;pointer-events:none}
   #osd span{position:absolute}
   #osd .tl{left:20px;top:16px}#osd .tr{right:20px;top:16px}#osd .bl{left:20px;bottom:16px}#osd .br{right:20px;bottom:16px}
   #osd .x{left:50%;top:50%;transform:translate(-50%,-50%);color:#f1f3ff;font-size:22px}
   #osd .rec{color:#ff4d6d}
   @media (prefers-reduced-motion:reduce){#lvl.on{animation:none;opacity:0}}
-  @media (prefers-reduced-motion:reduce){.wbg,#ptr i,#goB b,#brief .bwave b,#brief .bh i,#intro .cur{animation:none}#ttl.on .t1{animation:tw-fill .3s forwards}}
+  @media (prefers-reduced-motion:reduce){#nxB,.wbg,#ptr i,#goB b,#brief .bwave b,#brief .bh i,#intro .cur{animation:none}#ttl.on .t1{animation:tw-fill .3s forwards}}
 </style>
 </head>
 <body>
@@ -186,6 +219,7 @@
 <button id="back" type="button" aria-label="Назад">←</button>
 <button id="topB" type="button">☀ Сверху</button>
 <div id="hud"><small id="hudC"></small><div id="hudL"></div></div>
+<button id="cityG" type="button" aria-label="Настройки" aria-expanded="false">⚙</button>
 <button id="plainB" type="button">Обычный вид</button>
 <button id="tourB" type="button" hidden>Что где?</button>
 <button id="autoB" type="button" hidden>Автополёт: выкл</button>
@@ -196,7 +230,7 @@
   <button id="codeL" type="button" hidden>У меня есть код от педагога</button>
 </div>
 
-<div id="intro" aria-live="polite"><i class="c1"></i><i class="c2"></i><i class="c3"></i><i class="c4"></i>
+<div id="intro" aria-live="polite"><button id="introSnd" type="button"></button><i class="c1"></i><i class="c2"></i><i class="c3"></i><i class="c4"></i>
   <div id="introBox"><div id="introPre"></div><div id="introT"></div><div id="introS"></div></div>
   <span class="bl" id="introSpd"></span><span class="br" id="introD"></span></div>
 <div id="cap" aria-live="polite"><h2 id="capT"></h2><div id="capS"></div><p id="capP"></p></div>
@@ -207,12 +241,16 @@
 <div id="win" role="dialog" aria-modal="true" aria-labelledby="winT">
   <div class="wbg" id="wbg"></div>
   <div class="wpane" id="wpane"><div class="wbox">
-    <div class="wtop"><button id="winX" type="button">← К карте</button><div id="winT"></div></div>
-    <div id="brief" hidden aria-live="polite"><div class="bh"><i></i>ПЕРЕДАЧА ЗАДАНИЯ <span class="bwave"><b></b><b></b><b></b><b></b></span><button id="vB" type="button">Голос ▾</button><button id="sndB" type="button">Звук: вкл</button></div>
-      <div id="vRow" hidden><select id="vSel" aria-label="Голос"></select><button id="vTry" type="button">▶ Проба</button></div>
+    <div class="wtop"><button id="winX" type="button" aria-label="Назад">←</button><div id="winT"></div><button id="gearB" type="button" aria-label="Настройки">⚙</button>
+      <div id="gearM" hidden><button id="sndB" type="button">🔊 Звук: вкл</button><button id="vB" type="button">🎙 Голос ▾</button>
+        <div id="vRow" hidden><select id="vSel" aria-label="Голос"></select><button id="vTry" type="button">▶ Проба</button></div>
+        <button id="gSkip" type="button">⏭ Пропустить задание</button><button id="gCom" type="button">💬 Комментарий к заданию</button><button id="gBug" type="button">⚠ Сообщить об ошибке</button></div></div>
+    <div id="slBars" hidden aria-hidden="true"></div>
+    <div id="brief" hidden aria-live="polite"><div class="bh"><i></i>ПЕРЕДАЧА ЗАДАНИЯ <span class="bwave"><b></b><b></b><b></b><b></b></span></div>
       <h2 id="bT"></h2><p id="bX"></p><button id="bSkip" type="button">Показать всё сразу</button></div>
     <div id="t-kurs"></div>
   </div></div>
+  <button id="nxB" type="button" hidden aria-label="Дальше">➜</button>
 </div>
 <div id="lvl" aria-hidden="true"><span id="lvlT"></span></div>
 <div id="stars" aria-label="Пройдено заданий в модуле">★ <span id="starsN"></span></div>
