@@ -61,7 +61,7 @@
 <body>
 <main>
   <h1>Экран задания: 3 варианта</h1>
-  <p>Фон - настоящий снимок карты (модуль 1, крыша и космос). Экран и текст нарисованы поверх, чтобы показать идею. Нажмите <b>"Показать"</b> у каждого варианта. Голос в макетах - выбранный внизу.</p>
+  <p>Фон - настоящий снимок карты (модуль 1, крыша и космос). Экран и текст нарисованы поверх, чтобы показать идею. Нажмите <b>"Показать"</b> у каждого варианта. Голос в макетах - выбранный внизу страницы.</p>
   <p>Во всех вариантах одинаково: у каждого задания свой экран; дрон подлетает и разворачивается к экрану; текст задания печатается и читается голосом; кнопка "Пропустить" сразу показывает весь текст; звук можно выключить.</p>
 
   <section class="card" id="vA">
@@ -97,21 +97,21 @@
       <div class="v"><h3>2. Инструктор</h3><p>Мужской, чуть ниже и медленнее. Как тренер на поле.</p><small data-n="2"></small><button data-say="2">▶ Послушать</button> <button data-pick="2">Выбрать</button></div>
       <div class="v"><h3>3. Бортовой помощник</h3><p>Чуть выше и быстрее, перед фразой короткий сигнал рации. Как голос дрона.</p><small data-n="3"></small><button data-say="3">▶ Послушать</button> <button data-pick="3">Выбрать</button></div>
     </div>
-    <p style="margin-top:14px">Все русские голоса на этом устройстве (можно послушать любой):</p>
+    
     <select id="all"></select>
-    <div class="row"><button id="sayAll">▶ Послушать выбранный в списке</button></div>
+    <div class="row"><button id="sayAll" class="main">▶ Послушать</button></div>
   </section>
 
-  <p>Выберите вариант экрана (А, Б или В) и голос (1, 2 или 3) - напишите в чат, например "А2". Можно смешать: "А, но с лучом к дрону из Б".</p>
+  <p>Выбрано 22.10: вариант А, а в начале - короткое приветствие по имени на 3D-экране, как в В.</p>
 </main>
 <script>
 var TT='Задание 1. Добро пожаловать во Взлёт';
 var TX='Пилот, приём! Сегодня узнаем, что такое FPV и как устроен наш курс. Прочитай карточки, потом ответь на два вопроса.';
 var red=matchMedia('(prefers-reduced-motion:reduce)').matches, tel=function(){ return innerWidth<=640; };
 var syn=window.speechSynthesis, ALL=[], pick=+(localStorage.getItem('ekr_voice')||1);
-function ru(){ return (syn?syn.getVoices():[]).filter(function(v){ return /^ru/i.test(v.lang); }); }
+function ru(){ var r=(syn?syn.getVoices():[]).filter(function(v){ return /^ru/i.test(v.lang); }); return r.filter(natural).concat(r.filter(function(v){ return !natural(v); })); }
 function find(re){ return ru().find(function(v){ return re.test(v.name); }); }
-function natural(v){ return /natural|online|enhanced|premium/i.test(v.name); }
+function natural(v){ return /natural|online|neural|enhanced|premium/i.test(v.name); }
 /* подбор: сначала живые (Natural/Online), потом любые */
 function voiceFor(k){ var r=ru(), fem=/svetlana|dariya|milena|katya|irina|elena|anna|alena|google/i, male=/dmitry|pavel|yuri|maxim|nikolai|male/i;
   var pool=r.filter(natural).concat(r);
@@ -119,18 +119,20 @@ function voiceFor(k){ var r=ru(), fem=/svetlana|dariya|milena|katya|irina|elena|
   return pool.find(function(v){ return fem.test(v.name)&&!male.test(v.name); })||pool[0]; }
 var SET={1:{rate:1,pitch:1.05},2:{rate:.93,pitch:.85},3:{rate:1.08,pitch:1.3,beep:1}};
 var AX; function beep(){ try{ AX=AX||new (window.AudioContext||window.webkitAudioContext)(); var o=AX.createOscillator(),g=AX.createGain(),t=AX.currentTime; o.type='square'; o.frequency.setValueAtTime(1400,t); o.frequency.setValueAtTime(1900,t+.07); g.gain.setValueAtTime(.06,t); g.gain.exponentialRampToValueAtTime(.001,t+.18); o.connect(g).connect(AX.destination); o.start(t); o.stop(t+.2); }catch(e){} }
-function say(text,k,voice,onb,onend){ if(!syn){ onend&&onend(); return; } syn.cancel(); var s=SET[k]||SET[1], u=new SpeechSynthesisUtterance(text); u.lang='ru-RU'; u.voice=voice||voiceFor(k)||null; u.rate=s.rate; u.pitch=s.pitch;
+function say(text,k,voice,onb,onend){ if(!syn){ onend&&onend(); return; } syn.cancel(); var s=SET[k]||SET[1], u=new SpeechSynthesisUtterance(text); u.lang='ru-RU'; u.voice=voice||chosen()||null; u.rate=s.rate; u.pitch=s.pitch;
   if(onb) u.onboundary=onb; u.onend=function(){ onend&&onend(); }; u.onerror=function(){ onend&&onend(); };
   if(s.beep){ beep(); setTimeout(function(){ syn.speak(u); },230); } else syn.speak(u); }
 function info(){ var r=ru(), el=document.getElementById('vInfo');
   [1,2,3].forEach(function(k){ var v=voiceFor(k), sm=document.querySelector('small[data-n="'+k+'"]'); sm.textContent=v?'Здесь звучит: '+v.name:''; });
   document.querySelectorAll('[data-pick]').forEach(function(b){ b.classList.toggle('on',+b.dataset.pick===pick); b.textContent=+b.dataset.pick===pick?'✓ Выбран':'Выбрать'; });
   el.textContent=!syn?'В этом браузере нет голоса. Текст будет только печататься.':(r.length?'Русских голосов на этом устройстве: '+r.length+'.':'Русские голоса ещё загружаются или их нет. Если тишина - в настройках телефона добавьте голос "Русский" (синтез речи).');
-  var sel=document.getElementById('all'); sel.innerHTML=r.map(function(v,i){ return '<option value="'+i+'">'+v.name+(natural(v)?' (живой)':'')+'</option>'; }).join(''); }
+  var sel=document.getElementById('all'), ch=chosen(); sel.innerHTML=r.map(function(v,i){ return '<option value="'+i+'"'+(ch&&ch.name===v.name?' selected':'')+'>'+v.name+(natural(v)?' - живой':'')+'</option>'; }).join(''); }
 if(syn){ syn.onvoiceschanged=info; } info(); setTimeout(info,800);
 document.querySelectorAll('[data-say]').forEach(function(b){ b.onclick=function(){ say(TT+'. '+TX,+b.dataset.say); }; });
 document.querySelectorAll('[data-pick]').forEach(function(b){ b.onclick=function(){ pick=+b.dataset.pick; try{ localStorage.setItem('ekr_voice',pick); }catch(e){} info(); }; });
-document.getElementById('sayAll').onclick=function(){ var v=ru()[+document.getElementById('all').value]; say(TT+'. '+TX,1,v); };
+function chosen(){ var nm=null; try{ nm=localStorage.getItem('ekr_vname'); }catch(e){} return ru().find(function(v){ return v.name===nm; })||ru()[0]; }
+document.getElementById('all').onchange=function(){ var v=ru()[+this.value]; try{ localStorage.setItem('ekr_vname',v.name); }catch(e){} };
+document.getElementById('sayAll').onclick=function(){ var v=ru()[+document.getElementById('all').value]; try{ localStorage.setItem('ekr_vname',v.name); }catch(e){} say(TT+'. '+TX,1,v); };
 
 /* печать текста: идёт вместе с голосом; если голос молчит - по таймеру */
 function typeIn(scr,done){ var tt=scr.querySelector('.tt'), tx=scr.querySelector('.tx'), i=0, j=0, full=TT+'. '+TX, said=0, timer;

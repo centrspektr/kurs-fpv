@@ -4,7 +4,7 @@
      вход   - портал "Добро пожаловать", кнопка "Вперёд"
      курс   - модули на одной нити по порядку (М1 -> М2 -> ...) и узел "Мой прогресс"
      модуль - в центре модуль, вокруг по нити его задания
-     задание - плоское окно задания (из moduli.js) поверх своего фона
+     задание - экран у зоны: приветствие на экране, потом окно задания (из moduli.js) вырастает из экрана, за стеклом живая крыша и космос
    Узлы собираются сами из MODS и LIB (zadaniya.js): новое задание в модуле = новая звезда на карте.
    Состояние узла берётся из прогресса ученика (VZ_KURS_INFO): пройдено, открыто, ждёт проверки, закрыто.
    Система всегда ведёт к следующему заданию: подлёт к нему при входе в уровень, указатель и строка "Дальше" внизу.
@@ -292,13 +292,27 @@ function taskScreen(n,b,w,L0){ var sg=new THREE.Group(); sg.position.set(w*2.1,0
   var pm=L0(0x2a3358,.15), po=new THREE.Mesh(new THREE.CylinderGeometry(.14,.2,3.6,8),pm); po.position.y=1.8; sg.add(po);
   var fr=new THREE.Mesh(new THREE.BoxGeometry(6.7,4.3,.3),L0(0x1b2240,.3)); fr.position.y=5.6; sg.add(fr);
   var pl=new THREE.Mesh(new THREE.PlaneGeometry(6.3,3.94),new THREE.MeshBasicMaterial({map:scrTex(n),transparent:true,opacity:.85})); pl.position.set(0,5.6,.16); sg.add(pl); n.mats.push(pl.material);
-  n.scr=pl; n.scrW=6.3; n.scrH=3.94;
+  n.scr=pl; n.stex=pl.material.map; n.scrW=6.3; n.scrH=3.94;
   n.anim.push(function(t){ if(n.st!=='lock') pl.material.opacity=.88+.1*Math.sin(t*7)*Math.sin(t*1.3); }); }
 /* где экран в мире и откуда на него смотреть, чтобы он занял почти весь вид */
 var SQ=new THREE.Quaternion();
 function scrView(n){ var p=n.scr.getWorldPosition(V()), nm=V(0,0,1).applyQuaternion(n.scr.getWorldQuaternion(SQ)); nm.y=0; nm.normalize();
   var tv=Math.tan(C.fov*Math.PI/360), th=tv*C.aspect, f=Math.min(.92,800/innerWidth), D=Math.max(n.scrH/.95/(2*tv),n.scrW/f/(2*th)); /* экран по ширине совпадает с окном задания */
-  return {p:p.clone().addScaledVector(nm,D),l:p,c:p,nm:nm}; }
+  return {p:p.clone().addScaledVector(nm,D),l:p,c:p,nm:nm,D:D}; }
+/* приветствие (22.10, выбор владельца: А + коротко из В): камера встаёт к экрану под углом, на нём печатается "Добро пожаловать, имя!" и голос это говорит,
+   потом экран вырастает в окно задания. Только для непройденных заданий */
+function greetDraw(n,a,b,k){ if(!n.gc){ n.gc=document.createElement('canvas'); n.gc.width=512; n.gc.height=320; n.gt=new THREE.CanvasTexture(n.gc); }
+  var x=n.gc.getContext('2d'), w=512, h=320, t1=a.slice(0,k), t2=k>a.length?b.slice(0,k-a.length):'';
+  x.clearRect(0,0,w,h); x.fillStyle='rgba(6,14,32,.92)'; x.fillRect(0,0,w,h); x.fillStyle=n.c; x.globalAlpha=.07; for(var y=0;y<h;y+=5) x.fillRect(0,y,w,2); x.globalAlpha=1;
+  x.strokeStyle=n.c; x.lineWidth=6; x.strokeRect(5,5,w-10,h-10); x.fillStyle=n.c; x.font='800 22px Manrope, system-ui, sans-serif'; x.fillText('ПЕРЕДАЧА · ЗАДАНИЕ '+n.num,30,50);
+  x.fillStyle='#ffffff'; x.font='700 42px Manrope, system-ui, sans-serif'; x.fillText(t1+(k<=a.length?'▍':''),30,140);
+  x.fillStyle=n.c; x.font='800 58px Manrope, system-ui, sans-serif'; wrapTxt(x,t2+(k>a.length&&k<a.length+b.length?'▍':''),30,225,w-60,62,2);
+  n.gt.needsUpdate=true; if(n.scr.material.map!==n.gt){ n.scr.material.map=n.gt; n.scr.material.needsUpdate=true; } }
+function scrBack(n){ if(n&&n.scr&&n.stex&&n.scr.material.map!==n.stex){ n.scr.material.map=n.stex; n.scr.material.needsUpdate=true; } }
+function greet(n,done){ var nm=ME0&&ME0.first?String(ME0.first).trim():'', a='Добро пожаловать,', b=(nm||'пилот')+'!', k=0, said=false, typed=false, GL0=window.GOLOS;
+  function fin(){ if(said&&typed){ said=typed=false; setTimeout(done,450); } }
+  var tm2=setInterval(function(){ k++; greetDraw(n,a,b,k); if(k>=a.length+b.length){ clearInterval(tm2); typed=true; fin(); } },45);
+  if(!(GL0&&GL0.say('Добро пожаловать, '+(nm||'пилот')+'!',{onend:function(){ said=true; fin(); }}))) setTimeout(function(){ said=true; fin(); },900); }
 function scrRect(n){ var hw=n.scrW/2, hh=n.scrH/2, xs=[], ys=[]; [[-hw,-hh],[hw,-hh],[-hw,hh],[hw,hh]].forEach(function(q){ var v=n.scr.localToWorld(V(q[0],q[1],0)).project(C); xs.push((v.x+1)/2*innerWidth); ys.push((1-v.y)/2*innerHeight); });
   var l=Math.min.apply(0,xs), t=Math.min.apply(0,ys); return {l:l,t:t,w:Math.max.apply(0,xs)-l,h:Math.max.apply(0,ys)-t}; }
 /* зоны заданий внутри модуля: вид зависит от типа задания */
@@ -694,7 +708,10 @@ function enter(n){
   if(n.kind==='center'){ var t=targetOf(curL); if(t) goTo(t); else goUp(); return; }
   hideCap(); st='fly'; var p=n.g.position.clone(), d=p.clone().sub(camP).normalize(); diveBack={p:camP.clone(),l:camL.clone()};
   if(n.kind==='mod'){ modTrans(n); return; }
-  if(n.kind==='task'&&n.scr){ var sv=scrView(n); startFly(sv.p,sv.l,null,red?.4:1.5,function(){ openWin('task',n,scrRect(n)); }); return; }
+  if(n.kind==='task'&&n.scr){ var sv=scrView(n), inWin=function(){ openWin('task',n,scrRect(n)); };
+    if(n.st==='done'||red){ startFly(sv.p,sv.l,null,red?.4:1.5,inWin); return; }
+    var gp=sv.c.clone().addScaledVector(sv.nm.clone().applyAxisAngle(UP,.5),sv.D*1.5); gp.y-=.4; /* сначала экран под углом - приветствие, потом прямо к нему */
+    startFly(gp,sv.c.clone(),null,1.4,function(){ greet(n,function(){ startFly(sv.p,sv.l,null,.9,inWin); }); }); return; }
   startFly(p.clone().addScaledVector(d,-n.s*.2),p.clone().addScaledVector(d,60),null,red?.4:1.2,function(){
     flashOn(n.c+'dd',function(){ camP.copy(diveBack.p); camL.copy(diveBack.l); openWin(n.kind==='tab'?'prog':'task',n); flashOff(); }); }); }
 /* правка 7: переход в модуль, у модулей разные (MOD_TRANS): portal, fpv, hyper. В конце - заставка модуля и новая локация */
@@ -742,7 +759,12 @@ function openWin(mode,n,from){ winOn=true; winMode=mode; st='win'; cur=n; winTas
     bx.animate([{transform:'translate('+(from.l-r.left)+'px,'+(from.t-r.top)+'px) scale('+sx+','+sy+')',transformOrigin:'0 0',opacity:.6},{transform:'none',transformOrigin:'0 0',opacity:1}],{duration:650,easing:'cubic-bezier(.3,0,.2,1)'}); } }
 /* передача задания: сверху окна печатается номер, название и план задания, голос читает (engine/golos.js). Пройденное - без голоса */
 var bEl=$('brief'), bT=$('bT'), bX=$('bX'), tk=$('t-kurs'), bTm=0, GL=window.GOLOS;
-function sndUI(){ $('sndB').textContent=GL&&GL.on?'Звук: вкл':'Звук: выкл'; $('sndB').hidden=!GL||!GL.can(); }
+function sndUI(){ var ok=!!GL&&GL.can(); $('sndB').textContent=GL&&GL.on?'Звук: вкл':'Звук: выкл'; $('sndB').hidden=$('vB').hidden=!ok; if(!ok) $('vRow').hidden=true; }
+/* выбор голоса: все русские голоса устройства, живые (Natural) первыми */
+$('vB').onclick=function(){ var r=$('vRow'); r.hidden=!r.hidden; if(r.hidden) return; var c=GL.cur();
+  $('vSel').innerHTML=GL.list().map(function(v){ return '<option'+(c&&v.name===c.name?' selected':'')+'>'+esc(v.name)+'</option>'; }).join('').replace(/<option([^>]*)>([^<]*)/g,function(m,a,nm){ return '<option'+a+' value="'+nm+'">'+nm.replace(/^Microsoft |^Google /,'')+(GL.live({name:nm})?' - живой':''); }); };
+function vTry(){ GL.pick($('vSel').value); briefEnd(); GL.say('Привет! Я буду читать тебе задания.'); }
+$('vSel').onchange=vTry; $('vTry').onclick=vTry;
 $('sndB').onclick=function(){ if(!GL) return; GL.setOn(!GL.on); sndUI(); if(!GL.on) briefEnd(); };
 function briefEnd(){ clearInterval(bTm); if(GL) GL.stop(); if(bEl._full){ bT.textContent=bEl._t; bX.textContent=bEl._x; } bEl.classList.remove('typing','talk'); $('bSkip').hidden=true; tk.classList.remove('hold'); }
 $('bSkip').onclick=briefEnd;
@@ -756,7 +778,7 @@ function brief(n){ clearInterval(bTm); if(GL) GL.stop(); var T0=n&&K.lib[n.tid];
   bTm=setInterval(function(){ pos=Math.max(pos+1,said); var a=Math.min(pos,t.length); bT.textContent=t.slice(0,a); bX.textContent=pos>t.length+2?x.slice(0,pos-t.length-2):'';
     if(pos>=full.length){ clearInterval(bTm); bEl.classList.remove('typing'); $('bSkip').hidden=!spoke; tk.classList.remove('hold'); if(!spoke) bEl.classList.remove('talk'); } },spoke?55:28);
   if(spoke){ var w0=setInterval(function(){ if(!speechSynthesis.speaking&&pos>=full.length){ clearInterval(w0); bEl.classList.remove('talk'); $('bSkip').hidden=true; } },400); } }
-function closeWin(after){ if(!winOn) return; var c=cur?cur.c+'cc':null; clearInterval(bTm); if(GL) GL.stop(); flashOn(c,function(){ win.classList.remove('on'); winOn=false; LIVE=false; document.body.classList.remove('livebg'); hud.classList.add('on'); backB.classList.add('on'); refresh(); lvlStars();
+function closeWin(after){ if(!winOn) return; var c=cur?cur.c+'cc':null; clearInterval(bTm); if(GL) GL.stop(); scrBack(cur); flashOn(c,function(){ win.classList.remove('on'); winOn=false; LIVE=false; document.body.classList.remove('livebg'); hud.classList.add('on'); backB.classList.add('on'); refresh(); lvlStars();
   if(after) after(); else if(cur){ var n=cur, B=viewOf(n); camP.copy(B.p); camL.copy(B.l); arrive(n);
     /* задание только что пройдено - сразу ведём к следующему */
     if(n.kind==='task'&&!wasDone&&n.st==='done'){ burst(n); starFly(n); if(target&&target!==n){ passGate=true; guideSoon(1400); } } }
@@ -766,7 +788,7 @@ $('winX').onclick=function(){ closeWin(); };
 /* экраны курса внутри окна: следующее задание - узел на карте тоже меняется; "К модулю" и "Все модули" - назад в космос */
 document.addEventListener('kurs-view',function(e){ var d=e.detail||{}; if(!winOn) return; pane.scrollTop=0;
   if(d.t){ winMode='task'; var mm=mods.find(function(m){ return m.tasks.indexOf(d.t)>=0; }), L=mm&&LBY[mm.id]; if(!L) return;
-    if(L!==curL) setLevel(L); var n=L.by[d.t]; if(n&&n!==cur){ cur=n; winTask=n.tid; wasDone=n.st==='done'; var B=n.scr?scrView(n):viewOf(n); camP.copy(B.p); camL.copy(B.l); setBg(n,LIVE); brief(n); } hud.classList.remove('on'); backB.classList.remove('on'); return; }
+    if(L!==curL) setLevel(L); var n=L.by[d.t]; if(n&&n!==cur){ scrBack(cur); cur=n; winTask=n.tid; wasDone=n.st==='done'; var B=n.scr?scrView(n):viewOf(n); camP.copy(B.p); camL.copy(B.l); setBg(n,LIVE); brief(n); } hud.classList.remove('on'); backB.classList.remove('on'); return; }
   if(d.m){ closeWin(function(){ var L=LBY[d.m]; if(L!==curL) setLevel(L); var c=L.by['c_'+d.m], B=viewOf(c); camP.copy(B.p).add(V(0,4,30)); camL.copy(B.l); flyOver(L,true); }); return; }
   if(winMode!=='prog') closeWin(function(){ setLevel(LK); flyOver(LK,true); }); });
 document.addEventListener('kurs-save',function(){ if(!winOn) refresh(); });
@@ -920,7 +942,7 @@ function frame(){ var dt=Math.min(clock.getDelta(),.05); tm+=dt; fc++;
     life(L,dt); if(L.city){ life(LK,dt); syncCity(L); }
     /* дрон-проводник в локации: на полёте летит впереди по нити, у зоны висит рядом */
     if(L.gd){ var q=L.gd, tg=GT; if(fly&&fly.cv){ var u2=fly.rev?1-ease(fly.t):ease(fly.t); fly.cv.getPoint(Math.min(1,Math.max(0,u2+(fly.rev?-.22:.22))),tg); tg.y+=1.2; }
-      else if(cur&&cur.scr){ var sv2=scrView(cur); tg.copy(sv2.c).addScaledVector(sv2.nm,4.2); tg.y=sv2.c.y-1.3+Math.sin(tm*1.5)*.35; }
+      else if(cur&&cur.scr){ var sv2=scrView(cur); tg.copy(sv2.c).addScaledVector(sv2.nm.applyAxisAngle(UP,-.6),4.4); tg.y=sv2.c.y-1.8+Math.sin(tm*1.5)*.35; /* сбоку от камеры, чтобы не закрывал экран */ }
       else if(cur){ tg.set(cur.g.position.x-camP.x,0,cur.g.position.z-camP.z).normalize().multiplyScalar(5).add(cur.g.position); tg.y=PY+5.5+Math.sin(tm*1.5)*.6; } else tg.set(Math.sin(tm*.5)*3,PY+6+Math.sin(tm)*.5,-14);
       var ddx=tg.x-q.g.position.x, ddz=tg.z-q.g.position.z; q.g.position.lerp(tg,Math.min(1,dt*(fly?5:2)));
       if(!fly&&cur&&cur.scr&&ddx*ddx+ddz*ddz<4){ var sc2=cur.scr.getWorldPosition(GT2), ya=Math.atan2(sc2.x-q.g.position.x,sc2.z-q.g.position.z), dy=ya-q.g.rotation.y; dy=Math.atan2(Math.sin(dy),Math.cos(dy)); q.g.rotation.set(q.g.rotation.x*.9,q.g.rotation.y+dy*Math.min(1,dt*3),0,'YXZ'); } /* развернулся к экрану */

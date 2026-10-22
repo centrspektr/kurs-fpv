@@ -114,7 +114,12 @@
   #brief.talk .bwave b{animation:wv .5s ease-in-out infinite alternate}
   .bwave b:nth-child(2){animation-delay:.1s}.bwave b:nth-child(3){animation-delay:.2s}.bwave b:nth-child(4){animation-delay:.3s}
   @keyframes wv{to{height:12px}} @keyframes bl{50%{opacity:.2}}
-  #sndB{margin-left:auto;min-height:32px;padding:0 12px;border-radius:99px;border:1px solid var(--line);background:var(--glass);color:var(--fg);font:700 12px var(--body);letter-spacing:0;cursor:pointer}
+  #vB{margin-left:auto}
+  #vB,#vTry{min-height:32px;padding:0 12px;border-radius:99px;border:1px solid var(--line);background:var(--glass);color:var(--fg);font:700 12px var(--body);letter-spacing:0;cursor:pointer}
+  #vB[hidden]{display:none}
+  #vRow{display:flex;gap:8px;margin-top:10px;position:relative;z-index:1}#vRow[hidden]{display:none}
+  #vSel{flex:1;min-width:0;min-height:36px;border-radius:10px;border:1px solid var(--line);background:#0b0f26;color:var(--fg);font:600 13px var(--body);padding:0 8px}
+  #sndB{min-height:32px;padding:0 12px;border-radius:99px;border:1px solid var(--line);background:var(--glass);color:var(--fg);font:700 12px var(--body);letter-spacing:0;cursor:pointer}
   #bT{margin:8px 0 6px;font:700 clamp(17px,4.4vw,24px) var(--display);min-height:1.25em;text-wrap:balance}
   #bX{margin:0;color:#dfe4ff;font-size:15px;line-height:1.5;min-height:1.5em}
   #brief.typing #bX:after{content:"▍";color:rgb(var(--mr));animation:bl .8s infinite}
@@ -175,7 +180,8 @@
   <div class="wbg" id="wbg"></div>
   <div class="wpane" id="wpane"><div class="wbox">
     <div class="wtop"><button id="winX" type="button">← К карте</button><div id="winT"></div></div>
-    <div id="brief" hidden aria-live="polite"><div class="bh"><i></i>ПЕРЕДАЧА ЗАДАНИЯ <span class="bwave"><b></b><b></b><b></b><b></b></span><button id="sndB" type="button">Звук: вкл</button></div>
+    <div id="brief" hidden aria-live="polite"><div class="bh"><i></i>ПЕРЕДАЧА ЗАДАНИЯ <span class="bwave"><b></b><b></b><b></b><b></b></span><button id="vB" type="button">Голос ▾</button><button id="sndB" type="button">Звук: вкл</button></div>
+      <div id="vRow" hidden><select id="vSel" aria-label="Голос"></select><button id="vTry" type="button">▶ Проба</button></div>
       <h2 id="bT"></h2><p id="bX"></p><button id="bSkip" type="button">Показать всё сразу</button></div>
     <div id="t-kurs"></div>
   </div></div>
