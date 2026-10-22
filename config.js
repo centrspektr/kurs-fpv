@@ -11,7 +11,7 @@
    from       - откуда перенести вход и прогресс ученика при первом открытии (perenos.js); пусто - не переносить */
 window.KURSY = {
   name: 'Курс FPV',
-  org: 'Клуб БПЛА "Взлёт"',
+  org: '',
   club: 'vzlet',
   api: 'https://functions.yandexcloud.net/d4e4vhndceg7scc0mh3b',
   store: 'kursy_fpv',
