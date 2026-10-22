@@ -128,7 +128,8 @@ function mkNode(L,n){ var g=new THREE.Group(); g.position.fromArray(n.p); L.g.ad
   if(n.city||n.zone) building(L,n);
   if(n.kind==='mod') antenna(n);
   var hm=new THREE.Mesh(new THREE.SphereGeometry(n.s*1.4,10,8),new THREE.MeshBasicMaterial({visible:false})); hm.userData.id=n.id; g.add(hm); L.hits.push(hm);
-  var el=document.createElement('button'); el.type='button'; el.className='lb'; el.textContent=n.n; el.style.setProperty('--pc',n.c); el.onclick=function(){ tapNode(n.id); }; labels.appendChild(el); n.el=el; }
+  var el=document.createElement('button'); el.type='button'; el.className='lb'; el.innerHTML='<span class="lo"></span><span class="lt"></span><span class="lm"></span>'; n.lo=el.firstChild; n.lt=n.lo.nextSibling; n.lm=n.lt.nextSibling; n.lt.textContent=n.n; el.style.setProperty('--pc',n.c); el.onclick=function(){ tapNode(n.id); };
+  el.onmouseenter=function(){ hovEl=n; }; el.onmouseleave=function(){ if(hovEl===n) hovEl=null; }; labels.appendChild(el); n.el=el; }
 /* антенна на крыше здания модуля: мачта с перекладинами, маяк-узел на верхушке; нить идёт от антенны к антенне */
 function antenna(n){ var a=new THREE.Group(), m=new THREE.MeshLambertMaterial({color:0xb8c2e0,emissive:new THREE.Color(n.c),emissiveIntensity:.35}); a.position.y=-2.6; n.g.add(a);
   var ms=new THREE.Mesh(new THREE.CylinderGeometry(.07,.12,2.6,6),m); ms.position.y=1.3; a.add(ms);
@@ -500,7 +501,7 @@ function refresh(){ LV.forEach(function(L){ L.nodes.forEach(function(n){ var s=n
   n.pl.visible=!lock&&!n.zone; n.wf.visible=lock&&!n.zone; n.halo.material.color.set(s==='wait'?'#facc15':lock?'#64748b':'#ffffff'); n.halo.material.opacity=lock?.25:s==='done'?1:.8;
   if(n.nm) n.nm.material.opacity=lock?.45:1;
   if(n.mats) n.mats.forEach(function(m,i){ if(m.emissiveIntensity!=null){ if(m.e0==null) m.e0=m.emissiveIntensity; m.emissiveIntensity=lock?m.e0*.18:m.e0; } else m.opacity=lock?.15:.85; }); dimModel(n); n.el.className='lb s-'+s+(n.kind==='mod'||n.kind==='center'?' big':''); }); });
-  LV.forEach(function(L){ L.nodes.forEach(function(n){ n.full=null; }); }); target=targetOf(curL); guideUI(); }
+  LV.forEach(function(L){ L.nodes.forEach(function(n){ n.full=null; n.lk=null; }); }); target=targetOf(curL); guideUI(); }
 
 /* ---- состояние и полёт (как в "Иртыше") ---- */
 var st='gate', gp=0, mix=0, mixT=0, roll=0, rollT=0, cur=null, curL=null, back=[], acc=0;
@@ -519,10 +520,10 @@ function viewOf(n){ var p=n.g.position; if(n.zone){ var f=n.from==='me'?n.L.me:n
     return {p:V(p.x+dz.x*17,PY+9.5,p.z+dz.z*17),l:V(p.x,PY+3.5,p.z)}; }
   if(n.city){ var d=V(p.x,0,p.z-CZ).normalize(); if(!isFinite(d.x)) d.set(0,0,1); var H=TOPH[n.st0]||n.h, D=Math.max(15,H*1.25+8); return {p:V(p.x+d.x*D,PY+Math.max(8,H*.8),p.z+d.z*D),l:V(p.x,PY+H*.5,p.z)}; }
   return {p:V(p.x,p.y+n.s*1.1,p.z+n.s*(n.kind==='center'||n.kind==='mod'?7:6.5)),l:p.clone()}; }
-function startFly(toP,toL,curve,dur,done,rev){ fly={a:camP.clone(),al:camL.clone(),b:toP,bl:toL,cv:curve,rev:!!rev,t:0,d:red?.6:dur,done:done}; guideUI(); }
+function startFly(toP,toL,curve,dur,done,rev){ fly={a:camP.clone(),al:camL.clone(),b:toP,bl:toL,cv:curve,rev:!!rev,t:0,d:red?.6:dur,done:done}; guideUI(); return fly; }
 function ease(t){ return t<.5?4*t*t*t:1-Math.pow(-2*t+2,3)/2; }
 var UP=V(0,1,0), tq=V(0,0,0), tt=V(0,0,0), tl=V(0,0,0);
-function stepFly(dt){ var o=camP.clone(); fly.t=Math.min(1,fly.t+dt/fly.d); var e=ease(fly.t);
+function stepFly(dt){ var o=camP.clone(); fly.t=Math.min(1,fly.t+dt/fly.d); var e=(fly.ez||ease)(fly.t);
   if(fly.cv){ /* камера идёт за точкой нити, чуть сзади и выше, и смотрит вперёд по нити */
     var u=fly.rev?1-e:e; fly.cv.getPoint(u,tq); fly.cv.getTangent(u,tt); if(fly.rev) tt.negate();
     tq.addScaledVector(tt,-7).addScaledVector(UP,2.2); var ws=Math.max(0,1-e/.22), we=Math.max(0,(e-.75)/.25); camP.copy(tq).lerp(fly.a,ws*ws).lerp(fly.b,we);
@@ -675,10 +676,28 @@ function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,function(c){ ret
 
 /* ---- вход и выход через портал ---- */
 $('goB').onclick=function(){ fall(); };
+/* "Начать обучение" (21.10): влетаем в портал, выходим в разгоне далеко перед городом, на бортовом экране печатается приветствие,
+   камера тормозит и подлетает к городу. Нажатие во время полёта - быстрее. */
 function fall(){ if(st!=='gate') return; st='falling'; wel.classList.remove('on'); ttl.style.opacity=0;
-  startFly(V(0,0,-34),V(0,0,-90),null,red?.5:1.6,function(){
-    flashOn(null,function(){ gate.visible=false; setLevel(LK); camP.set(0,46,260); camL.copy(LK.oL); flashOff(); flyOver(LK,true); }); }); }
-function exitToGate(){ hideCap(); backB.classList.remove('on'); hud.classList.remove('on'); st='falling';
+  startFly(V(0,0,-27),V(0,0,-90),null,red?.5:1.3,function(){
+    flashOn('rgba('+IA2+',.55)',function(){ gate.visible=false; setLevel(LK); document.body.classList.add('intro'); streak.material.color.set(IA);
+      var B=spunP(LK.oP,LK.oL), BL=spun(LK.oL); camP.copy(B).add(V(0,0,red?120:820)); camL.copy(BL); flashOff(); introOn();
+      st='fly'; startFly(B,BL,null,red?1:6.5,function(){ introEnd(function(){ st='over'; guideUI(); guideSoon(700); }); }).ez=easeOut; }); }); }
+function easeOut(t){ return 1-Math.pow(1-t,3); }
+var IA='#5effc4', IA2='94,255,196', introEl=$('intro'), introTm=[], introDone=0;
+function typeIn(el,txt,ms,cb){ var i=0, c=document.createElement('span'); c.className='cur'; el.textContent=''; el.appendChild(c);
+  (function step(){ if(i>=txt.length){ cb&&cb(); return; } c.insertAdjacentText('beforebegin',txt[i++]); introTm.push(setTimeout(step,red?0:ms)); })(); }
+function introOn(){ if(!introEl) return; introClear(); introEl.classList.add('on'); var P=ME0&&ME0.first;
+  $('introT').textContent=''; $('introS').textContent=''; introDone=0;
+  typeIn($('introPre'),'// ВХОДЯЩЕЕ СООБЩЕНИЕ',22,function(){ introTm.push(setTimeout(function(){ var p=$('introPre').querySelector('.cur'); if(p) p.remove();
+    typeIn($('introT'),(P?'Привет, '+P+'! ':'')+'Добро пожаловать в учебный курс "Взлёт"',42,function(){ introTm.push(setTimeout(function(){ var q=$('introT').querySelector('.cur'); if(q) q.remove();
+      typeIn($('introS'),'Модули - здания летающего города. Пройденное горит, указатель покажет, куда лететь дальше.',18,function(){ introDone=performance.now(); }); },300)); }); },200)); }); }
+function introClear(){ introTm.forEach(clearTimeout); introTm=[]; }
+/* подлетели: даём дочитать и убираем бортовой экран */
+function introEnd(cb){ var wait=introDone?Math.max(0,introDone+900-performance.now()):1400; if(red) wait=300;
+  introTm.push(setTimeout(function(){ introClear(); if(introEl) introEl.classList.remove('on'); document.body.classList.remove('intro'); streak.material.color.set('#ffffff'); cb(); },wait)); }
+function introStop(){ introClear(); if(introEl) introEl.classList.remove('on'); document.body.classList.remove('intro'); streak.material.color.set('#ffffff'); }
+function exitToGate(){ introStop(); hideCap(); backB.classList.remove('on'); hud.classList.remove('on'); st='falling';
   flashOn(null,function(){ LV.forEach(function(q){ q.g.visible=false; }); curL=null; cur=null; back=[]; gate.visible=true; mixT=0; rollT=0; bgT.copy(BG_A); galT.set('#ffffff'); camP.set(0,0,-20); camL.set(0,0,-60); gp=0; flashOff(); guideUI();
     startFly(V(0,0,46),V(0,0,-30),null,red?.5:2,function(){ st='gate'; wel.classList.add('on'); ttl.style.opacity=1; }); }); }
 
@@ -690,7 +709,7 @@ function scrollBy(dy){
   else if(acc<-260){ acc=0; goBack(); } }
 addEventListener('wheel',function(e){ if(winOn) return; e.preventDefault(); if(curL&&(st==='over'||st==='node')){ zoomCity(Math.exp(e.deltaY*.0012)); return; } scrollBy(e.deltaY); },{passive:false});
 var ty=null, tx=null, moved=0, yaw=0;
-cv.addEventListener('pointerdown',function(e){ ty=e.clientY; tx=e.clientX; moved=0; });
+cv.addEventListener('pointerdown',function(e){ ty=e.clientY; tx=e.clientX; moved=0; if(fly&&fly.ez===easeOut&&fly.d>2) fly.d*=.4; });
 addEventListener('pointermove',function(e){ if(ty===null||winOn) return; var dy=ty-e.clientY, dx=e.clientX-tx; ty=e.clientY; tx=e.clientX; moved+=Math.abs(dy)+Math.abs(dx);
   if(curL&&(st==='over'||st==='node')){ if(pts2.length>1) return; turnCity(-dx*.006); tiltCity(-dy*.004); return; }
   scrollBy(dy*2.2); if(curL!==LK&&(st==='over'||st==='node')) yaw=Math.max(-.5,Math.min(.5,yaw+dx*.002)); });
@@ -756,6 +775,26 @@ function hideEl(el){ el.style.opacity=0; el.style.pointerEvents='none'; if(el._l
 var LEADS=document.getElementById('leads');
 function leadOf(n){ if(!n.el._ld&&LEADS){ var pl=document.createElementNS('http://www.w3.org/2000/svg','polyline'); pl.setAttribute('fill','none'); pl.setAttribute('stroke',n.c); pl.setAttribute('stroke-width','1.4'); pl.style.opacity=0; LEADS.appendChild(pl);
     var dt2=document.createElementNS('http://www.w3.org/2000/svg','circle'); dt2.setAttribute('r','3'); dt2.setAttribute('fill',n.c); pl._dot=dt2; LEADS.appendChild(dt2); n.el._ld=pl; } return n.el._ld; }
+/* сноска (21.10): коротко - "Модуль 1"; раскрыта (наведение мышью или следующий узел) - надпись сверху, название, состояние */
+function lbMeta(n){ var s=n.st;
+  if(n.kind==='tab') return n.act==='soon'?'Скоро откроется':(n.tip||'');
+  if(s==='lock') return n.kind==='task'?'Откроется после предыдущего задания':'Откроет педагог';
+  if(s==='wait') return 'Ждёт проверки педагога';
+  if(n.kind==='mod'||n.kind==='center'){ var m=mods.find(function(x){ return x.id===n.mid; }); if(!m) return ''; var d=m.tasks.filter(function(t){ return I.task(t)==='done'; }).length;
+    return s==='done'?'Пройден: '+d+' из '+m.tasks.length:'Заданий пройдено: '+d+' из '+m.tasks.length; }
+  if(s==='done') return 'Пройдено';
+  return n===target?'Следующее - сюда':'Открыто'; }
+function lbSet(n,full,ex){ var el=n.el, mod=n.kind==='mod'||n.kind==='center';
+  el.classList.toggle('sh',!full); el.classList.toggle('ex',ex);
+  n.lo.textContent=ex?(mod?n.n:n.kind==='task'?'Задание '+n.num:''):''; n.lo.style.display=ex&&n.lo.textContent?'':'none';
+  n.lt.textContent=!full?n.num:!ex?n.n:mod?(n.sub||n.n):n.kind==='task'?n.n.replace(/^\d+\.\s*/,''):n.n;
+  n.lm.textContent=ex?lbMeta(n):''; }
+/* наведение мышью на здание или подпись раскрывает сноску; на телефоне - нажатие (подлёт и надпись внизу) */
+var HOVER=matchMedia('(hover:hover)').matches, hov=null, hovEl=null, mxy=null;
+if(HOVER) cv.addEventListener('pointermove',function(e){ mxy=[e.clientX,e.clientY]; });
+cv.addEventListener('pointerleave',function(){ mxy=null; });
+function hoverPick(calm){ var h=null; if(calm&&curL&&mxy){ var r=new THREE.Raycaster(); r.setFromCamera(new THREE.Vector2(mxy[0]/innerWidth*2-1,-(mxy[1]/innerHeight)*2+1),C); var x=r.intersectObjects(curL.hits,false)[0]; if(x) h=curL.by[x.object.userData.id]||null; }
+  hov=calm?(hovEl||h):null; if(hov===cur) hov=null; cv.style.cursor=h?'pointer':''; }
 function frame(){ var dt=Math.min(clock.getDelta(),.05); tm+=dt; fc++;
   if(winOn&&!fly){ requestAnimationFrame(frame); return; } /* под окном задания космос стоит: бережём батарею */
   if(fly) stepFly(dt);
@@ -814,6 +853,8 @@ function frame(){ var dt=Math.min(clock.getDelta(),.05); tm+=dt; fc++;
   R.render(S,C);
   /* подписи узлов: кнопки поверх 3D */
   var fpx=innerHeight/2/Math.tan(C.fov*Math.PI/360), cx0=-9, cy0=-9, cr=0, calm=!fly&&(st==='over'||st==='node');
+  if(HOVER&&(fc%3===0||!calm)) hoverPick(calm);
+  if(introEl&&document.body.classList.contains('intro')&&(fc&3)===0){ $('introSpd').textContent='SPD '+Math.round(speed*12)+' км/ч'; $('introD').textContent='ДО ГОРОДА '+(camP.distanceTo(spunP(LK.oP,LK.oL))*.015).toFixed(1)+' км'; }
   if(L&&cur&&st==='node'){ cur.g.getWorldPosition(v); var dc=v.distanceTo(C.position); v.project(C); cx0=(v.x*.5+.5)*innerWidth; cy0=(-v.y*.5+.5)*innerHeight; cr=cur.s*1.7/dc*fpx+30; }
   /* подписи не налезают друг на друга: сначала следующий узел, потом ближние; та, что упирается в уже стоящую, прячется.
      у дальних заданий - только номер, полное название - у следующего и у ближних */
@@ -822,16 +863,16 @@ function frame(){ var dt=Math.min(clock.getDelta(),.05); tm+=dt; fc++;
       n.g.getWorldPosition(v); var d=v.distanceTo(C.position); v.project(C); var sx=(v.x*.5+.5)*innerWidth, sy=(-v.y*.5+.5)*innerHeight;
       var op=Math.max(0,Math.min(1,(260-d)/120)), on=v.z<1&&Math.abs(v.x)<1.1&&Math.abs(v.y)<1.1&&cur!==n&&op>.05&&Math.hypot(sx-cx0,sy-cy0)>cr;
       if(!on){ hideEl(el); return; }
-      var full=n.kind!=='task'||n===target||d<38; if(n.full!==full){ n.full=full; el.textContent=full?n.n:n.num; el.classList.toggle('sh',!full); n.w=0; }
+      var full=n.kind!=='task'||n===target||d<38, ex=n===hov||n===target, lk=(full?1:0)+(ex?2:0); if(n.lk!==lk){ n.lk=lk; n.full=full; lbSet(n,full,ex); n.w=0; }
       if(!n.w){ n.w=el.offsetWidth; n.h=el.offsetHeight; }
-      cand.push({n:n,sx:sx,sy:sy,op:op,k:n===target?-1:d}); });
+      cand.push({n:n,sx:sx,sy:sy,op:n===hov?1:op,k:n===hov?-2:n===target?-1:d}); });
     cand.sort(function(a,b){ return a.k-b.k; });
     if(cur&&st==='node') used.push([cx0-cr,cy0-cr,cx0+cr,cy0+cr]);
     /* подпись - сноской: вправо-вверх от узла, к узлу тянется тонкая линия с точкой; если справа нет места - влево */
     cand.forEach(function(q){ var n=q.n, el=n.el, gap=n===target?52:30, ly=q.sy-(n===target?40:30), lx=q.sx+gap, left=lx+n.w>innerWidth-8;
-      if(left) lx=q.sx-gap-n.w; var r=[lx-4,ly-n.h/2-3,lx+n.w+4,ly+n.h/2+3];
+      if(left) lx=q.sx-gap-n.w; lx=Math.max(8,Math.min(lx,innerWidth-8-n.w)); var r=[lx-4,ly-n.h/2-3,lx+n.w+4,ly+n.h/2+3];
       if(n===target) used.push([q.sx-40,q.sy-110,q.sx+40,q.sy-6]); /* место для указателя "сюда" */
-      else if(used.some(function(u){ return r[0]<u[2]&&r[2]>u[0]&&r[1]<u[3]&&r[3]>u[1]; })){ hideEl(el); return; }
+      else if(n!==hov&&used.some(function(u){ return r[0]<u[2]&&r[2]>u[0]&&r[1]<u[3]&&r[3]>u[1]; })){ hideEl(el); return; }
       used.push(r); el.style.opacity=q.op; el.style.pointerEvents='auto';
       el.style.transform='translate('+lx+'px,'+ly+'px) translate(0,-50%)';
       var ld=leadOf(n); if(ld){ var ex=left?lx+n.w:lx, mx=q.sx+(ex-q.sx)*.45; ld.setAttribute('points',q.sx+','+q.sy+' '+mx+','+ly+' '+ex+','+ly); ld.style.opacity=q.op*.85; ld._dot.setAttribute('cx',q.sx); ld._dot.setAttribute('cy',q.sy); ld._dot.style.opacity=q.op; } }); }
