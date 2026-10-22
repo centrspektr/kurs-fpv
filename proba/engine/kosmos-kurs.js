@@ -27,7 +27,7 @@ var cv=document.getElementById('c'), R;
 try{ R=new THREE.WebGLRenderer({canvas:cv,antialias:!mob,powerPreference:'high-performance'}); }catch(e){ plain(); return; }
 document.getElementById('plainB').onclick=function(){ lsS(VKEY,'plain'); location.href=PLAIN; };
 R.setPixelRatio(Math.min(devicePixelRatio||1,mob?1.25:1.75));
-var S=new THREE.Scene(), C=new THREE.PerspectiveCamera(62,1,.1,1200);
+var S=new THREE.Scene(), C=new THREE.PerspectiveCamera(62,1,.1,2600);
 var BG_A=new THREE.Color('#04050d'), BG_B=new THREE.Color('#0c0420'); S.background=BG_A.clone();
 var bgT=BG_A.clone(), galT=new THREE.Color('#ffffff');
 function V(x,y,z){ return new THREE.Vector3(x,y,z); }
@@ -211,7 +211,15 @@ function building(L,n){ var b=new THREE.Group(), w=n.s*2.1, c=new THREE.Color(n.
   if(n.zone){ add(new THREE.CylinderGeometry(w*1.5,w*1.55,.25,40),L0(0x1b2240,.12),0,.12,0); var zr=add(new THREE.TorusGeometry(w*1.5,.12,4,48),glow({opacity:.7}),0,.26,0); zr.rotation.x=Math.PI/2; } /* площадка зоны */
   else add(new THREE.CylinderGeometry(w*1.15,w*1.3,1,10),L0(0x1b2240,.1),0,.5,0); /* цоколь */
   var k0=b.children.length; /* всё, что ниже, - здание из кода; готовая модель его заменит */
-  if(ZONE[st]) ZONE[st]({b:b,n:n,w:w,c:c,add:add,L0:L0,glow:glow,win:win});
+  if(n.rb){ /* открытый модуль: то же здание, что изнутри. Длинная сторона смотрит на центр города (как крыша внутри); покрытие крыши и дорогу заданий кладёт cityRoof */
+    var bw=w*1.7, bl=w*3.6, hh=TOPH[st]-1; b.rotation.y=Math.atan2(n.p[0],n.p[2]-CZ);
+    add(new THREE.BoxGeometry(bw,hh,bl),win([2,Math.max(2,Math.round(hh/5))]),0,1+hh/2,0);
+    for(var y2=hh;y2>2;y2-=6) add(new THREE.BoxGeometry(bw+.12,.28,bl+.12),glow({opacity:.75}),0,1+y2-.3,0); /* светлые пояса, как на стенах изнутри */
+    add(new THREE.BoxGeometry(bw+.24,.32,bl+.24),glow({opacity:1}),0,1+hh+.06,0); /* светящееся ограждение по краю крыши (один бортик вместо четырёх: бережём телефон) */
+    n.roofTop=add(new THREE.PlaneGeometry(bw-.1,bl-.1),L0(0x2e5a2e,.2),0,1+hh+.23,0); n.roofTop.rotation.x=-Math.PI/2; n.rbs={bw:bw,bl:bl,y:1+hh+.2};
+    var cl=[]; [[1,1],[1,-1],[-1,1],[-1,-1]].forEach(function(q){ var lp=new THREE.Sprite(new THREE.SpriteMaterial({map:glowTex(n.c),blending:THREE.AdditiveBlending,depthWrite:false})); lp.scale.setScalar(1.6); lp.position.set(q[0]*bw/2,1+hh+.5,q[1]*bl/2); b.add(lp); cl.push(lp); });
+    n.anim.push(function(t){ cl.forEach(function(lp,j){ lp.material.opacity=Math.sin(t*2+j*1.6)>-.2?1:.15; }); }); }
+  else if(ZONE[st]) ZONE[st]({b:b,n:n,w:w,c:c,add:add,L0:L0,glow:glow,win:win});
   else if(st==='k'){ add(new THREE.CylinderGeometry(w*.45,w*.5,3.2,10),win([2,1]),0,2.6,0); add(new THREE.SphereGeometry(w*.5,16,10,0,6.283,0,Math.PI/2),L0(n.c,.5),0,4.2,0);
     var sg2=add(new THREE.TorusGeometry(w*.7,.1,6,32),glow(),0,4.6,0); sg2.rotation.x=Math.PI/2; n.anim.push(function(t){ sg2.rotation.z=t*1.5; }); }
   else if(st==='kb'){ /* мастерская с гаечным ключом: сообщить об ошибке */
@@ -270,7 +278,7 @@ function building(L,n){ var b=new THREE.Group(), w=n.s*2.1, c=new THREE.Color(n.
     add(new THREE.ConeGeometry(w*.5,14,6),L0(n.c,.4),0,13+7,0);
     var pts=[]; for(var k=0;k<=80;k++){ var u=k/80; pts.push(V(Math.cos(u*18)*w*(.9-u*.6),13+u*13,Math.sin(u*18)*w*(.9-u*.6))); }
     var sp=add(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts),120,.12,5,false),glow({color:0xffd36e}),0,0,0); n.anim.push(function(t){ sp.rotation.y=t*.5; }); }
-  n.body=b.children.slice(k0); useModel(n,b,MODELI[st],TOPH[st]-1,w*(n.zone?2.6:2.8),1);
+  n.body=b.children.slice(k0); if(!n.rb) useModel(n,b,MODELI[st],TOPH[st]-1,w*(n.zone?2.6:2.8),1);
   if(n.kind==='task') taskScreen(n,b,w,L0);
   var hb=new THREE.Mesh(new THREE.BoxGeometry(w*2.6,TOPH[st]+2,w*2.6),new THREE.MeshBasicMaterial({visible:false})); hb.position.y=TOPH[st]/2; hb.userData.id=n.id; b.add(hb); L.hits.push(hb); }
 function hTex(col){ return tex(function(x,w){ var c=w/2; x.strokeStyle=col; x.lineWidth=w*.04; x.beginPath(); x.arc(c,c,c*.86,0,6.283); x.stroke();
@@ -347,8 +355,16 @@ var ZONE={
     o.n.anim.push(function(t){ cup.rotation.y=t*.9; }); }
 };
 function topY(st){ return PY+TOPH[st]+2.2; }
+/* светящаяся надпись (например "ФИНИШ") */
+function signTex(t,c){ return tex(function(x,w,h){ x.font='900 '+(h*.62)+'px Unbounded, Manrope, system-ui, sans-serif'; x.textAlign='center'; x.textBaseline='middle';
+  x.shadowColor=c; x.shadowBlur=h*.35; x.fillStyle=c; x.fillText(t,w/2,h/2); x.shadowBlur=h*.12; x.fillStyle='#ffffff'; x.fillText(t,w/2,h/2); },512,128); }
+/* какие модули - открытые площадки (вокруг виден город), какие - закрытые (внутри огромного космического ангара); номера модулей с 1. Решение 21.10, вариант 5А.
+   Открытый модуль и в городе, и изнутри - одно здание: стены с окнами, светлые пояса, на крыше покрытие локации и дорога заданий (22.10) */
+var OPEN_MODS=[1,4,6];
+/* во сколько раз город под крышей открытого модуля крупнее самого города (см. cityAround) */
+var CF=12;
 mods.forEach(function(m,i){ var a=i*1.02, r=RI*.62-i*1.6, st0=i<6?i+1:6, h=TOPH[st0];
-  mkNode(LK,{id:m.id,kind:'mod',mid:m.id,city:1,h:h,st0:st0,from:i?mods[i-1].id:'me',n:'Модуль '+m.n,sub:m.t,c:MC[i%MC.length],p:[Math.sin(a)*r,topY(st0),CZ+Math.cos(a)*r],s:2,num:String(m.n),
+  mkNode(LK,{id:m.id,kind:'mod',mid:m.id,city:1,h:h,st0:st0,rb:OPEN_MODS.indexOf(i+1)>=0,from:i?mods[i-1].id:'me',n:'Модуль '+m.n,sub:m.t,c:MC[i%MC.length],p:[Math.sin(a)*r,topY(st0),CZ+Math.cos(a)*r],s:2,num:String(m.n),
   tip:i?'':'Главная нить курса: от здания к зданию, модули по порядку. Начинаем отсюда'}); LK.order.push(m.id); });
 /* киоски у площадки (без нитей: от H нить идёт только к модулю 1): всё, что есть на сайте помимо модулей. act: home - окно прогресса, bug - сообщить об ошибке, code - вход по коду, soon - скоро */
 /* свой квартал у площадки H: у каждого сервиса своё здание (решение 21.10, вариант 3А); настройки - внутри окна "Мой прогресс" */
@@ -396,10 +412,6 @@ mods.forEach(function(m,i){ var a=i*1.02, r=RI*.62-i*1.6, st0=i<6?i+1:6, h=TOPH[
 LK.over={p:V(0,PY+40,CZ+RI+34),l:V(0,PY+2,CZ-6)};
 /* ===== уровни модулей = локации: провалились в здание модуля - вокруг новая местность со своим небом и землёй.
    Задания - зоны вдоль дороги (по нити): прошёл зону - дрон-проводник летит вперёд, камера за ним к следующей ===== */
-/* какие модули - открытые площадки (вокруг виден город), какие - закрытые (внутри огромного космического ангара); номера модулей с 1. Решение 21.10, вариант 5А */
-var OPEN_MODS=[1,4,6];
-/* во сколько раз город под крышей открытого модуля крупнее самого города (см. cityAround) */
-var CF=7;
 /* как влетаем в модуль (правка 7): portal - кольцо-портал над антенной, fpv - FPV-дрон ныряет в дверь здания, hyper - гиперпрыжок */
 var MOD_TRANS={1:'portal',2:'fpv',3:'fpv',4:'portal',5:'fpv',6:'hyper'};
 var THEME=[
@@ -429,16 +441,18 @@ function prop(kind,c){ var g=new THREE.Group(), M2=function(col,e){ return new T
   else if(kind==='cloud'){ var cl=new THREE.Sprite(new THREE.SpriteMaterial({map:glowTex('#ffffff'),transparent:true,opacity:.35,depthWrite:false})); cl.scale.set(18,8,1); cl.position.y=1; g.add(cl); }
   return g; }
 mods.forEach(function(m,i){ var c=MC[i%MC.length], T=THEME[i%THEME.length], open=OPEN_MODS.indexOf(i+1)>=0,
-  L=mkLevel(m.id,{mid:m.id,mi:i,open:open,pz:-80,name:'Модуль '+m.n+'. '+m.t,mix:0,c:c,loc:1,me:V(0,PY+2,0),fog:new THREE.Fog(open?new THREE.Color('#0a0d24').lerp(new THREE.Color(c),.08):new THREE.Color(T.sky[0]).lerp(new THREE.Color(c),.12),open?180:90,open?900:420)});
+  L=mkLevel(m.id,{mid:m.id,mi:i,open:open,pz:-80,name:'Модуль '+m.n+'. '+m.t,mix:0,c:c,loc:1,me:V(0,PY+2,0),fog:new THREE.Fog(open?new THREE.Color('#0a0d24').lerp(new THREE.Color(c),.08):new THREE.Color(T.sky[0]).lerp(new THREE.Color(c),.12),open?260:90,open?1700:420)});
   var pts=[[0,-28]]; m.tasks.forEach(function(tid,k){ pts.push([Math.sin(k*1.25+.6)*20,-58-k*30]); });
   var gt=tex(T.gr,256); gt.wrapS=gt.wrapT=THREE.RepeatWrapping;
-  if(open) roof(L,pts,c,gt,T,i); /* открытый модуль: мы на крыше здания модуля, вокруг космос, внизу город */
+  if(open){ roof(L,pts,c,gt,T,i); cityRoof(LK.by[m.id],pts,T); } /* открытый модуль: мы на крыше здания модуля, вокруг космос, внизу город */
   else { gt.repeat.set(36,36); L.g.add(skyDome(T));
     var gr=new THREE.Mesh(new THREE.PlaneGeometry(700,700),new THREE.MeshLambertMaterial({map:gt,emissive:0xffffff,emissiveMap:gt,emissiveIntensity:T.day?.55:.35})); gr.rotation.x=-Math.PI/2; gr.position.set(0,PY-.02,-120); L.g.add(gr); }
-  mkNode(L,{id:'c_'+m.id,kind:'center',mid:m.id,from:'me',n:'Модуль '+m.n,sub:T.n+'. '+m.t,c:c,zone:1,st0:'zs',face:0,p:[0,topY('zs'),-28],s:1.6,num:String(m.n)}); L.order.push('c_'+m.id);
+  mkNode(L,{id:'c_'+m.id,kind:'center',mid:m.id,from:'me',n:'Старт',sub:T.n+'. '+m.t,c:c,zone:1,st0:'zs',face:0,p:[0,topY('zs'),-28],s:1.6,num:String(m.n)}); L.order.push('c_'+m.id);
   var prev='c_'+m.id, k=0;
   m.tasks.forEach(function(tid){ var T0=K.lib[tid]; if(!T0) return; var q=pts[k+1], pq=pts[k], st0=zoneKind(tid);
     mkNode(L,{id:tid,kind:'task',tid:tid,mid:m.id,from:prev,n:(k+1)+'. '+T0.t,sub:T0.sub,c:c,zone:1,st0:st0,face:Math.atan2(pq[0]-q[0],pq[1]-q[1]),p:[q[0],topY(st0),q[1]],s:1.6,num:String(k+1)}); L.order.push(tid); prev=tid; k++; });
+  /* в конце дороги - светящаяся мигающая надпись "ФИНИШ" (22.10); в начале вместо таблички "Модуль N" - подпись "Старт" */
+  var fin=L.by[prev]; if(fin&&fin!==L.by['c_'+m.id]){ var fs=new THREE.Sprite(new THREE.SpriteMaterial({map:signTex('ФИНИШ',c),transparent:true,depthWrite:false})); fs.scale.set(16,4,1); fs.position.set(fin.p[0],PY+TOPH[fin.st0]+9,fin.p[2]); L.g.add(fs); (L.blink=L.blink||[]).push({s:fs,f:2.2,p:0}); }
   /* декор по теме вдали от дороги */
   function nearRoad(x,z){ for(var j=0;j<pts.length;j++){ var a2=pts[j], b2=pts[j+1]||pts[j], dx=b2[0]-a2[0], dz=b2[1]-a2[1], l2=dx*dx+dz*dz||1, u=Math.max(0,Math.min(1,((x-a2[0])*dx+(z-a2[1])*dz)/l2)), ex=a2[0]+dx*u-x, ez=a2[1]+dz*u-z; if(ex*ex+ez*ez<150) return true; } return Math.hypot(x,z)<12; }
   for(var d=0,tries=0;d<(mob?22:44)&&tries<400;tries++){ var x=(Math.random()-.5)*150, z=20-Math.random()*(pts.length*30+60); if(nearRoad(x,z)) continue; var pr=prop(T.deco[d%T.deco.length],c); pr.position.set(x,PY,z); L.g.add(pr); d++;
@@ -460,12 +474,19 @@ function hangar(L,pts,c){ var zMin=pts[pts.length-1][1]-70, z0=80, len=z0-zMin, 
     [-.5,0,.5].forEach(function(a){ var lp=new THREE.Sprite(new THREE.SpriteMaterial({map:lamp,blending:THREE.AdditiveBlending,depthWrite:false,opacity:.8})); lp.scale.setScalar(9); lp.position.set(Math.sin(a)*(R-6),PY+Math.cos(a)*(R-6),z); L.g.add(lp); }); }
   var fl=new THREE.Mesh(new THREE.PlaneGeometry(R*2,len),new THREE.MeshBasicMaterial({color:new THREE.Color(c),transparent:true,opacity:.06,depthWrite:false})); fl.rotation.x=-Math.PI/2; fl.position.set(0,PY+.03,zc); L.g.add(fl);
   L.closed=1; }
+/* крыша того же здания в городе: покрытие локации и маленькая светящаяся дорога заданий, как внутри (22.10) */
+function cityRoof(n,pts,T){ if(!n||!n.rbs) return; var r=n.rbs, z0=60, zMin=pts[pts.length-1][1]-55, t2=tex(T.gr,128); t2.wrapS=t2.wrapT=THREE.RepeatWrapping; t2.repeat.set(1,2);
+  var m=n.roofTop.material; m.map=t2; m.color.set(0xffffff); m.emissive.set(0xffffff); m.emissiveMap=t2; m.emissiveIntensity=T.day?.5:.35; m.needsUpdate=true; if(m.e0!=null) m.e0=m.emissiveIntensity;
+  var P=pts.map(function(q){ return V(q[0]/176*r.bw,r.y+.08,r.bl/2-(z0-q[1])/(z0-zMin)*r.bl); });
+  var ln=new THREE.Line(new THREE.BufferGeometry().setFromPoints(P),new THREE.LineBasicMaterial({color:new THREE.Color(n.c).lerp(new THREE.Color('#ffffff'),.4)})); n.bld.add(ln);
+  [P[0],P[P.length-1]].forEach(function(p,j){ var sp=new THREE.Sprite(new THREE.SpriteMaterial({map:glowTex(j?'#ffd36e':'#9dff7c'),blending:THREE.AdditiveBlending,depthWrite:false})); sp.scale.setScalar(1.4); sp.position.copy(p); n.bld.add(sp); }); }
 /* крыша здания модуля: плита с покрытием локации, ограждение с огнями по краю, стены с окнами уходят вниз, на краю - антенна модуля */
 function roof(L,pts,c,gt,T,i){ var z0=60, zMin=pts[pts.length-1][1]-55, len=z0-zMin, W=176, zc=(z0+zMin)/2, cc=new THREE.Color(c);
   gt.repeat.set(W/20,len/20); var wt=winTex(c);
   var side=new THREE.MeshLambertMaterial({map:wt,emissive:0xffffff,emissiveMap:wt,emissiveIntensity:.7}), top=new THREE.MeshLambertMaterial({map:gt,emissive:0xffffff,emissiveMap:gt,emissiveIntensity:T.day?.5:.35});
-  var D=Math.max(150,TOPH[i<6?i+1:6]*CF); wt.repeat.set(W/10,6*D/64); /* стены здания уходят вниз до платформы города (город внизу в масштабе CF) */
+  var D=Math.max(220,TOPH[i<6?i+1:6]*CF); wt.repeat.set(W/42,D/54); /* окна того же размера, что у этого здания в городе (x CF) */ /* стены здания уходят вниз до платформы города (город внизу в масштабе CF) */
   var body=new THREE.Mesh(new THREE.BoxGeometry(W,D,len),[side,side,top,side,side,side]); body.position.set(0,PY-D/2,zc); L.g.add(body); L.zc=zc;
+  var bandM=new THREE.MeshBasicMaterial({color:cc,transparent:true,opacity:.75}); for(var by=6;by<D-4;by+=6*CF){ var bnd=new THREE.Mesh(new THREE.BoxGeometry(W+1.4,3.4,len+1.4),bandM); bnd.position.set(0,PY-by,zc); L.g.add(bnd); } /* светлые пояса, как у этого здания в городе */
   var rail=new THREE.MeshBasicMaterial({color:cc}); [[0,z0,W,.25],[0,zMin,W,.25],[-W/2,zc,.25,len],[W/2,zc,.25,len]].forEach(function(q){ var rb=new THREE.Mesh(new THREE.BoxGeometry(q[2],.25,q[3]),rail); rb.position.set(q[0],PY+1.1,q[1]); L.g.add(rb); });
   L.blink=L.blink||[]; for(var z=z0;z>=zMin;z-=16) [-W/2,W/2].forEach(function(x){ var lp=new THREE.Sprite(new THREE.SpriteMaterial({map:glowTex(c),blending:THREE.AdditiveBlending,depthWrite:false})); lp.scale.setScalar(2.2); lp.position.set(x,PY+1.4,z); L.g.add(lp); L.blink.push({s:lp,f:2,p:z*.08+(x>0?3:0)}); });
   /* антенна модуля в конце крыши - та же, что над зданием в городе */
@@ -492,7 +513,7 @@ function cityMoving(){ if(CMOV) return CMOV; var all=[], t0=tm, mv=new Set(); LK
   return CMOV=mv; }
 function cityAround(L){ if(!L.open) return; var nm=LK.nodes.filter(function(n){ return n.model; }).length; if(L.city&&L.cityN===nm) return; /* догрузились модели - пересобираем */
   if(L.city) L.g.remove(L.city); L.cityN=nm;
-  var me=LK.by[L.mid], D=Math.max(150,TOPH[me.st0]*CF), mv=cityMoving(), cp=LK.g.clone(true), pairs=[], skip=new Set([me.g,me.bld]); LK.pulses.forEach(function(q){ skip.add(q.sp); });
+  var me=LK.by[L.mid], D=Math.max(220,TOPH[me.st0]*CF), mv=cityMoving(), cp=LK.g.clone(true), pairs=[], skip=new Set([me.g,me.bld]); LK.pulses.forEach(function(q){ skip.add(q.sp); });
   LK.drones.filter(function(q){ return !q.patrol; }).slice(2).forEach(function(q){ skip.add(q.g); }); /* снизу хватит пары дронов и патрульных: бережём телефон */
   LK.nodes.forEach(function(n){ skip.add(n.wf); }); if(mob) LK.lamps.forEach(function(q,j){ if(j%2) skip.add(q); });
   (function walk(a,b){ for(var i=0;i<a.children.length;i++){ var x=a.children[i], y=b.children[i]; if(skip.has(x)){ y.visible=false; continue; } if(mv.has(x)) pairs.push([x,y]); if(x.material&&x.material.depthTest===false){ y.material=x.material.clone(); y.material.depthTest=true; } /* номера модулей не просвечивают сквозь крышу */ walk(x,y); } })(LK.g,cp);
@@ -601,7 +622,7 @@ function targetOf(L){ if(!L) return null; var nx=I.next(); if(L===LK) return nx?
 function refresh(){ LV.forEach(function(L){ L.nodes.forEach(function(n){ var s=n.st=stOf(n), lock=s==='lock';
   n.pl.visible=!lock&&!n.zone; n.wf.visible=lock&&!n.zone; n.halo.material.color.set(s==='wait'?'#facc15':lock?'#64748b':'#ffffff'); n.halo.material.opacity=lock?.25:s==='done'?1:.8;
   if(n.nm) n.nm.material.opacity=lock?.45:1;
-  if(n.mats) n.mats.forEach(function(m,i){ if(m.emissiveIntensity!=null){ if(m.e0==null) m.e0=m.emissiveIntensity; m.emissiveIntensity=lock?m.e0*.18:m.e0; } else m.opacity=lock?.15:.85; }); dimModel(n); n.el.className='lb s-'+s+(n.kind==='mod'||n.kind==='center'?' big':''); }); });
+  if(n.mats) n.mats.forEach(function(m,i){ if(m.emissiveIntensity!=null){ if(m.e0==null) m.e0=m.emissiveIntensity; m.emissiveIntensity=lock?m.e0*.18:m.e0; } else m.opacity=lock?.15:.85; }); dimModel(n); n.el.className='lb s-'+s+(n.kind==='mod'||n.kind==='center'?' big':'')+(n.kind==='center'?' start':''); }); });
   LV.forEach(function(L){ L.nodes.forEach(function(n){ n.full=null; }); }); target=targetOf(curL); guideUI(); }
 
 /* ---- состояние и полёт (как в "Иртыше") ---- */
