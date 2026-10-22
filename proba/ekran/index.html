@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Экран задания - варианты</title>
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700&family=Manrope:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{--bg:#04050d;--fg:#f1f3ff;--dim:#a7acd2;--glass:rgba(14,18,40,.62);--line:rgba(170,180,255,.24);--c:#7cf3ff;
+    --display:'Unbounded','Arial Black',system-ui,sans-serif;--body:'Manrope',system-ui,-apple-system,sans-serif;color-scheme:dark}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--body);line-height:1.45}
+  main{max-width:1100px;margin:0 auto;padding:20px 16px 60px}
+  h1{font:700 clamp(20px,4.6vw,30px) var(--display);margin:6px 0 8px}
+  h2{font:700 clamp(17px,3.6vw,22px) var(--display);margin:0 0 6px}
+  p{margin:0 0 10px;color:var(--dim)} p b{color:var(--fg)}
+  .card{background:rgba(12,15,34,.8);border:1px solid var(--line);border-radius:20px;padding:16px;margin:18px 0}
+  .tag{display:inline-block;font:800 12px var(--body);letter-spacing:.12em;color:#0b0820;background:var(--c);border-radius:99px;padding:3px 10px;margin-bottom:8px}
+  .rec{background:#9dff7c}
+  .row{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px}
+  button{font:700 14px var(--body);color:var(--fg);background:var(--glass);border:1px solid var(--line);border-radius:99px;min-height:42px;padding:0 18px;cursor:pointer}
+  button.main{border:0;background:linear-gradient(135deg,#7cf3ff,#a78bfa 55%,#ff7ce0);color:#0b0820}
+  button.on{border-color:#9dff7c;box-shadow:0 0 14px rgba(157,255,124,.4)}
+  button:focus-visible{outline:2px solid #7cf3ff;outline-offset:2px}
+
+  /* сцена-макет: снимок настоящей карты + экран поверх */
+  .stage{position:relative;overflow:hidden;border-radius:16px;border:1px solid var(--line);background:#000;aspect-ratio:1280/760;margin-top:10px}
+  @media (max-width:640px){.stage{aspect-ratio:390/700}}
+  .stage .sc{position:absolute;inset:0;background-size:cover;background-position:center;transition:transform 1.6s cubic-bezier(.5,0,.3,1),filter 1.6s,opacity 1s}
+  .stage .zone{background-image:url(img/pc-zone.jpg)} .stage .close{background-image:url(img/pc-close.jpg);opacity:0}
+  @media (max-width:640px){.stage .zone{background-image:url(img/tel-zone.jpg)} .stage .close{background-image:url(img/tel-close.jpg)}}
+  .scr{position:absolute;border:2px solid var(--c);border-radius:14px;background:rgba(6,14,32,.72);box-shadow:0 0 30px rgba(124,243,255,.45),inset 0 0 40px rgba(124,243,255,.12);
+    backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);padding:clamp(10px,2.4vw,24px);opacity:0;transition:all 1.3s cubic-bezier(.5,0,.3,1);overflow:hidden}
+  .scr:before{content:"";position:absolute;inset:0;background:repeating-linear-gradient(0deg,rgba(124,243,255,.06) 0 2px,transparent 2px 5px);pointer-events:none}
+  .scr .hd{font:800 clamp(10px,1.5vw,12px) var(--body);letter-spacing:.18em;color:var(--c);display:flex;align-items:center;gap:8px;margin-bottom:6px}
+  .scr .hd i{width:8px;height:8px;border-radius:50%;background:#ff4d6d;box-shadow:0 0 8px #ff4d6d;animation:blink 1s infinite}
+  .scr .tt{font:700 clamp(15px,2.6vw,26px) var(--display);margin:0 0 8px;min-height:1.2em}
+  .scr .tx{font-size:clamp(13px,1.8vw,17px);color:#dfe4ff;min-height:3em;white-space:pre-wrap}
+  .scr .tx:after,.scr .tt.typing:after{content:"▍";color:var(--c);animation:blink .8s infinite}
+  .scr .tx.end:after{content:""}
+  .scr .go{margin-top:12px;opacity:0;transition:opacity .5s}
+  .scr .go.on{opacity:1}
+  .wave{display:inline-flex;gap:2px;align-items:end;height:12px;margin-left:auto}
+  .wave b{width:3px;background:var(--c);border-radius:2px;height:3px}
+  .talk .wave b{animation:wv .5s ease-in-out infinite alternate}
+  .wave b:nth-child(2){animation-delay:.1s}.wave b:nth-child(3){animation-delay:.2s}.wave b:nth-child(4){animation-delay:.3s}.wave b:nth-child(5){animation-delay:.15s}
+  @keyframes wv{to{height:12px}} @keyframes blink{50%{opacity:0}}
+  .beam{position:absolute;height:2px;transform-origin:0 50%;background:linear-gradient(90deg,var(--c),transparent);opacity:0;transition:opacity .6s;box-shadow:0 0 10px var(--c)}
+  .note{position:absolute;left:12px;bottom:10px;font:700 12px var(--body);color:#fff;background:rgba(0,0,0,.55);padding:4px 10px;border-radius:99px}
+
+  /* голоса */
+  .vs{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px;margin-top:10px}
+  .v{border:1px solid var(--line);border-radius:16px;padding:14px;background:rgba(20,16,48,.5)}
+  .v h3{margin:0 0 4px;font:700 16px var(--display)} .v p{font-size:13.5px}
+  .v small{display:block;color:#9dff7c;font-size:12px;margin:6px 0 8px;min-height:1.2em}
+  select{width:100%;font:600 14px var(--body);color:var(--fg);background:#0b0f26;border:1px solid var(--line);border-radius:10px;min-height:40px;padding:0 10px;margin-top:6px}
+  .warn{color:#ffd36e}
+  @media (prefers-reduced-motion:reduce){.stage .sc,.scr{transition:none}}
+</style>
+</head>
+<body>
+<main>
+  <h1>Экран задания: 3 варианта</h1>
+  <p>Фон - настоящий снимок карты (модуль 1, крыша и космос). Экран и текст нарисованы поверх, чтобы показать идею. Нажмите <b>"Показать"</b> у каждого варианта. Голос в макетах - выбранный внизу.</p>
+  <p>Во всех вариантах одинаково: у каждого задания свой экран; дрон подлетает и разворачивается к экрану; текст задания печатается и читается голосом; кнопка "Пропустить" сразу показывает весь текст; звук можно выключить.</p>
+
+  <section class="card" id="vA">
+    <span class="tag rec">ВАРИАНТ А - советую</span>
+    <h2>Экран во весь вид</h2>
+    <p>Камера подлетает к экрану вплотную, экран вырастает почти на весь вид. По краям и сквозь стекло видны крыша и космос - живые, слегка размытые. Внутри печатается задание с голосом, потом в этом же экране идут карточки и вопросы. <b>Плюс:</b> текст крупный, на телефоне читается лучше всего. <b>Минус:</b> город виден только по краям.</p>
+    <div class="stage" data-v="A"><div class="sc zone"></div><div class="sc close"></div><div class="scr"></div><span class="note">макет</span></div>
+    <div class="row"><button class="main" data-play="A">▶ Показать</button></div>
+  </section>
+
+  <section class="card" id="vB">
+    <span class="tag">ВАРИАНТ Б</span>
+    <h2>Экран рядом с дроном</h2>
+    <p>Камера останавливается так, что видно и дрон, и экран. Экран приближается до половины вида (на телефоне - нижние две трети), от экрана к дрону идёт луч "передачи задания". Крыша и космос остаются чёткими. <b>Плюс:</b> чувство, что дрон сам получает задание. <b>Минус:</b> меньше места для текста, длинные карточки придётся листать.</p>
+    <div class="stage" data-v="B"><div class="sc zone"></div><div class="sc close"></div><div class="beam"></div><div class="scr"></div><span class="note">макет</span></div>
+    <div class="row"><button class="main" data-play="B">▶ Показать</button></div>
+  </section>
+
+  <section class="card" id="vC">
+    <span class="tag">ВАРИАНТ В</span>
+    <h2>Текст прямо на 3D-экране</h2>
+    <p>Экран остаётся частью города: стоит под углом, как голограмма, и задание печатается прямо на нём, пока дрон висит рядом. Когда ученик жмёт "Начать", экран разворачивается к нему и становится как в варианте А. <b>Плюс:</b> самый "киношный". <b>Минус:</b> на маленьком телефоне текст под углом читается хуже, и это на один шаг дольше.</p>
+    <div class="stage" data-v="C"><div class="sc zone"></div><div class="sc close"></div><div class="scr"></div><span class="note">макет</span></div>
+    <div class="row"><button class="main" data-play="C">▶ Показать</button></div>
+  </section>
+
+  <section class="card" id="voices">
+    <h2>Голос: 3 на выбор</h2>
+    <p>Голос бесплатный - встроенный в браузер и телефон. Поэтому он звучит по-разному на разных устройствах: на компьютере в Edge есть живые голоса Microsoft (Светлана, Дмитрий), на Android - голос Google, на iPhone - Милена или Юрий. Послушайте <b>на том устройстве, где учатся дети</b>.</p>
+    <p id="vInfo" class="warn"></p>
+    <div class="vs">
+      <div class="v"><h3>1. Диспетчер</h3><p>Женский, спокойный, обычная скорость. Как голос с вышки аэродрома.</p><small data-n="1"></small><button data-say="1">▶ Послушать</button> <button data-pick="1">Выбрать</button></div>
+      <div class="v"><h3>2. Инструктор</h3><p>Мужской, чуть ниже и медленнее. Как тренер на поле.</p><small data-n="2"></small><button data-say="2">▶ Послушать</button> <button data-pick="2">Выбрать</button></div>
+      <div class="v"><h3>3. Бортовой помощник</h3><p>Чуть выше и быстрее, перед фразой короткий сигнал рации. Как голос дрона.</p><small data-n="3"></small><button data-say="3">▶ Послушать</button> <button data-pick="3">Выбрать</button></div>
+    </div>
+    <p style="margin-top:14px">Все русские голоса на этом устройстве (можно послушать любой):</p>
+    <select id="all"></select>
+    <div class="row"><button id="sayAll">▶ Послушать выбранный в списке</button></div>
+  </section>
+
+  <p>Выберите вариант экрана (А, Б или В) и голос (1, 2 или 3) - напишите в чат, например "А2". Можно смешать: "А, но с лучом к дрону из Б".</p>
+</main>
+<script>
+var TT='Задание 1. Добро пожаловать во Взлёт';
+var TX='Пилот, приём! Сегодня узнаем, что такое FPV и как устроен наш курс. Прочитай карточки, потом ответь на два вопроса.';
+var red=matchMedia('(prefers-reduced-motion:reduce)').matches, tel=function(){ return innerWidth<=640; };
+var syn=window.speechSynthesis, ALL=[], pick=+(localStorage.getItem('ekr_voice')||1);
+function ru(){ return (syn?syn.getVoices():[]).filter(function(v){ return /^ru/i.test(v.lang); }); }
+function find(re){ return ru().find(function(v){ return re.test(v.name); }); }
+function natural(v){ return /natural|online|enhanced|premium/i.test(v.name); }
+/* подбор: сначала живые (Natural/Online), потом любые */
+function voiceFor(k){ var r=ru(), fem=/svetlana|dariya|milena|katya|irina|elena|anna|alena|google/i, male=/dmitry|pavel|yuri|maxim|nikolai|male/i;
+  var pool=r.filter(natural).concat(r);
+  if(k===2) return pool.find(function(v){ return male.test(v.name); })||pool[0];
+  return pool.find(function(v){ return fem.test(v.name)&&!male.test(v.name); })||pool[0]; }
+var SET={1:{rate:1,pitch:1.05},2:{rate:.93,pitch:.85},3:{rate:1.08,pitch:1.3,beep:1}};
+var AX; function beep(){ try{ AX=AX||new (window.AudioContext||window.webkitAudioContext)(); var o=AX.createOscillator(),g=AX.createGain(),t=AX.currentTime; o.type='square'; o.frequency.setValueAtTime(1400,t); o.frequency.setValueAtTime(1900,t+.07); g.gain.setValueAtTime(.06,t); g.gain.exponentialRampToValueAtTime(.001,t+.18); o.connect(g).connect(AX.destination); o.start(t); o.stop(t+.2); }catch(e){} }
+function say(text,k,voice,onb,onend){ if(!syn){ onend&&onend(); return; } syn.cancel(); var s=SET[k]||SET[1], u=new SpeechSynthesisUtterance(text); u.lang='ru-RU'; u.voice=voice||voiceFor(k)||null; u.rate=s.rate; u.pitch=s.pitch;
+  if(onb) u.onboundary=onb; u.onend=function(){ onend&&onend(); }; u.onerror=function(){ onend&&onend(); };
+  if(s.beep){ beep(); setTimeout(function(){ syn.speak(u); },230); } else syn.speak(u); }
+function info(){ var r=ru(), el=document.getElementById('vInfo');
+  [1,2,3].forEach(function(k){ var v=voiceFor(k), sm=document.querySelector('small[data-n="'+k+'"]'); sm.textContent=v?'Здесь звучит: '+v.name:''; });
+  document.querySelectorAll('[data-pick]').forEach(function(b){ b.classList.toggle('on',+b.dataset.pick===pick); b.textContent=+b.dataset.pick===pick?'✓ Выбран':'Выбрать'; });
+  el.textContent=!syn?'В этом браузере нет голоса. Текст будет только печататься.':(r.length?'Русских голосов на этом устройстве: '+r.length+'.':'Русские голоса ещё загружаются или их нет. Если тишина - в настройках телефона добавьте голос "Русский" (синтез речи).');
+  var sel=document.getElementById('all'); sel.innerHTML=r.map(function(v,i){ return '<option value="'+i+'">'+v.name+(natural(v)?' (живой)':'')+'</option>'; }).join(''); }
+if(syn){ syn.onvoiceschanged=info; } info(); setTimeout(info,800);
+document.querySelectorAll('[data-say]').forEach(function(b){ b.onclick=function(){ say(TT+'. '+TX,+b.dataset.say); }; });
+document.querySelectorAll('[data-pick]').forEach(function(b){ b.onclick=function(){ pick=+b.dataset.pick; try{ localStorage.setItem('ekr_voice',pick); }catch(e){} info(); }; });
+document.getElementById('sayAll').onclick=function(){ var v=ru()[+document.getElementById('all').value]; say(TT+'. '+TX,1,v); };
+
+/* печать текста: идёт вместе с голосом; если голос молчит - по таймеру */
+function typeIn(scr,done){ var tt=scr.querySelector('.tt'), tx=scr.querySelector('.tx'), i=0, j=0, full=TT+'. '+TX, said=0, timer;
+  tt.textContent=''; tx.textContent=''; tx.classList.remove('end'); tt.classList.add('typing'); scr.classList.add('talk');
+  function show(n){ n=Math.min(n,full.length); var a=Math.min(n,TT.length); tt.textContent=TT.slice(0,a); if(n>TT.length+2) { tt.classList.remove('typing'); tx.textContent=TX.slice(0,n-TT.length-2); } }
+  var pos=0; timer=setInterval(function(){ pos=Math.max(pos+1,said); show(pos); if(pos>=full.length){ clearInterval(timer); } },red?1:45);
+  var mute=!syn||!ru().length;
+  if(!mute) say(full,pick,null,function(e){ if(e.charIndex!=null) said=e.charIndex+(e.charLength||6); },function(){ clearInterval(timer); show(full.length); tx.classList.add('end'); scr.classList.remove('talk'); done&&done(); });
+  if(mute) setTimeout(function(){ clearInterval(timer); show(full.length); tx.classList.add('end'); scr.classList.remove('talk'); done&&done(); },full.length*45); }
+function screenHTML(){ return '<div class="hd"><i></i>ПЕРЕДАЧА ЗАДАНИЯ<span class="wave"><b></b><b></b><b></b><b></b><b></b></span></div><div class="tt"></div><div class="tx"></div><div class="go"><button class="main">Начать ›</button> <button>Пропустить голос</button></div>'; }
+/* точка экрана-голограммы на снимке */
+function spot(){ return tel()?{x:50,y:45,w:50,h:15}:{x:54.5,y:51,w:6.5,h:7}; }
+function reset(st){ var z=st.querySelector('.zone'), c=st.querySelector('.close'), s=st.querySelector('.scr'), bm=st.querySelector('.beam'), p=spot();
+  z.style.transition=c.style.transition=s.style.transition='none'; z.style.transform=''; z.style.filter=''; z.style.opacity=1; c.style.opacity=0; c.style.transform='scale(1.15)'; c.style.filter='';
+  s.innerHTML=screenHTML(); s.style.left=(p.x-p.w/2)+'%'; s.style.top=(p.y-p.h/2)+'%'; s.style.width=p.w+'%'; s.style.height=p.h+'%'; s.style.opacity=0; s.style.transform=''; s.style.fontSize='';
+  if(bm) bm.style.opacity=0; void st.offsetWidth; z.style.transition=c.style.transition=s.style.transition=''; return {z:z,c:c,s:s,bm:bm,p:p}; }
+function fin(o){ var go=o.s.querySelector('.go'); go.classList.add('on'); var bs=go.querySelectorAll('button'); bs[1].onclick=function(){ syn&&syn.cancel(); }; bs[0].onclick=function(){ syn&&syn.cancel(); }; }
+var PLAY={
+  A:function(st){ var o=reset(st), p=o.p;
+    o.s.style.opacity=.9; o.z.style.transformOrigin=p.x+'% '+p.y+'%'; o.z.style.transform='scale(2.6)'; o.z.style.filter='blur(1px)';
+    setTimeout(function(){ o.z.style.opacity=0; o.c.style.opacity=1; o.c.style.transform='scale(1.03)'; o.c.style.filter='blur(2.5px) brightness(.8)';
+      o.s.style.left=tel()?'4%':'9%'; o.s.style.top=tel()?'6%':'8%'; o.s.style.width=tel()?'92%':'82%'; o.s.style.height=tel()?'84%':'80%'; o.s.style.opacity=1;
+      setTimeout(function(){ typeIn(o.s,function(){ fin(o); }); },1300); },1200); },
+  B:function(st){ var o=reset(st), p=o.p;
+    o.z.style.transformOrigin=p.x+'% '+(p.y+6)+'%'; o.z.style.transform='scale(1.35)'; o.s.style.opacity=.9;
+    setTimeout(function(){ if(tel()){ o.s.style.left='4%'; o.s.style.top='52%'; o.s.style.width='92%'; o.s.style.height='45%'; }
+      else { o.s.style.left='46%'; o.s.style.top='10%'; o.s.style.width='50%'; o.s.style.height='78%'; } o.s.style.opacity=1;
+      var bm=o.bm; if(tel()){ bm.style.left='60%'; bm.style.top='52%'; bm.style.width='6%'; bm.style.transform='rotate(-90deg)'; } else { bm.style.left='46%'; bm.style.top='52%'; bm.style.width='12%'; bm.style.transform='rotate(170deg)'; }
+      bm.style.opacity=1; setTimeout(function(){ typeIn(o.s,function(){ fin(o); }); },1300); },1300); },
+  C:function(st){ var o=reset(st), p=o.p;
+    o.z.style.transformOrigin=p.x+'% '+p.y+'%'; o.z.style.transform='scale(1.5)'; o.s.style.opacity=.9;
+    setTimeout(function(){ o.s.style.left=tel()?'8%':'30%'; o.s.style.top=tel()?'16%':'14%'; o.s.style.width=tel()?'84%':'44%'; o.s.style.height=tel()?'42%':'58%';
+      o.s.style.transform='perspective(900px) rotateY(-24deg) rotateX(6deg)'; o.s.style.opacity=1; o.s.style.fontSize='.85em';
+      setTimeout(function(){ typeIn(o.s,function(){ fin(o); var b=o.s.querySelector('.go .main');
+        b.onclick=function(){ o.z.style.transform='scale(2.6)'; o.z.style.opacity=0; o.c.style.opacity=1; o.c.style.filter='blur(2.5px) brightness(.8)';
+          o.s.style.transform='none'; o.s.style.left=tel()?'4%':'9%'; o.s.style.top=tel()?'6%':'8%'; o.s.style.width=tel()?'92%':'82%'; o.s.style.height=tel()?'84%':'80%'; o.s.style.fontSize=''; }; }); },1300); },1300); }
+};
+document.querySelectorAll('[data-play]').forEach(function(b){ b.onclick=function(){ var v=b.dataset.play; syn&&syn.cancel(); PLAY[v](document.querySelector('.stage[data-v="'+v+'"]')); b.textContent='↻ Ещё раз'; }; });
+document.querySelectorAll('.stage').forEach(function(st){ reset(st); });
+</script>
+</body>
+</html>
