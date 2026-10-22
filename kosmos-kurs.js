@@ -27,7 +27,7 @@ var cv=document.getElementById('c'), R;
 try{ R=new THREE.WebGLRenderer({canvas:cv,antialias:!mob,powerPreference:'high-performance'}); }catch(e){ plain(); return; }
 document.getElementById('plainB').onclick=function(){ lsS(VKEY,'plain'); location.href=PLAIN; };
 R.setPixelRatio(Math.min(devicePixelRatio||1,mob?1.25:1.75));
-var S=new THREE.Scene(), C=new THREE.PerspectiveCamera(62,1,.1,2600);
+var S=new THREE.Scene(), C=new THREE.PerspectiveCamera(62,1,.4,2600); /* ближняя плоскость .4 (было .1): точнее глубина, крыши не мерцают полосками */
 var BG_A=new THREE.Color('#04050d'), BG_B=new THREE.Color('#0c0420'); S.background=BG_A.clone();
 var bgT=BG_A.clone(), galT=new THREE.Color('#ffffff');
 function V(x,y,z){ return new THREE.Vector3(x,y,z); }
@@ -199,6 +199,49 @@ var LK=mkLevel('kurs',{name:'Город Взлёт',mix:0,pz:CZ,me:V(0,PY+1.5,CZ
 function winTex(c){ var t=tex(function(x,w,h){ x.fillStyle='#0b1022'; x.fillRect(0,0,w,h);
   for(var yy=5;yy<h;yy+=12) for(var xx=5;xx<w;xx+=11){ var on=Math.random()<.55; x.globalAlpha=on?.5+Math.random()*.5:1; x.fillStyle=on?(Math.random()<.35?c:'#ffe7a8'):'#151b36'; x.fillRect(xx,yy,6,7); }
   x.globalAlpha=1; },128,256); t.wrapS=t.wrapT=THREE.RepeatWrapping; return t; }
+/* открытые модули (правка 22.10 вечер, вариант В): у каждого здания свой силуэт, свой рисунок окон, вывеска и балконы.
+   1 - ярусы и окна-ленты с козырьками, 4 - скошенные углы, стекло и кольца света, 6 - овальная башня с ламелями и короной.
+   Одно и то же здание в городе (s=1) и изнутри модуля (s - во сколько раз крупнее); верх всегда прямоугольник bw x bl - это крыша модуля */
+var FAS={1:'lenta',4:'steklo',6:'lamel'}, VYV={1:'ШКОЛА FPV',4:'ДИСПЕТЧЕР',6:'БАШНЯ АСА'};
+function facTex(c,k){ var t=tex(function(x,w,h){ var i,xx,yy;
+  if(k==='lenta'){ x.fillStyle='#10162e'; x.fillRect(0,0,w,h); for(yy=4;yy<h;yy+=16){ var g=x.createLinearGradient(0,0,w,0); g.addColorStop(0,'#1b2a52'); g.addColorStop(.5,Math.random()<.5?'#ffe7a8':c); g.addColorStop(1,'#1b2a52'); x.globalAlpha=.4+Math.random()*.6; x.fillStyle=g; x.fillRect(0,yy,w,8); x.globalAlpha=1; x.fillStyle='#0b1022'; for(xx=0;xx<w;xx+=16) x.fillRect(xx,yy,2,8); } }
+  else if(k==='steklo'){ var g2=x.createLinearGradient(0,0,w,h); g2.addColorStop(0,'#1e3a6e'); g2.addColorStop(.5,'#3a6fb0'); g2.addColorStop(1,'#15244a'); x.fillStyle=g2; x.fillRect(0,0,w,h); x.strokeStyle='rgba(10,16,34,.9)'; x.lineWidth=2;
+    for(xx=0;xx<=w;xx+=21){ x.beginPath(); x.moveTo(xx,0); x.lineTo(xx,h); x.stroke(); } for(yy=0;yy<=h;yy+=32){ x.beginPath(); x.moveTo(0,yy); x.lineTo(w,yy); x.stroke(); }
+    for(i=0;i<30;i++){ x.fillStyle=Math.random()<.5?'rgba(255,231,168,.85)':c; x.fillRect(Math.floor(Math.random()*6)*21+2,Math.floor(Math.random()*8)*32+2,18,29); } }
+  else { x.fillStyle='#0b1022'; x.fillRect(0,0,w,h); for(xx=6;xx<w;xx+=18) for(yy=0;yy<h;yy+=6){ var on=Math.random()<.6; x.fillStyle=on?(Math.random()<.3?c:'#ffe7a8'):'#141a33'; x.globalAlpha=on?.5+Math.random()*.5:1; x.fillRect(xx,yy,8,4); } x.globalAlpha=1; }
+  },128,256); t.wrapS=t.wrapT=THREE.RepeatWrapping; return t; }
+function vyvTex(c,s){ return tex(function(x,w,h){ x.fillStyle='rgba(5,8,20,.92)'; x.fillRect(0,0,w,h); x.strokeStyle=c; x.lineWidth=6; x.strokeRect(5,5,w-10,h-10); x.font='900 50px sans-serif'; x.fillStyle=c; x.textAlign='center'; x.textBaseline='middle'; x.shadowColor=c; x.shadowBlur=12; x.fillText(s,w/2,h/2+3,w-30); },384,112); }
+/* o: s - масштаб деталей, side(доля высоты) - материал стен, glow(прозрачность, цвет), dark - балконы, top - верх крыши (иначе стены), c - цвет модуля */
+function rbBody(g,st,bw,bl,hh,o){ var s=o.s, gl=o.glow(1), top=o.top||null;
+  function box(w,h,d,m,x,y,z){ var me=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),m); me.position.set(x||0,y,z||0); g.add(me); return me; }
+  function cap(w,h,d,y){ var sm=o.side(h/hh); return box(w,h,d,top?[sm,sm,top,sm,sm,sm]:sm,0,y,0); }
+  var sx=bw/2, sz=0, sy=hh*.6;
+  if(st===1){ /* ярусы: широкий цоколь, средний ярус, верхний корпус под крышей; козырьки-балконы на верхнем */
+    var y=0; [[1.25,1.12,.22],[1.12,1.06,.28],[1,1,.5]].forEach(function(q,j){ var h=hh*q[2], w=bw*q[0], d=bl*q[1]; if(j<2) box(w,h,d,o.side(q[2]),0,y+h/2,0); else cap(w,h,d,y+h/2);
+      if(j<2) box(w+.3*s,.3*s,d+.3*s,gl,0,y+h,0); y+=h; });
+    for(var yb=hh-1.2*s;yb>hh*.5+.5*s;yb-=3*s) box(bw+.6*s,.18*s,bl+.6*s,o.dark,0,yb,0); }
+  else if(st===4){ /* скошенные углы, стекло, кольца света; сверху прямоугольный венец под крышу */
+    var a=bw/2, b=bl/2, k=bw*.22, sh=new THREE.Shape(); sh.moveTo(-a+k,-b); sh.lineTo(a-k,-b); sh.lineTo(a,-b+k); sh.lineTo(a,b-k); sh.lineTo(a-k,b); sh.lineTo(-a+k,b); sh.lineTo(-a,b-k); sh.lineTo(-a,-b+k); sh.closePath();
+    var ch=1.4*s, hb=hh-ch, ge=new THREE.ExtrudeGeometry(sh,{depth:hb,bevelEnabled:false}); ge.rotateX(-Math.PI/2);
+    var sm=o.side(1); sm.map.repeat.set(o.RX/bw,o.RY/hh); var me=new THREE.Mesh(ge,[o.dark,sm]); g.add(me);
+    var rg=new THREE.ExtrudeGeometry(sh,{depth:.25*s,bevelEnabled:false}); rg.rotateX(-Math.PI/2); var rm=o.glow(.7);
+    for(var yr=hb/4;yr<hb-.5*s;yr+=hb/4){ var ring=new THREE.Mesh(rg,rm); ring.position.y=yr; ring.scale.set(1.03,1,1.03); g.add(ring); }
+    [[1,1],[1,-1],[-1,1],[-1,-1]].forEach(function(q){ box(.3*s,hb,.3*s,o.glow(.9),q[0]*(a-k/2),hb/2,q[1]*(b-k/2)).rotation.y=q[0]*q[1]*Math.PI/4; }); /* светящиеся рёбра на скосах */
+    cap(bw,ch,bl,hb+ch/2); box(bw+.3*s,.3*s,bl+.3*s,gl,0,hb,0); }
+  else { /* овальная башня: сужается книзу, ламели, корона-кольцо, широкая плита-крыша сверху */
+    var dh=1.6*s, hc=hh-dh, cy=new THREE.CylinderGeometry(.5,.4,1,28,1,true), cm=o.side(1); cm.map.repeat.set(o.RX*4.5,o.RY*hc/hh); cm.side=THREE.DoubleSide;
+    var tw=new THREE.Mesh(cy,cm); tw.scale.set(bw*.9,hc,bl*.9); tw.position.y=hc/2; g.add(tw);
+    var tr=new THREE.Mesh(new THREE.TorusGeometry(.5,.012,6,48),o.glow(1)); tr.rotation.x=Math.PI/2; tr.scale.set(bw*.98,bl*.98,s*12); tr.position.y=hc*.75; g.add(tr); /* корона */
+    var tr2=tr.clone(); tr2.scale.set(bw*.86,bl*.86,s*12); tr2.position.y=hc*.4; g.add(tr2);
+    for(var j=0;j<8;j++){ var an=j/8*Math.PI*2+.2; box(.22*s,hc*.9,.22*s,o.glow(.55,'#ffffff'),Math.sin(an)*bw*.43,hc*.48,Math.cos(an)*bl*.43); } /* ламели */
+    var sk=new THREE.Mesh(new THREE.CylinderGeometry(.5,.45,1,28,1,true),o.glow(.5)); sk.scale.set(bw*.98,.5*s,bl*.98); sk.position.y=hc-.25*s; g.add(sk); /* светлая юбка под плитой */
+    cap(bw,dh,bl,hc+dh/2); box(bw+.3*s,.3*s,bl+.3*s,gl,0,hc,0); sx=bw*.46; sz=0; }
+  /* вывеска и мелочи: балконы-кондиционеры на торце, розовый неон */
+  var sg=new THREE.Mesh(new THREE.PlaneGeometry(bw*.8,bw*.24),o.sign); sg.position.set(sx+.35*s,sy,sz); sg.rotation.y=Math.PI/2; g.add(sg);
+  var sg2=sg.clone(); sg2.position.x=-sg.position.x; sg2.rotation.y=-Math.PI/2; g.add(sg2);
+  /* у овальной башни мелочи ставим прямо на стену: радиус стены на высоте y - .9*(.4+.1*y/hc) от размера */
+  for(var m=0;m<3;m++){ var bx=(m-1)*bw*.25, by=hh*(.25+m*.17), bz=st===6?bl*.9*(.4+.1*by/hc)*Math.sqrt(1-bx*bx/(bw*bw*Math.pow(.9*(.4+.1*by/hc),2))):bl/2; box(1.4*s,.5*s,1*s,o.dark,bx,by,bz+.5*s); }
+  var nz=-bl*.3, nx=st===6?bw*.9*(.4+.04*hh/hc)*Math.sqrt(1-nz*nz/(bl*bl*Math.pow(.9*(.4+.04*hh/hc),2))):bw/2; box(.5*s,hh*.35,.5*s,o.glow(.9,'#ff7ce0'),-nx-.1*s,hh*.4,nz); }
 /* здание-заглушка: цоколь, башня с окнами, верхний ярус цвета модуля, светящееся кольцо */
 /* здания: у каждого модуля своё (стиль st): 1 школа безопасности, 2 мастерская, 3 аккумуляторная, 4 диспетчерская вышка,
    5 гоночный стадион, 6 башня аса; киоски боковых нитей. TOPH - полная высота, над ней висит маяк-узел */
@@ -214,10 +257,12 @@ function building(L,n){ var b=new THREE.Group(), w=n.s*2.1, c=new THREE.Color(n.
   var k0=b.children.length; /* всё, что ниже, - здание из кода; готовая модель его заменит */
   if(n.rb){ /* открытый модуль: то же здание, что изнутри. Длинная сторона смотрит на центр города (как крыша внутри); покрытие крыши и дорогу заданий кладёт cityRoof */
     var bw=w*1.7, bl=w*3.6, hh=TOPH[st]-1; b.rotation.y=Math.atan2(n.p[0],n.p[2]-CZ);
-    add(new THREE.BoxGeometry(bw,hh,bl),win([2,Math.max(2,Math.round(hh/5))]),0,1+hh/2,0);
-    for(var y2=hh;y2>2;y2-=6) add(new THREE.BoxGeometry(bw+.12,.28,bl+.12),glow({opacity:.75}),0,1+y2-.3,0); /* светлые пояса, как на стенах изнутри */
+    var ft=facTex(n.c,FAS[st]), rbg=new THREE.Group(); rbg.position.y=1; b.add(rbg);
+    rbBody(rbg,st,bw,bl,hh,{s:1,RX:2,RY:hh/5,c:n.c,dark:L0(0x8892b0,.15),sign:mat(new THREE.MeshBasicMaterial({map:vyvTex(n.c,VYV[st]),transparent:true,opacity:.85,side:THREE.DoubleSide})),
+      side:function(f){ var t=ft.clone(); t.needsUpdate=true; t.repeat.set(2,Math.max(1,Math.round(hh*f/5))); return L0(0xffffff,.85,{map:t,emissive:0xffffff,emissiveMap:t}); },
+      glow:function(op,col){ return glow(col?{color:new THREE.Color(col),opacity:op}:{opacity:op}); }});
     add(new THREE.BoxGeometry(bw+.24,.32,bl+.24),glow({opacity:1}),0,1+hh+.06,0); /* светящееся ограждение по краю крыши (один бортик вместо четырёх: бережём телефон) */
-    n.roofTop=add(new THREE.PlaneGeometry(bw-.1,bl-.1),L0(0x2e5a2e,.2),0,1+hh+.23,0); n.roofTop.rotation.x=-Math.PI/2; n.rbs={bw:bw,bl:bl,y:1+hh+.2};
+    n.roofTop=add(new THREE.PlaneGeometry(bw-.1,bl-.1),L0(0x2e5a2e,.2),0,1+hh+.5,0); n.roofTop.rotation.x=-Math.PI/2; n.rbs={bw:bw,bl:bl,y:1+hh+.5}; /* покрытие заметно выше бортика: иначе издалека они мерцают полосками */
     var cl=[]; [[1,1],[1,-1],[-1,1],[-1,-1]].forEach(function(q){ var lp=new THREE.Sprite(new THREE.SpriteMaterial({map:glowTex(n.c),blending:THREE.AdditiveBlending,depthWrite:false})); lp.scale.setScalar(1.6); lp.position.set(q[0]*bw/2,1+hh+.5,q[1]*bl/2); b.add(lp); cl.push(lp); });
     n.anim.push(function(t){ cl.forEach(function(lp,j){ lp.material.opacity=Math.sin(t*2+j*1.6)>-.2?1:.15; }); }); }
   else if(ZONE[st]) ZONE[st]({b:b,n:n,w:w,c:c,add:add,L0:L0,glow:glow,win:win});
@@ -301,6 +346,7 @@ function taskScreen(n,b,w,L0){ var sg=new THREE.Group(); sg.position.set(w*2.1,0
   var pm=L0(0x2a3358,.15), po=new THREE.Mesh(new THREE.CylinderGeometry(.14,.2,3.6,8),pm); po.position.y=1.8; sg.add(po);
   var fr=new THREE.Mesh(new THREE.BoxGeometry(6.7,4.3,.3),L0(0x1b2240,.3)); fr.position.y=5.6; sg.add(fr);
   var pl=new THREE.Mesh(new THREE.PlaneGeometry(6.3,3.94),new THREE.MeshBasicMaterial({map:scrTex(n),transparent:true,opacity:.85})); pl.position.set(0,5.6,.16); sg.add(pl); n.mats.push(pl.material);
+  pl.userData.id=n.id; pl.userData.scr=1; n.L.hits.push(pl); /* нажатие на экран - сразу в задание (22.10, правка 13) */
   n.scr=pl; n.stex=pl.material.map; n.scrW=6.3; n.scrH=3.94;
   n.anim.push(function(t){ if(n.st!=='lock') pl.material.opacity=.88+.1*Math.sin(t*7)*Math.sin(t*1.3); }); }
 /* где экран в мире и откуда на него смотреть, чтобы он занял почти весь вид */
@@ -356,6 +402,13 @@ var ZONE={
     o.n.anim.push(function(t){ cup.rotation.y=t*.9; }); }
 };
 function topY(st){ return PY+TOPH[st]+2.2; }
+/* вывеска, которая печатается по букве и мигает, как электронное табло. Цикл начинается заново при каждом входе в уровень (L.t0 в setLevel) */
+function typeSign(L,t,c,pos){ var cn=document.createElement('canvas'); cn.width=512; cn.height=128; var x=cn.getContext('2d'), tx=new THREE.CanvasTexture(cn), last='';
+  var sp=new THREE.Sprite(new THREE.SpriteMaterial({map:tx,transparent:true,depthWrite:false})); sp.scale.set(16,4,1); sp.position.copy(pos); L.g.add(sp);
+  function draw(k,on){ var key=k+'|'+on; if(key===last) return; last=key; x.clearRect(0,0,512,128); var s2=t.slice(0,k)+(k<t.length&&on?'_':''); x.font='900 79px Unbounded, Manrope, system-ui, sans-serif'; x.textAlign='center'; x.textBaseline='middle';
+    if(on||k<t.length){ x.shadowColor=c; x.shadowBlur=44; x.fillStyle=c; x.fillText(s2,256,64); x.shadowBlur=15; x.fillStyle='#ffffff'; x.fillText(s2,256,64); } else { x.fillStyle='rgba(255,255,255,.12)'; x.fillText(t,256,64); } tx.needsUpdate=true; }
+  (L.tick=L.tick||[]).push(function(tm2){ var u=(tm2-(L.t0||0))%9, per=.22, k=Math.min(t.length,Math.floor(u/per)), te=t.length*per;
+    if(u<te) draw(k,Math.floor(u/.11)%2===0); else if(u<te+3) draw(t.length,Math.floor((u-te)/.3)%2===0); else draw(t.length,true); }); draw(0,true); return sp; }
 /* светящаяся надпись (например "ФИНИШ") */
 function signTex(t,c){ return tex(function(x,w,h){ x.font='900 '+(h*.62)+'px Unbounded, Manrope, system-ui, sans-serif'; x.textAlign='center'; x.textBaseline='middle';
   x.shadowColor=c; x.shadowBlur=h*.35; x.fillStyle=c; x.fillText(t,w/2,h/2); x.shadowBlur=h*.12; x.fillStyle='#ffffff'; x.fillText(t,w/2,h/2); },512,128); }
@@ -386,7 +439,7 @@ mods.forEach(function(m,i){ var a=i*1.02, r=RI*.62-i*1.6, st0=i<6?i+1:6, h=TOPH[
   var deck=new THREE.Mesh(new THREE.CylinderGeometry(RI,RI-2,2.4,64),[new THREE.MeshLambertMaterial({color:0x1b2246,emissive:0x7c5cff,emissiveIntensity:.12}),new THREE.MeshLambertMaterial({map:top,emissive:0xffffff,emissiveMap:top,emissiveIntensity:.55}),new THREE.MeshLambertMaterial({color:0x111633})]);
   deck.position.set(0,PY-1.2,CZ); G.add(deck);
   var rim=new THREE.Mesh(new THREE.TorusGeometry(RI,.35,8,96),new THREE.MeshBasicMaterial({color:0x7cf3ff,transparent:true,opacity:.9})); rim.rotation.x=Math.PI/2; rim.position.set(0,PY,CZ); G.add(rim); LK.rim=rim;
-  var rock=new THREE.ConeGeometry(RI-2,52,28,6,true), pos=rock.attributes.position; for(var i=0;i<pos.count;i++){ var y=pos.getY(i); if(y<25){ var f=1+(Math.random()-.5)*.22; pos.setX(i,pos.getX(i)*f); pos.setZ(i,pos.getZ(i)*f); pos.setY(i,y+(Math.random()-.5)*4); } }
+  var rock=new THREE.ConeGeometry(RI-2,52,28,6,true), pos=rock.attributes.position; for(var i=0;i<pos.count;i++){ var y=pos.getY(i); if(y<-25){ pos.setX(i,pos.getX(i)*.9); pos.setZ(i,pos.getZ(i)*.9); continue; } /* край под платформой: только внутрь, иначе уголки торчат за город */ if(y<25){ var f=1-Math.random()*.22; pos.setX(i,pos.getX(i)*f); pos.setZ(i,pos.getZ(i)*f); pos.setY(i,y+(Math.random()-.5)*4); } }
   rock.computeVertexNormals(); var rk=new THREE.Mesh(rock,new THREE.MeshLambertMaterial({color:0x2a2148,emissive:0x3b1d6e,emissiveIntensity:.25,flatShading:true,side:THREE.DoubleSide})); rk.rotation.x=Math.PI; rk.position.set(0,PY-2.4-26,CZ); G.add(rk);
   LK.eng=[]; [[0,0],[24,10],[-22,14],[8,-26],[-14,-22]].forEach(function(q,j){ var e=new THREE.Sprite(new THREE.SpriteMaterial({map:glowTex(j%2?'#ff7ce0':'#7cf3ff'),blending:THREE.AdditiveBlending,depthWrite:false})); e.position.set(q[0],PY-14-j*5,CZ+q[1]); e.scale.setScalar(j?14:30); G.add(e); LK.eng.push(e); });
   var under=new THREE.Sprite(new THREE.SpriteMaterial({map:glowTex('#a78bfa'),blending:THREE.AdditiveBlending,depthWrite:false,opacity:.5})); under.scale.set(260,160,1); under.position.set(0,PY-70,CZ); G.add(under);
@@ -443,16 +496,18 @@ function prop(kind,c){ var g=new THREE.Group(), M2=function(col,e){ return new T
   return g; }
 mods.forEach(function(m,i){ var c=MC[i%MC.length], T=THEME[i%THEME.length], open=OPEN_MODS.indexOf(i+1)>=0,
   L=mkLevel(m.id,{mid:m.id,mi:i,open:open,pz:-80,name:'Модуль '+m.n+'. '+m.t,mix:0,c:c,loc:1,me:V(0,PY+2,0),fog:new THREE.Fog(open?new THREE.Color('#0a0d24').lerp(new THREE.Color(c),.08):new THREE.Color(T.sky[0]).lerp(new THREE.Color(c),.12),open?260:90,open?1700:420)});
-  var pts=[[0,-28]]; m.tasks.forEach(function(tid,k){ pts.push([Math.sin(k*1.25+.6)*20,-58-k*30]); });
+  var pts=[[0,-28]]; m.tasks.forEach(function(tid,k){ pts.push([Math.sin(k*1.25+.6)*20,-58-k*30]); }); L.pts=pts;
   var gt=tex(T.gr,256); gt.wrapS=gt.wrapT=THREE.RepeatWrapping;
   if(open){ roof(L,pts,c,gt,T,i); cityRoof(LK.by[m.id],pts,T); } /* открытый модуль: мы на крыше здания модуля, вокруг космос, внизу город */
   else { gt.repeat.set(36,36); L.g.add(skyDome(T));
     var gr=new THREE.Mesh(new THREE.PlaneGeometry(700,700),new THREE.MeshLambertMaterial({map:gt,emissive:0xffffff,emissiveMap:gt,emissiveIntensity:T.day?.55:.35})); gr.rotation.x=-Math.PI/2; gr.position.set(0,PY-.02,-120); L.g.add(gr); }
-  mkNode(L,{id:'c_'+m.id,kind:'center',mid:m.id,from:'me',n:'Старт',sub:T.n+'. '+m.t,c:c,zone:1,st0:'zs',face:0,p:[0,topY('zs'),-28],s:1.6,num:String(m.n)}); L.order.push('c_'+m.id);
+  mkNode(L,{id:'c_'+m.id,kind:'center',mid:m.id,from:'me',n:'Старт',sub:T.n+'. '+m.t,c:c,zone:1,st0:'zs',face:0,p:[0,topY('zs'),-28],s:1.6}); /* без номера: "1" у старта путалась с заданием 1 (правка 22.10) */ L.order.push('c_'+m.id);
   var prev='c_'+m.id, k=0;
   m.tasks.forEach(function(tid){ var T0=K.lib[tid]; if(!T0) return; var q=pts[k+1], pq=pts[k], st0=zoneKind(tid);
     mkNode(L,{id:tid,kind:'task',tid:tid,mid:m.id,from:prev,n:(k+1)+'. '+T0.t,sub:T0.sub,c:c,zone:1,st0:st0,face:Math.atan2(pq[0]-q[0],pq[1]-q[1]),p:[q[0],topY(st0),q[1]],s:1.6,num:String(k+1)}); L.order.push(tid); prev=tid; k++; });
-  /* в конце дороги - светящаяся мигающая надпись "ФИНИШ" (22.10); в начале вместо таблички "Модуль N" - подпись "Старт" */
+  /* над первым кольцом - электронная вывеска "СТАРТ": печатается по букве, потом мигает (правка 22.10) */
+  typeSign(L,'СТАРТ',c,V(0,PY+TOPH.zs+8,-28));
+  /* в конце дороги - светящаяся мигающая надпись "ФИНИШ" (22.10) */
   var fin=L.by[prev]; if(fin&&fin!==L.by['c_'+m.id]){ var fs=new THREE.Sprite(new THREE.SpriteMaterial({map:signTex('ФИНИШ',c),transparent:true,depthWrite:false})); fs.scale.set(16,4,1); fs.position.set(fin.p[0],PY+TOPH[fin.st0]+9,fin.p[2]); L.g.add(fs); (L.blink=L.blink||[]).push({s:fs,f:2.2,p:0}); }
   /* декор по теме вдали от дороги */
   function nearRoad(x,z){ for(var j=0;j<pts.length;j++){ var a2=pts[j], b2=pts[j+1]||pts[j], dx=b2[0]-a2[0], dz=b2[1]-a2[1], l2=dx*dx+dz*dz||1, u=Math.max(0,Math.min(1,((x-a2[0])*dx+(z-a2[1])*dz)/l2)), ex=a2[0]+dx*u-x, ez=a2[1]+dz*u-z; if(ex*ex+ez*ez<150) return true; } return Math.hypot(x,z)<12; }
@@ -486,8 +541,12 @@ function roof(L,pts,c,gt,T,i){ var z0=60, zMin=pts[pts.length-1][1]-55, len=z0-z
   gt.repeat.set(W/20,len/20); var wt=winTex(c);
   var side=new THREE.MeshLambertMaterial({map:wt,emissive:0xffffff,emissiveMap:wt,emissiveIntensity:.7}), top=new THREE.MeshLambertMaterial({map:gt,emissive:0xffffff,emissiveMap:gt,emissiveIntensity:T.day?.5:.35});
   var D=Math.max(220,TOPH[i<6?i+1:6]*CF); wt.repeat.set(W/42,D/54); /* окна того же размера, что у этого здания в городе (x CF) */ /* стены здания уходят вниз до платформы города (город внизу в масштабе CF) */
-  var body=new THREE.Mesh(new THREE.BoxGeometry(W,D,len),[side,side,top,side,side,side]); body.position.set(0,PY-D/2,zc); L.g.add(body); L.zc=zc;
-  var bandM=new THREE.MeshBasicMaterial({color:cc,transparent:true,opacity:.75}); for(var by=6;by<D-4;by+=6*CF){ var bnd=new THREE.Mesh(new THREE.BoxGeometry(W+1.4,3.4,len+1.4),bandM); bnd.position.set(0,PY-by,zc); L.g.add(bnd); } /* светлые пояса, как у этого здания в городе */
+  var st=i<6?i+1:6, bg=new THREE.Group(); bg.position.set(0,PY-D,zc); L.g.add(bg); L.zc=zc; /* то же здание, что в городе (rbBody), только крупнее */
+  if(FAS[st]){ var ft=facTex(c,FAS[st]), dk=new THREE.MeshLambertMaterial({color:0x8892b0,emissive:0x1b2246,emissiveIntensity:.4});
+    rbBody(bg,st,W,len,D,{s:W/7.14,RX:W/42,RY:D/54,c:c,dark:dk,top:top,sign:new THREE.MeshBasicMaterial({map:vyvTex(c,VYV[st]),side:THREE.DoubleSide}),
+      side:function(f){ var t=ft.clone(); t.needsUpdate=true; t.repeat.set(W/42,Math.max(1,Math.round(D*f/54))); return new THREE.MeshLambertMaterial({map:t,emissive:0xffffff,emissiveMap:t,emissiveIntensity:.7}); },
+      glow:function(op,col){ return new THREE.MeshBasicMaterial({color:col?new THREE.Color(col):cc,transparent:true,opacity:op}); }}); }
+  else { var body=new THREE.Mesh(new THREE.BoxGeometry(W,D,len),[side,side,top,side,side,side]); body.position.y=D/2; bg.add(body); }
   var rail=new THREE.MeshBasicMaterial({color:cc}); [[0,z0,W,.25],[0,zMin,W,.25],[-W/2,zc,.25,len],[W/2,zc,.25,len]].forEach(function(q){ var rb=new THREE.Mesh(new THREE.BoxGeometry(q[2],.25,q[3]),rail); rb.position.set(q[0],PY+1.1,q[1]); L.g.add(rb); });
   L.blink=L.blink||[]; for(var z=z0;z>=zMin;z-=16) [-W/2,W/2].forEach(function(x){ var lp=new THREE.Sprite(new THREE.SpriteMaterial({map:glowTex(c),blending:THREE.AdditiveBlending,depthWrite:false})); lp.scale.setScalar(2.2); lp.position.set(x,PY+1.4,z); L.g.add(lp); L.blink.push({s:lp,f:2,p:z*.08+(x>0?3:0)}); });
   /* антенна модуля в конце крыши - та же, что над зданием в городе */
@@ -603,6 +662,51 @@ cityRoads();
   /* дроны-патрульные низко вдоль края платформы */
   for(var d=0;d<(mob?2:3);d++){ var q=mini(MC[(d+2)%MC.length]); q.props=[]; q.g.scale.setScalar(1.3); G.add(q.g); q.patrol=1; q.r=RI+2+d*1.5; q.a=d*2.1; q.sp=(.22+d*.05)*(d%2?-1:1); q.y=PY+3.5+d*1.5; q.ph=d*2; LK.drones.push(q); }
 })();
+/* пол города (правка 22.10 вечер): кое-где газоны с деревьями, площадки из плиток, мелкие постройки и дорожки к дорогам.
+   Всё одинаковое рисуется одним вызовом (InstancedMesh): бережём телефон. Места выбираются так, чтобы не задеть здания, дороги и линии от кристалла */
+function cityFloor(){ var G=LK.g, R2=Math.random; var rnd=(function(s){ return function(){ s=(s*16807)%2147483647; return (s-1)/2147483646; }; })(7); /* одна и та же раскладка при каждом входе */
+  var obs=[[0,CZ,10],[LK.me.x,LK.me.z,8]]; LK.nodes.forEach(function(n){ obs.push([n.p[0],n.p[2],n.rb?11:n.kind==='mod'?8:5.5]); });
+  var seg=[]; (LK.rc||[]).forEach(function(cv){ var p=cv.getPoints(24); for(var i=0;i<p.length-1;i++) seg.push([p[i].x,p[i].z,p[i+1].x,p[i+1].z,2.6]); });
+  LK.nodes.forEach(function(n){ if(n.kind==='tab') seg.push([LK.me.x,LK.me.z,n.p[0],n.p[2],1.6]); if(n.kind==='mod') seg.push([0,CZ,n.p[0],n.p[2],1.2]); });
+  function dSeg(x,z,s){ var dx=s[2]-s[0], dz=s[3]-s[1], l=dx*dx+dz*dz||1, u=Math.max(0,Math.min(1,((x-s[0])*dx+(z-s[1])*dz)/l)); return Math.hypot(x-s[0]-u*dx,z-s[1]-u*dz); }
+  function free(x,z,r){ if(Math.hypot(x,z-CZ)>RI-12-r) return false; for(var i=0;i<obs.length;i++) if(Math.hypot(x-obs[i][0],z-obs[i][1])<obs[i][2]+r) return false; for(var j=0;j<seg.length;j++) if(dSeg(x,z,seg[j])<seg[j][4]+r) return false; return true; }
+  /* типы мест: lawn - газон с деревьями, plaza - площадка из шестиугольных плиток, block - мелкие постройки на мощёной площадке, solar - солнечные панели */
+  var MIX=['lawn','lawn','block','plaza','block','solar']; /* выбор владельца 22.10: смесь (вариант В) */
+  var spots=[]; for(var t=0;t<1500&&spots.length<(mob?18:28);t++){ var r=9+rnd()*(RI-20), a=rnd()*6.283, x=Math.sin(a)*r, z=CZ+Math.cos(a)*r, rr=t<600?4+rnd()*3:2.4+rnd()*2;
+    if(!free(x,z,rr)) continue; var ok=true; spots.forEach(function(s){ if(Math.hypot(s.x-x,s.z-z)<s.r+rr+1.5) ok=false; }); if(!ok) continue; spots.push({x:x,z:z,r:rr,k:MIX[spots.length%MIX.length]}); obs.push([x,z,rr+.5]); }
+  var L=[]; function Q(){ return {m:[],c:[]}; } var lawn=Q(), tile=Q(), tree=Q(), trunk=Q(), ball=Q(), house=Q(), roofQ=Q(), pave=Q(), sol=Q(), bol=Q();
+  var o=new THREE.Object3D(); function put(q,x,y,z,sx,sy,sz,ry,col,rx){ o.position.set(x,y,z); o.rotation.set(rx||0,ry||0,0); o.scale.set(sx,sy,sz); o.updateMatrix(); q.m.push(o.matrix.clone()); q.c.push(new THREE.Color(col||'#ffffff')); }
+  var GR=['#2f7d3a','#3c9147','#2a6e45','#4aa156'], TR=['#3fae5a','#2f8f4e','#57c46b','#7fd35b'], TL=['#2b4a8f','#355aa8','#2a3f7a','#3d6bc4'], HC=['#7cf3ff','#ff7ce0','#ffd36e','#9dff7c','#a78bfa','#ff9f5a'];
+  spots.forEach(function(s,i){ var y=PY+.05;
+    if(s.k==='lawn'){ put(lawn,s.x,y,s.z,s.r,1,s.r*(.75+rnd()*.25),rnd()*6,GR[i%4]); var nt=1+Math.floor(rnd()*3);
+      for(var k=0;k<nt;k++){ var a=rnd()*6.283, d=rnd()*s.r*.55, tx=s.x+Math.sin(a)*d, tz=s.z+Math.cos(a)*d, h=1.6+rnd()*1.4;
+        put(trunk,tx,y+.4,tz,1,1,1,0,'#6b4a2e'); if(rnd()<.5) put(tree,tx,y+.7+h/2,tz,h*.42,h,h*.42,rnd()*6,TR[k%4]); else put(ball,tx,y+.8+h*.4,tz,h*.42,h*.42,h*.42,rnd()*6,TR[(k+1)%4]); } }
+    else if(s.k==='plaza'){ var st=.62; for(var gx=-s.r;gx<=s.r;gx+=st*1.5) for(var gz=-s.r;gz<=s.r;gz+=st*1.732){ var px=gx, pz=gz+((Math.round(gx/(st*1.5))%2)?st*.866:0); /* соты без щелей */ if(Math.hypot(px,pz)>s.r) continue;
+        put(tile,s.x+px,y,s.z+pz,.98,1,.98,0,rnd()<.12?HC[i%6]:TL[Math.floor(rnd()*4)]); }
+      put(bol,s.x,y+.3,s.z,.7,.5,.7,0,HC[i%6]); }
+    else if(s.k==='block'){ put(pave,s.x,y,s.z,s.r*1.5,1,s.r*1.5,s.x*.1,'#2b3150'); var nh=2+Math.floor(rnd()*3), ry=s.x*.1;
+      for(var k2=0;k2<nh;k2++){ var a2=ry+k2/nh*6.283+.4, d2=s.r*.38, hx=s.x+Math.cos(a2)*d2, hz=s.z+Math.sin(a2)*d2, hw=1.1+rnd()*.8, hh=1+rnd()*2.2, col=HC[(i+k2)%6];
+        put(house,hx,y+hh/2,hz,hw,hh,hw*(.8+rnd()*.5),ry,'#ffffff'); if(rnd()<.6) put(roofQ,hx,y+hh+.3,hz,hw*.8,.6,hw*.8,ry+Math.PI/4,col); else put(bol,hx,y+hh+.1,hz,hw*.9,.15,hw*.9,ry,col); } }
+    else { for(var k3=0;k3<6;k3++){ var cx=(k3%3-1)*1.6, cz=(Math.floor(k3/3)-.5)*1.4, ry3=s.x*.1; put(sol,s.x+cx*Math.cos(ry3)+cz*Math.sin(ry3),y+.5,s.z-cx*Math.sin(ry3)+cz*Math.cos(ry3),1.4,.08,1.1,ry3,'#ffffff',-.5); } }
+    /* дорожка от места к ближайшей дороге: мелкие светлые плитки */
+    var best=null, bd=1e9; seg.forEach(function(g){ if(g[4]<2) return; var dx=g[2]-g[0], dz=g[3]-g[1], l=dx*dx+dz*dz||1, u=Math.max(0,Math.min(1,((s.x-g[0])*dx+(s.z-g[1])*dz)/l)), qx=g[0]+u*dx, qz=g[1]+u*dz, d=Math.hypot(s.x-qx,s.z-qz); if(d<bd){ bd=d; best=[qx,qz]; } });
+    if(best&&bd<16){ var ux=(best[0]-s.x)/bd, uz=(best[1]-s.z)/bd, ang=Math.atan2(ux,uz); for(var dd=s.r+.3;dd<bd-2;dd+=.9) put(pave,s.x+ux*dd,y,s.z+uz*dd,.55,1,.7,ang,'#c9d3ff'); } });
+  /* сборка: на каждый тип одна сетка */
+  function mk(q,geo,mat){ if(!q.m.length) return; var im=new THREE.InstancedMesh(geo,mat,q.m.length); q.m.forEach(function(m,i){ im.setMatrixAt(i,m); im.setColorAt(i,q.c[i]); }); im.instanceMatrix.needsUpdate=true; if(im.instanceColor) im.instanceColor.needsUpdate=true; G.add(im); L.push(im); }
+  var gt=tex(function(x,w){ x.fillStyle='#bfbfbf'; x.fillRect(0,0,w,w); for(var i=0;i<900;i++){ x.fillStyle='rgba(255,255,255,'+(R2()*.5)+')'; x.fillRect(R2()*w,R2()*w,1,3); } },128);
+  var disc=new THREE.CircleGeometry(1,20); disc.rotateX(-Math.PI/2); var pos=disc.attributes.position; for(var i=1;i<pos.count;i++){ var f=.85+R2()*.2; pos.setX(i,pos.getX(i)*f); pos.setZ(i,pos.getZ(i)*f); } /* неровный край газона */
+  mk(lawn,disc,new THREE.MeshLambertMaterial({map:gt,emissive:0x16401c,emissiveIntensity:.6}));
+  var hx=new THREE.CylinderGeometry(.6,.6,.1,6); hx.rotateY(Math.PI/6); mk(tile,hx,new THREE.MeshLambertMaterial({emissive:0x2a3a8a,emissiveIntensity:.6}));
+  mk(tree,new THREE.ConeGeometry(1,1,7),new THREE.MeshLambertMaterial({emissive:0x0f3a1a,emissiveIntensity:.5})); mk(ball,new THREE.IcosahedronGeometry(1,0),new THREE.MeshLambertMaterial({emissive:0x0f3a1a,emissiveIntensity:.5}));
+  mk(trunk,new THREE.CylinderGeometry(.1,.14,.8,5),new THREE.MeshLambertMaterial({emissive:0x2a1a0a,emissiveIntensity:.4}));
+  var wt=winTex('#7cf3ff'); wt.repeat.set(1,.5); mk(house,new THREE.BoxGeometry(1,1,1),new THREE.MeshLambertMaterial({map:wt,emissive:0xffffff,emissiveMap:wt,emissiveIntensity:.8}));
+  mk(roofQ,new THREE.ConeGeometry(.75,1,4),new THREE.MeshLambertMaterial({emissive:0x333355,emissiveIntensity:.5}));
+  var pg=new THREE.PlaneGeometry(1,1); pg.rotateX(-Math.PI/2); mk(pave,pg,new THREE.MeshLambertMaterial({emissive:0x222a55,emissiveIntensity:.5,transparent:true,opacity:.9}));
+  var stx=tex(function(x,w){ x.fillStyle='#16244a'; x.fillRect(0,0,w,w); x.strokeStyle='#7cf3ff'; x.globalAlpha=.55; x.lineWidth=2; for(var i=0;i<=w;i+=w/4){ x.beginPath(); x.moveTo(i,0); x.lineTo(i,w); x.stroke(); x.beginPath(); x.moveTo(0,i); x.lineTo(w,i); x.stroke(); } },64);
+  mk(sol,new THREE.BoxGeometry(1,1,1),new THREE.MeshLambertMaterial({map:stx,emissive:0xffffff,emissiveMap:stx,emissiveIntensity:.7}));
+  mk(bol,new THREE.CylinderGeometry(.18,.22,1.2,8),new THREE.MeshBasicMaterial({}));
+  LK.floor=L; }
+cityFloor();
 LV.forEach(function(L){ mkThreads(L); mkOver(L); if(L.over){ L.oP=L.over.p; L.oL=L.over.l; } mkTop(L); if(L.loc) L.nodes.forEach(function(n){ if(n.curve){ road(L,n.curve,n.c); roadLamps(L,n.curve,n.c); } }); });
 /* огоньки по краям дороги в модуле: бегут волной вперёд, к следующим заданиям */
 function roadLamps(L,cv,c){ var nl=Math.max(3,Math.round(cv.getLength()/5)), a=V(0,0,0), tg=V(0,0,0); L.chase=L.chase||[];
@@ -623,7 +727,7 @@ function targetOf(L){ if(!L) return null; var nx=I.next(); if(L===LK) return nx?
 function refresh(){ LV.forEach(function(L){ L.nodes.forEach(function(n){ var s=n.st=stOf(n), lock=s==='lock';
   n.pl.visible=!lock&&!n.zone; n.wf.visible=lock&&!n.zone; n.halo.material.color.set(s==='wait'?'#facc15':lock?'#64748b':'#ffffff'); n.halo.material.opacity=lock?.25:s==='done'?1:.8;
   if(n.nm) n.nm.material.opacity=lock?.45:1;
-  if(n.mats) n.mats.forEach(function(m,i){ if(m.emissiveIntensity!=null){ if(m.e0==null) m.e0=m.emissiveIntensity; m.emissiveIntensity=lock?m.e0*.18:m.e0; } else m.opacity=lock?.15:.85; }); dimModel(n); n.el.className='lb s-'+s+(n.kind==='mod'||n.kind==='center'?' big':'')+(n.kind==='center'?' start':''); }); });
+  if(n.mats) n.mats.forEach(function(m,i){ if(m.emissiveIntensity!=null){ if(m.e0==null) m.e0=m.emissiveIntensity; m.emissiveIntensity=lock?m.e0*.18:m.e0; } else m.opacity=lock?.15:.85; }); dimModel(n); n.el.className='lb s-'+s+(n.kind==='mod'||n.kind==='center'?' big':''); }); });
   LV.forEach(function(L){ L.nodes.forEach(function(n){ n.full=null; n.lk=null; }); }); target=targetOf(curL); guideUI(); }
 
 /* ---- состояние и полёт (как в "Иртыше") ---- */
@@ -634,6 +738,7 @@ function rotC(v,a){ var z0=PZ(), x=v.x, z=v.z-z0, c=Math.cos(a), s=Math.sin(a); 
 function spun(v){ v=v.clone(); return curL&&spin?rotC(v,spin):v; }
 /* камера обзора города с учётом поворота (spin), наклона (tilt) и приближения (zoom) */
 var tilt=0, zoom=1;
+function ZMAX(){ return curL&&curL.loc?4:3.2; } /* во сколько раз можно отдалить обзор: город и модуль (правка 22.10, было 1.9) */
 function setElev(o,e){ var len=o.length(), h=Math.hypot(o.x,o.z)||1; o.set(o.x/h*Math.cos(e)*len,Math.sin(e)*len,o.z/h*Math.cos(e)*len); return o; }
 function elevOf(o){ return Math.asin(Math.max(-1,Math.min(1,o.y/(o.length()||1)))); }
 function spunP(P,Lk){ var l=spun(Lk); if(!curL) return P.clone(); var o=P.clone().sub(Lk).applyAxisAngle(V(0,1,0),spin);
@@ -650,7 +755,7 @@ var UP=V(0,1,0), tq=V(0,0,0), tt=V(0,0,0), tl=V(0,0,0);
 function stepFly(dt){ var o=camP.clone(); fly.t=Math.min(1,fly.t+dt/fly.d); var e=(fly.ez||ease)(fly.t);
   if(fly.cv){ /* камера идёт за точкой нити, чуть сзади и выше, и смотрит вперёд по нити */
     var u=fly.rev?1-e:e; fly.cv.getPoint(u,tq); fly.cv.getTangent(u,tt); if(fly.rev) tt.negate();
-    tq.addScaledVector(tt,-7).addScaledVector(UP,2.2); var ws=Math.max(0,1-e/.22), we=Math.max(0,(e-.75)/.25); camP.copy(tq).lerp(fly.a,ws*ws).lerp(fly.b,we);
+    tq.addScaledVector(tt,-7).addScaledVector(UP,fly.up||2.2); var ws=Math.max(0,1-e/.22), we=Math.max(0,(e-.75)/.25); camP.copy(tq).lerp(fly.a,ws*ws).lerp(fly.b,we);
     fly.cv.getPoint(Math.max(0,Math.min(1,u+(fly.rev?-.15:.15))),tl); camL.copy(fly.al).lerp(tl,Math.min(1,e/.3)).lerp(fly.bl,we); }
   else { var mid=fly.a.clone().lerp(fly.b,.5); mid.y+=4; var a1=fly.a.clone().lerp(mid,e), b1=mid.lerp(fly.b,e); camP.copy(a1.lerp(b1,e)); camL.copy(fly.al).lerp(fly.bl,Math.min(1,e*1.3)); }
   speed=o.distanceTo(camP)/Math.max(dt,.001);
@@ -661,7 +766,7 @@ var backB=$('back'), flash=$('flash'), cap=$('cap'), wel=$('wel'), hud=$('hud'),
 var win=$('win'), wbg=$('wbg'), pane=$('wpane'), winOn=false, winMode='', winTask=null, wasDone=false;
 function setLevel(L){ LV.forEach(function(q){ q.g.visible=q===L; }); LV.forEach(function(q){ q.nodes.forEach(function(n){ if(q!==L) hideEl(n.el); }); });
   if(curL) curL.sv=[spin,tilt,zoom]; var sv=L.sv||[0,0,1]; spin=sv[0]; tilt=sv[1]; zoom=sv[2];
-  if(L.open) cityAround(L); curL=L; cur=null; back=[]; acc=0; osdOff(); lvlStars(); topOn=false; topUI(); S.fog=L.fog||null; mixT=L.mix; rollT=L.mix?.06:0;
+  if(L.open) cityAround(L); curL=L; L.t0=tm; cur=null; back=[]; acc=0; osdOff(); lvlStars(); topOn=false; topUI(); S.fog=L.fog||null; mixT=L.mix; rollT=L.mix?.06:0;
   if(L.mix){ bgT.set(L.c).multiplyScalar(.08).add(BG_B); galT.set(L.c).lerp(new THREE.Color('#ffffff'),.35); } else { bgT.copy(BG_A); galT.set('#ffffff'); }
   $('hudL').textContent=L.name; hud.classList.add('on'); backB.classList.add('on'); refresh(); }
 function capTxt(n){ var s=n.st;
@@ -678,13 +783,13 @@ function showCap(n){ $('capT').textContent=n.n; $('capS').textContent=n.sub||'';
 function hideCap(){ cap.classList.remove('on'); }
 $('capT').onclick=function(){ if(cur) tapNode(cur.id); };
 function shake(){ if(cap.animate) cap.animate([{transform:'translate(-50%,0)'},{transform:'translate(calc(-50% - 8px),0)'},{transform:'translate(calc(-50% + 8px),0)'},{transform:'translate(-50%,0)'}],{duration:350}); }
-function arrive(n){ cur=n; acc=0; st='node'; showCap(n); guideUI(); if(tour){ clearTimeout(tourT); tourT=setTimeout(tourNext,red?900:1900); } }
+function arrive(n){ cur=n; acc=0; st='node'; showCap(n); guideUI(); if(n._go){ n._go=0; enter(n); return; } if(tour){ clearTimeout(tourT); tourT=setTimeout(tourNext,red?900:1900); } }
 /* знакомство с курсом: при первом входе камера сама облетает главную нить и все боковые, потом ведёт к заданию */
 var TKEY=(CFG.store||'kursy')+'_tour', tour=null, tourT=0;
 function tourStart(){ if(curL!==LK||fly) return; tour=[mods[0]&&LK.by[mods[0].id]].concat(['prog','code','bug','shp','trn'].map(function(id){ return LK.by[id]; })).filter(Boolean); tourNext(); }
 function tourNext(){ if(!tour||st==='win'||curL!==LK) { tour=null; return; } var n=tour.shift(); if(!n){ tourEnd(); return; } goTo(n); }
 function tourEnd(){ tour=null; clearTimeout(tourT); lsS(TKEY,'1'); back=[]; if(cur) showCap(cur); guideUI(); guideSoon(400); }
-function tapNode(id){ if(fly||(st!=='over'&&st!=='node')) return; if(tour){ tour=null; clearTimeout(tourT); lsS(TKEY,'1'); } var n=curL.by[id]; if(!n) return; if(cur===n) enter(n); else goTo(n); }
+function tapNode(id,now){ if(fly||(st!=='over'&&st!=='node')) return; if(tour){ tour=null; clearTimeout(tourT); lsS(TKEY,'1'); } var n=curL.by[id]; if(!n) return; if(cur===n) enter(n); else { if(now&&n.st!=='lock') n._go=1; goTo(n); } }
 function goTo(n,isBack){ if(topOn){ topOn=false; topUI(); } hideCap(); if(!isBack) back.push(cur?cur.id:null);
   /* летим плавной дугой прямо к точке обзора узла, не повторяя изгибы нити: так камера не дёргается */
   var B=viewOf(n), fwd=cur&&n.from===cur.id;
@@ -739,7 +844,13 @@ function enter(n){
 /* правка 7: переход в модуль, у модулей разные (MOD_TRANS): portal, fpv, hyper. В конце - заставка модуля и новая локация */
 function modIn(n,col){ flashOn(col||n.c+'dd',function(){ var L=LBY[n.mid], wp=$('warp'); osdOff(); hyperOff();
   wp.style.setProperty('--wc',n.c); $('warpT').textContent=n.n+'. '+n.sub; wp.classList.add('on'); flashOff();
-  setTimeout(function(){ setLevel(L); if(L.closed) camP.set(0,PY+26,64); else camP.set(0,30,150); camL.copy(L.oL); wp.classList.remove('on'); flyOver(L,true); },red?300:1100); }); }
+  setTimeout(function(){ setLevel(L); if(L.closed) camP.set(0,PY+26,64); else camP.set(0,30,150); camL.copy(L.oL); wp.classList.remove('on'); roadTour(L); },red?300:1100); }); }
+/* правка 22.10: после входа в модуль - пролёт над крышей (дорогой заданий) от старта до финиша, как с FPV-дрона, разворот и обратно к старту. Нажатие ускоряет */
+function roadTour(L){ if(red||!L.pts){ flyOver(L,true); return; }
+  var P=L.pts.map(function(q){ return V(q[0],PY+5,q[1]); }); P.unshift(V(0,PY+5,6)); /* камера идёт выше зданий зон (fly.up) и смотрит на дорогу впереди */ var cv=new THREE.CatmullRomCurve3(P), e=P[P.length-1], tg=cv.getTangent(1).setY(0).normalize();
+  camP.set(0,PY+9,30); camL.copy(P[1]); st='fly';
+  var f=startFly(e.clone().addScaledVector(tg,-18).add(V(0,13,0)),e.clone().add(V(0,8,0)),cv, /* встаём перед финишем: вывеска "ФИНИШ" видна впереди */ Math.min(9,cv.getLength()/34),function(){
+    var p0=camP.clone(); startFly(p0.clone().add(V(0,3,0)),e.clone().addScaledVector(tg,-40).setY(PY+2),null,1.4,function(){ flyOver(L,true); }).skip=1; }); f.skip=1; f.up=11; }
 function modTrans(n){ var kind=red?'':MOD_TRANS[mods.findIndex(function(m){ return m.id===n.mid; })+1], p=n.g.position.clone(), bp=V(n.p[0],PY,n.p[2]);
   if(kind==='fpv'){ /* вид из FPV-очков: снижаемся к двери здания и ныряем внутрь */
     var out=V(camP.x-bp.x,0,camP.z-bp.z).normalize(), H=Math.max(2.4,(TOPH[n.st0]||8)*.22), door=bp.clone().addScaledVector(out,n.s*3.4).setY(PY+H);
@@ -781,32 +892,59 @@ function openWin(mode,n,from){ winOn=true; winMode=mode; st='win'; cur=n; winTas
     bx.animate([{transform:'translate('+(from.l-r.left)+'px,'+(from.t-r.top)+'px) scale('+sx+','+sy+')',transformOrigin:'0 0',opacity:.6},{transform:'none',transformOrigin:'0 0',opacity:1}],{duration:650,easing:'cubic-bezier(.3,0,.2,1)'}); } }
 /* передача задания: сверху окна печатается номер, название и план задания, голос читает (engine/golos.js). Пройденное - без голоса */
 var bEl=$('brief'), bT=$('bT'), bX=$('bX'), tk=$('t-kurs'), bTm=0, GL=window.GOLOS;
-function sndUI(){ var ok=!!GL&&GL.can(); $('sndB').textContent=GL&&GL.on?'Звук: вкл':'Звук: выкл'; $('sndB').hidden=$('vB').hidden=!ok; if(!ok) $('vRow').hidden=true; }
+/* шестерёнка в окне задания (22.10, правка 12): звук всегда виден; голос - если на устройстве есть русские голоса (список может появиться не сразу) */
+function sndUI(){ var ok=!!GL&&GL.can(); $('sndB').textContent=GL&&GL.on?'🔊 Звук: вкл':'🔇 Звук: выкл'; $('sndB').hidden=!GL; $('vB').hidden=!ok; if(!ok) $('vRow').hidden=true; }
+$('gearB').onclick=function(){ var m=$('gearM'); m.hidden=!m.hidden; sndUI(); };
+document.addEventListener('pointerdown',function(e){ var m=$('gearM'); if(!m.hidden&&!m.contains(e.target)&&e.target!==$('gearB')) m.hidden=true; });
 /* выбор голоса: все русские голоса устройства, живые (Natural) первыми */
 $('vB').onclick=function(){ var r=$('vRow'); r.hidden=!r.hidden; if(r.hidden) return; var c=GL.cur();
   $('vSel').innerHTML=GL.list().map(function(v){ return '<option'+(c&&v.name===c.name?' selected':'')+'>'+esc(v.name)+'</option>'; }).join('').replace(/<option([^>]*)>([^<]*)/g,function(m,a,nm){ return '<option'+a+' value="'+nm+'">'+nm.replace(/^Microsoft |^Google /,'')+(GL.live({name:nm})?' - живой':''); }); };
 function vTry(){ GL.pick($('vSel').value); briefEnd(); GL.say('Привет! Я буду читать тебе задания.'); }
 $('vSel').onchange=vTry; $('vTry').onclick=vTry;
 $('sndB').onclick=function(){ if(!GL) return; GL.setOn(!GL.on); sndUI(); if(!GL.on) briefEnd(); };
-function briefEnd(){ clearInterval(bTm); if(GL) GL.stop(); if(bEl._full){ bT.textContent=bEl._t; bX.textContent=bEl._x; } bEl.classList.remove('typing','talk'); $('bSkip').hidden=true; tk.classList.remove('hold'); }
+function briefEnd(){ clearInterval(bTm); if(GL) GL.stop(); if(bEl._full){ bT.textContent=bEl._t; bX.textContent=bEl._x; } bEl.classList.remove('typing','talk'); $('bSkip').hidden=true; slUpd(); }
+/* слайд "Передача задания" пройден: прячем его, открываем задание */
+function briefGo(){ briefEnd(); bEl.hidden=true; tk.classList.remove('hold'); win.querySelector('.wpane').scrollTop=0; slUpd(); }
 $('bSkip').onclick=briefEnd;
-function brief(n){ clearInterval(bTm); if(GL) GL.stop(); var T0=n&&K.lib[n.tid]; if(!T0){ bEl.hidden=true; tk.classList.remove('hold'); return; }
+function brief(n){ clearInterval(bTm); if(GL) GL.stop(); var T0=n&&K.lib[n.tid]; if(!T0){ bEl.hidden=true; tk.classList.remove('hold'); slUpd(); return; }
   var t='Задание '+n.num+'. '+T0.t, x=(T0.sub?T0.sub.replace(/[.!?]*$/,'. '):'')+'В задании: '+T0.steps.map(function(q){ return ({cards:'материал',game:'тренажёр',quiz:'проверка',fly:'полёт',coach:'занятие с тренером'})[q.s]||q.name||q.s; }).join(', ')+'.';
   bEl._t=t; bEl._x=x; bEl._full=1; bEl.hidden=false; sndUI();
-  if(n.st==='done'||red){ briefEnd(); return; }
-  bT.textContent=''; bX.textContent=''; bEl.classList.add('typing'); $('bSkip').hidden=false; tk.classList.add('hold');
+  if(n.st==='done'){ bEl.hidden=true; tk.classList.remove('hold'); slUpd(); return; } /* пройденное - сразу к материалу */
+  tk.classList.add('hold'); if(red){ briefEnd(); return; }
+  bT.textContent=''; bX.textContent=''; bEl.classList.add('typing'); $('bSkip').hidden=false; slUpd();
   var full=t+'. '+x, pos=0, said=0, spoke=GL&&GL.say(full,{onb:function(i){ said=i; },onend:function(){ if(pos<full.length) pos=full.length; }});
   if(spoke) bEl.classList.add('talk');
   bTm=setInterval(function(){ pos=Math.max(pos+1,said); var a=Math.min(pos,t.length); bT.textContent=t.slice(0,a); bX.textContent=pos>t.length+2?x.slice(0,pos-t.length-2):'';
-    if(pos>=full.length){ clearInterval(bTm); bEl.classList.remove('typing'); $('bSkip').hidden=!spoke; tk.classList.remove('hold'); if(!spoke) bEl.classList.remove('talk'); } },spoke?55:28);
+    if(pos>=full.length){ clearInterval(bTm); bEl.classList.remove('typing'); $('bSkip').hidden=!spoke; if(!spoke) bEl.classList.remove('talk'); slUpd(); } },spoke?55:28);
   if(spoke){ var w0=setInterval(function(){ if(!speechSynthesis.speaking&&pos>=full.length){ clearInterval(w0); bEl.classList.remove('talk'); $('bSkip').hidden=true; } },400); } }
+/* ---- задание слайдами (22.10, вариант А): одна мысль - один экран. Сверху полоски (первая - "Передача задания", дальше по шагу задания),
+   слева вверху "←", справа внизу большая стрелка "дальше". Шапка задания из moduli.js (шаги, "← Модуль", пропуск, ⚠) спрятана: пропуск и ошибка - в шестерёнке.
+   Стрелки нажимают кнопки "Назад"/"Вперёд" самого курса (moduli.js), поэтому прогресс сохраняется как раньше */
+var slBars=$('slBars'), nxB=$('nxB'), slT=0;
+function q1(sel){ return tk.querySelector(sel); }
+function slUpd(){ cancelAnimationFrame(slT); slT=requestAnimationFrame(function(){ var br=!bEl.hidden, f=q1('[data-k="nav-f"]'), steps=[].slice.call(tk.querySelectorAll('#krHead [data-k="step"]')).filter(function(b){ return b.dataset.i!=='-1'; });
+  var part=0, dots=tk.querySelectorAll('#krStage .kr-dots i'), on=tk.querySelector('#krStage .kr-dots i.on'), pr=q1('#krStage .kr-q .pr i');
+  if(dots.length&&on) part=([].indexOf.call(dots,on)+1)/dots.length; else if(pr) part=parseFloat(pr.style.width)/100||0;
+  var h='<i class="'+(br?'cur':'ok')+'"><b style="width:'+(br?(bEl.classList.contains('typing')?50:100):100)+'%"></b></i>';
+  steps.forEach(function(b){ var ok=b.classList.contains('ok'), cu=b.classList.contains('on'); h+='<i class="'+(ok?'ok':cu?'cur':'')+'"><b style="width:'+(ok?100:cu&&!br?Math.max(8,part*100):0)+'%"></b></i>'; });
+  slBars.innerHTML=winMode==='task'?h:''; slBars.hidden=winMode!=='task';
+  nxB.hidden=winMode!=='task'; nxB.disabled=!br&&!(f&&!f.disabled); nxB.classList.toggle('wait',br&&bEl.classList.contains('typing'));
+  var sk=q1('#krHead [data-k="skip"]'); $('gSkip').hidden=!sk; $('gCom').hidden=!q1('.kr-fbd'); }); }
+nxB.onclick=function(){ if(!bEl.hidden){ briefGo(); return; } var f=q1('[data-k="nav-f"]'); if(f&&!f.disabled) f.click(); win.querySelector('.wpane').scrollTop=0; };
+$('winX').onclick=function(){ if(winMode==='task'&&bEl.hidden){ var b=q1('[data-k="nav-b"]'); if(b&&!b.disabled){ b.click(); return; } } closeWin(); };
+$('gSkip').onclick=function(){ $('gearM').hidden=true; var b=q1('#krHead [data-k="skip"]'); if(b) b.click(); };
+$('gBug').onclick=function(){ $('gearM').hidden=true; var b=q1('#krHead [data-k="bug"]'); if(b) b.click(); else if(I.go.bug) I.go.bug(); };
+$('gCom').onclick=function(){ $('gearM').hidden=true; var d=q1('.kr-fbd'); if(d){ tk.classList.add('com'); d.open=true; d.scrollIntoView({behavior:'smooth'}); } };
+if(window.MutationObserver) new MutationObserver(slUpd).observe(tk,{childList:true,subtree:true,attributes:true,attributeFilter:['class','style','disabled']});
+/* листание пальцем: влево - дальше, вправо - назад (не в тренажёрах, где тянут предметы) */
+(function(){ var x0=null,y0=0; pane.addEventListener('touchstart',function(e){ if(winMode!=='task'||e.target.closest('input,textarea,select,.kg-lbl,.kg-stack')) { x0=null; return; } x0=e.touches[0].clientX; y0=e.touches[0].clientY; },{passive:true});
+  pane.addEventListener('touchend',function(e){ if(x0==null) return; var dx=e.changedTouches[0].clientX-x0, dy=e.changedTouches[0].clientY-y0; x0=null; if(Math.abs(dx)<60||Math.abs(dy)>Math.abs(dx)) return; if(dx<0){ if(!nxB.disabled) nxB.click(); } else if(bEl.hidden){ var b=q1('[data-k="nav-b"]'); if(b&&!b.disabled) b.click(); } }); })();
 function closeWin(after){ if(!winOn) return; var c=cur?cur.c+'cc':null; clearInterval(bTm); if(GL) GL.stop(); scrBack(cur); flashOn(c,function(){ win.classList.remove('on'); winOn=false; LIVE=false; document.body.classList.remove('livebg'); hud.classList.add('on'); backB.classList.add('on'); refresh(); lvlStars();
   if(after) after(); else if(cur){ var n=cur, B=viewOf(n); camP.copy(B.p); camL.copy(B.l); arrive(n);
     /* задание только что пройдено - сразу ведём к следующему */
     if(n.kind==='task'&&!wasDone&&n.st==='done'){ burst(n); starFly(n); if(target&&target!==n){ passGate=true; guideSoon(1400); } } }
   else { st='over'; }
   flashOff(); }); }
-$('winX').onclick=function(){ closeWin(); };
 /* экраны курса внутри окна: следующее задание - узел на карте тоже меняется; "К модулю" и "Все модули" - назад в космос */
 document.addEventListener('kurs-view',function(e){ var d=e.detail||{}; if(!winOn) return; pane.scrollTop=0;
   if(d.t){ winMode='task'; var mm=mods.find(function(m){ return m.tasks.indexOf(d.t)>=0; }), L=mm&&LBY[mm.id]; if(!L) return;
@@ -829,28 +967,43 @@ function guideUI(){ var show=!fly&&!winOn&&curL&&(st==='over'||st==='node'); if(
 function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
 
 /* ---- вход и выход через портал ---- */
-$('goB').onclick=function(){ fall(); };
+$('goB').onclick=function(){ vhodUnlock(); fall(); };
 /* "Начать обучение" (21.10): влетаем в портал, выходим в разгоне далеко перед городом, на бортовом экране печатается приветствие,
    камера тормозит и подлетает к городу. Нажатие во время полёта - быстрее. */
 function fall(){ if(st!=='gate') return; st='falling'; wel.classList.remove('on'); ttl.style.opacity=0;
   startFly(V(0,0,-27),V(0,0,-90),null,red?.5:1.3,function(){
     flashOn('rgba('+IA2+',.55)',function(){ gate.visible=false; setLevel(LK); document.body.classList.add('intro'); streak.material.color.set(IA);
-      var B=spunP(LK.oP,LK.oL), BL=spun(LK.oL); camP.copy(B).add(V(0,0,red?120:820)); camL.copy(BL); flashOff(); introOn();
-      st='fly'; startFly(B,BL,null,red?1:6.5,function(){ introEnd(function(){ st='over'; guideUI(); guideSoon(700); }); }).ez=easeOut; }); }); }
+      var B=spunP(LK.oP,LK.oL), BL=spun(LK.oL); camP.copy(B).add(V(0,0,red?120:1300)); camL.copy(BL); flashOff(); introOn();
+      st='fly'; startFly(B,BL,null,red?1:11,function(){ introEnd(function(){ st='over'; guideUI(); guideSoon(700); }); }).ez=easeOut; }); }); }
 function easeOut(t){ return 1-Math.pow(1-t,3); }
 var IA='#5effc4', IA2='94,255,196', introEl=$('intro'), introTm=[], introDone=0;
+var INTRO_T='Добро пожаловать в учебный курс "Взлёт"', INTRO_S='Модули - здания летающего города. Пройденное горит, указатель покажет, куда лететь дальше.';
+/* голос на входе (22.10): записанный файл zvuk/vhod-1.mp3 через GOLOS.play (engine/golos.js), нет файла - голос устройства читает текст.
+   Пока в golos.js нет play - голос устройства пониже и помедленнее, "бортовой компьютер". Звук выключен (GOLOS.on) - молчим. Кнопка звука есть и на бортовом экране. */
+var vSyn=window.speechSynthesis, vBusy=false, vOn=function(){ return !window.GOLOS||GOLOS.on; };
+function vhodUnlock(){ if(!vOn()||!vSyn) return; /* телефоны разрешают звук только сразу после нажатия: "будим" его здесь */
+  try{ vSyn.cancel(); var u=new SpeechSynthesisUtterance(' '); u.volume=0; vSyn.speak(u); }catch(e){} }
+function vhodSay(txt){ if(!vOn()||red) return;
+  if(window.GOLOS&&GOLOS.play){ vBusy=true; GOLOS.play('vhod-1.mp3',{text:txt,onend:function(){ vBusy=false; }}); return; }
+  if(!vSyn||!window.SpeechSynthesisUtterance) return; var r=(window.GOLOS&&GOLOS.list())||[], v=(window.GOLOS&&GOLOS.cur())||r[0]; if(!v) return;
+  var u=new SpeechSynthesisUtterance(txt); u.lang='ru-RU'; u.voice=v; u.rate=.92; u.pitch=.75; vSyn.cancel(); vSyn.speak(u); }
+function vhodTalking(){ return vBusy||!!(vSyn&&vSyn.speaking); }
+function vhodStop(){ if(!introEl||!introEl.classList.contains('on')) return; vBusy=false; if(window.GOLOS) GOLOS.stop(); else if(vSyn) vSyn.cancel(); }
+if($('introSnd')){ var vsUI=function(){ $('introSnd').textContent=vOn()?'🔊 Звук':'🔇 Звук'; }; vsUI();
+  $('introSnd').onclick=function(e){ e.stopPropagation(); var on=!vOn(); if(window.GOLOS) GOLOS.setOn(on); if(!on){ vBusy=false; if(window.GOLOS) GOLOS.stop(); else if(vSyn) vSyn.cancel(); } vsUI(); }; }
 function typeIn(el,txt,ms,cb){ var i=0, c=document.createElement('span'); c.className='cur'; el.textContent=''; el.appendChild(c);
   (function step(){ if(i>=txt.length){ cb&&cb(); return; } c.insertAdjacentText('beforebegin',txt[i++]); introTm.push(setTimeout(step,red?0:ms)); })(); }
 function introOn(){ if(!introEl) return; introClear(); introEl.classList.add('on'); var P=ME0&&ME0.first;
-  $('introT').textContent=''; $('introS').textContent=''; introDone=0;
+  $('introT').textContent=''; $('introS').textContent=''; introDone=0; vhodSay((P?'Привет, '+P+'! ':'')+INTRO_T.replace(/"/g,'')+'. '+INTRO_S);
   typeIn($('introPre'),'// ВХОДЯЩЕЕ СООБЩЕНИЕ',22,function(){ introTm.push(setTimeout(function(){ var p=$('introPre').querySelector('.cur'); if(p) p.remove();
-    typeIn($('introT'),(P?'Привет, '+P+'! ':'')+'Добро пожаловать в учебный курс "Взлёт"',42,function(){ introTm.push(setTimeout(function(){ var q=$('introT').querySelector('.cur'); if(q) q.remove();
-      typeIn($('introS'),'Модули - здания летающего города. Пройденное горит, указатель покажет, куда лететь дальше.',18,function(){ introDone=performance.now(); }); },300)); }); },200)); }); }
+    typeIn($('introT'),(P?'Привет, '+P+'! ':'')+INTRO_T,65,function(){ introTm.push(setTimeout(function(){ var q=$('introT').querySelector('.cur'); if(q) q.remove();
+      typeIn($('introS'),INTRO_S,38,function(){ introDone=performance.now(); }); },300)); }); },200)); }); }
 function introClear(){ introTm.forEach(clearTimeout); introTm=[]; }
-/* подлетели: даём дочитать и убираем бортовой экран */
-function introEnd(cb){ var wait=introDone?Math.max(0,introDone+900-performance.now()):1400; if(red) wait=300;
-  introTm.push(setTimeout(function(){ introClear(); if(introEl) introEl.classList.remove('on'); document.body.classList.remove('intro'); streak.material.color.set('#ffffff'); cb(); },wait)); }
-function introStop(){ introClear(); if(introEl) introEl.classList.remove('on'); document.body.classList.remove('intro'); streak.material.color.set('#ffffff'); }
+/* подлетели: ждём, пока текст допечатается и голос договорит, и ещё 2.5 секунды на чтение, потом убираем бортовой экран */
+function introEnd(cb){ if(!red&&(!introDone||vhodTalking())){ introTm.push(setTimeout(function(){ introEnd(cb); },250)); return; }
+  var wait=red?300:Math.max(0,introDone+2500-performance.now());
+  introTm.push(setTimeout(function(){ introClear(); vhodStop(); if(introEl) introEl.classList.remove('on'); document.body.classList.remove('intro'); streak.material.color.set('#ffffff'); cb(); },wait)); }
+function introStop(){ introClear(); vhodStop(); if(introEl) introEl.classList.remove('on'); document.body.classList.remove('intro'); streak.material.color.set('#ffffff'); }
 function exitToGate(){ introStop(); hideCap(); backB.classList.remove('on'); hud.classList.remove('on'); st='falling';
   flashOn(null,function(){ LV.forEach(function(q){ q.g.visible=false; }); curL=null; cur=null; back=[]; gate.visible=true; mixT=0; rollT=0; bgT.copy(BG_A); galT.set('#ffffff'); camP.set(0,0,-20); camL.set(0,0,-60); gp=0; flashOff(); guideUI();
     startFly(V(0,0,46),V(0,0,-30),null,red?.5:2,function(){ st='gate'; wel.classList.add('on'); ttl.style.opacity=1; }); }); }
@@ -863,7 +1016,7 @@ function scrollBy(dy){
   else if(acc<-260){ acc=0; goBack(); } }
 addEventListener('wheel',function(e){ if(winOn) return; e.preventDefault(); if(curL&&(st==='over'||st==='node')){ zoomCity(Math.exp(e.deltaY*.0012)); return; } scrollBy(e.deltaY); },{passive:false});
 var ty=null, tx=null, moved=0, yaw=0;
-cv.addEventListener('pointerdown',function(e){ ty=e.clientY; tx=e.clientX; moved=0; if(fly&&fly.ez===easeOut&&fly.d>2) fly.d*=.4; });
+cv.addEventListener('pointerdown',function(e){ ty=e.clientY; tx=e.clientX; moved=0; if(fly&&(fly.ez===easeOut||fly.skip)&&fly.d>1){ fly.d*=.4; fly.skip=0; } });
 addEventListener('pointermove',function(e){ if(ty===null||winOn) return; var dy=ty-e.clientY, dx=e.clientX-tx; ty=e.clientY; tx=e.clientX; moved+=Math.abs(dy)+Math.abs(dx);
   if(curL&&(st==='over'||st==='node')){ if(pts2.length>1) return; turnCity(-dx*.006); tiltCity(-dy*.004); return; }
   scrollBy(dy*2.2); if(curL!==LK&&(st==='over'||st==='node')) yaw=Math.max(-.5,Math.min(.5,yaw+dx*.002)); });
@@ -872,7 +1025,7 @@ function turnCity(a){ if(st==='over') spin+=a; else { rotC(camP,a); rotC(camL,a)
 /* наклон: тянем вверх-вниз - смотрим на город выше или ниже */
 function tiltCity(a){ if(st==='over'){ tilt=Math.max(-.9,Math.min(.9,tilt+a)); return; } var o=camP.clone().sub(camL); setElev(o,Math.max(.05,Math.min(1.4,elevOf(o)+a))); camP.copy(camL).add(o); }
 /* приближение: колесо мыши или щипок двумя пальцами */
-function zoomCity(k){ if(st==='over'){ zoom=Math.max(.4,Math.min(1.9,zoom*k)); return; } var o=camP.clone().sub(camL), d=Math.max(8,Math.min(160,o.length()*k)); camP.copy(camL).add(o.setLength(d)); }
+function zoomCity(k){ if(st==='over'){ zoom=Math.max(.4,Math.min(ZMAX(),zoom*k)); return; } var o=camP.clone().sub(camL), d=Math.max(8,Math.min(curL&&curL.loc?420:300,o.length()*k)); /* правка 22.10: отдаляться можно дальше */ camP.copy(camL).add(o.setLength(d)); }
 var pts2={}, pinchD=0; pts2.length=0;
 cv.addEventListener('pointerdown',function(e){ pts2[e.pointerId]=[e.clientX,e.clientY]; pts2.length=Object.keys(pts2).length-1; pinchD=0; });
 addEventListener('pointermove',function(e){ if(!pts2[e.pointerId]) return; pts2[e.pointerId]=[e.clientX,e.clientY]; if(pts2.length<2||!curL||(st!=='over'&&st!=='node')) return;
@@ -882,13 +1035,18 @@ addEventListener('pointercancel',function(e){ delete pts2[e.pointerId]; pts2.len
 addEventListener('pointerup',function(e){ var was=moved; ty=null; if(was>=8||e.target!==cv||winOn) return;
   var r=new THREE.Raycaster(), m=new THREE.Vector2(e.clientX/innerWidth*2-1,-(e.clientY/innerHeight)*2+1); r.setFromCamera(m,C);
   if(st==='gate'){ if(r.intersectObject(hit).length) fall(); return; }
-  if(!curL) return; var h=r.intersectObjects(curL.hits,false)[0]; if(h) tapNode(h.object.userData.id); });
+  if(!curL) return; var h=r.intersectObjects(curL.hits,false)[0]; if(h) tapNode(h.object.userData.id,h.object.userData.scr); });
 addEventListener('keydown',function(e){ if(winOn) return; if(e.key==='ArrowDown'||e.key===' '){ e.preventDefault(); scrollBy(300); } if(e.key==='ArrowUp') scrollBy(-300); if(curL&&(e.key==='ArrowLeft'||e.key==='ArrowRight')) turnCity(e.key==='ArrowLeft'?.25:-.25); if(e.key==='Escape'||e.key==='Backspace') goBack(); if(e.key==='Enter'&&st==='gate') fall(); else if(e.key==='Enter'&&cur) tapNode(cur.id); });
 
 /* приветствие: имя ученика, если вошёл по коду (только имя) */
 function codeLogin(){ lsS(CFG.meKey+'_guest',null); lsS(VKEY,'plain'); location.href=PLAIN; }
 (function(){ var P=ME0; if(P&&P.first) $('welHi').textContent='Привет, '+P.first+'!';
   else { var a=$('codeL'); a.hidden=false; a.onclick=codeLogin; } })();
+/* шестерёнка: открыть/закрыть меню; нажатие на пункт или мимо - меню закрывается */
+function gearSet(on){ document.body.classList.toggle('gear',on); $('cityG').setAttribute('aria-expanded',on?'true':'false'); }
+$('cityG').onclick=function(e){ e.stopPropagation(); gearSet(!document.body.classList.contains('gear')); };
+addEventListener('pointerdown',function(e){ if(document.body.classList.contains('gear')&&!e.target.closest('#cityG,#plainB,#tourB,#autoB')) gearSet(false); },true);
+['plainB','tourB','autoB'].forEach(function(id){ $(id).addEventListener('click',function(){ setTimeout(function(){ gearSet(false); },150); }); });
 $('tourB').onclick=function(){ if(tour) return; if(st==='node'||st==='over') tourStart(); };
 if($('autoB')){ autoUI(); $('autoB').onclick=function(){ AUTO=!AUTO; lsS(AKEY,AUTO?'1':null); autoUI(); if(AUTO) guideSoon(300); }; }
 var ttl=$('ttl'); setTimeout(function(){ ttl.classList.add('on'); },300); setTimeout(function(){ if(st==='gate') wel.classList.add('on'); },1600);
@@ -1025,8 +1183,8 @@ function frame(){ var dt=Math.min(clock.getDelta(),.05); tm+=dt; fc++;
     L.nodes.forEach(function(n){ var el=n.el; if(!calm){ hideEl(el); return; }
       n.g.getWorldPosition(v); var d=v.distanceTo(C.position); v.project(C); var sx=(v.x*.5+.5)*innerWidth, sy=(-v.y*.5+.5)*innerHeight;
       var op=Math.max(0,Math.min(1,(260-d)/120)), on=v.z<1&&Math.abs(v.x)<1.1&&Math.abs(v.y)<1.1&&cur!==n&&op>.05&&Math.hypot(sx-cx0,sy-cy0)>cr;
-      if(!on){ hideEl(el); return; }
-      var full=n.kind!=='task'||n===target||d<38, ex=n===hov||n===target, lk=(full?1:0)+(ex?2:0); if(n.lk!==lk){ n.lk=lk; n.full=full; lbSet(n,full,ex); n.w=0; }
+      if(!on||(n!==hov&&n!==target)){ hideEl(el); return; } /* правка 22.10: больших подписей нет, сноска - у следующего узла и при наведении; номера видны на самих зданиях */
+      var full=true, ex=true, lk=(full?1:0)+(ex?2:0); if(n.lk!==lk){ n.lk=lk; n.full=full; lbSet(n,full,ex); n.w=0; }
       if(!n.w){ n.w=el.offsetWidth; n.h=el.offsetHeight; }
       cand.push({n:n,sx:sx,sy:sy,op:n===hov?1:op,k:n===hov?-2:n===target?-1:d}); });
     cand.sort(function(a,b){ return a.k-b.k; });
