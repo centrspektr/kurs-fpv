@@ -95,6 +95,106 @@ function cellSvg(x, y, w, h, lvl, txt, d) {
   return `<g class="kcell" style="animation-delay:${d || 0}ms"><rect x="${x}" y="${y}" width="${w}" height="${h}" rx="7" class="kc-b"/><rect x="${x + w / 2 - 7}" y="${y - 5}" width="14" height="6" rx="2" class="kc-t"/>` +
     `<rect x="${x + 5}" y="${y + h - 5 - fh}" width="${w - 10}" height="${fh}" rx="4" class="kc-f"/>` + (txt ? `<text x="${x + w / 2}" y="${y + h / 2 + 5}" class="kc-x">${txt}</text>` : '') + '</g>';
 }
+/* ---------- рисунки: очки FPV и вуп Mobula 7 (вектор, свои) ---------- */
+const RIS = {};
+
+// Очки А: коробчатые FPV-очки с антеннами и ремнём
+RIS.ochkiA = () => `<svg viewBox="0 0 240 140" class="kpic" aria-hidden="true">
+<defs>
+ <linearGradient id="oa-b" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#64748b"/><stop offset="1" stop-color="#1e293b"/></linearGradient>
+ <linearGradient id="oa-f" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#1e3a5f"/><stop offset=".55" stop-color="#0b1220"/><stop offset="1" stop-color="#111827"/></linearGradient>
+ <linearGradient id="oa-s" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#7c3aed"/><stop offset=".5" stop-color="#a78bfa"/><stop offset="1" stop-color="#7c3aed"/></linearGradient>
+</defs>
+<g class="kfly">
+ <path d="M18 78 Q14 58 52 62 L52 84 Q24 86 18 78Z M222 78 Q226 58 188 62 L188 84 Q216 86 222 78Z" fill="url(#oa-s)"/>
+ <path d="M72 44 L64 18" stroke="#94a3b8" stroke-width="4" stroke-linecap="round"/>
+ <rect x="56" y="8" width="18" height="14" rx="4" fill="#334155" stroke="#94a3b8" stroke-width="2" transform="rotate(-14 65 15)"/>
+ <path d="M168 44 L178 16" stroke="#94a3b8" stroke-width="4" stroke-linecap="round"/>
+ <ellipse cx="179" cy="13" rx="10" ry="6" fill="#334155" stroke="#94a3b8" stroke-width="2"/>
+ <rect x="48" y="40" width="144" height="66" rx="18" fill="url(#oa-b)" stroke="#cbd5e1" stroke-width="2"/>
+ <path d="M98 106 Q120 88 142 106Z" fill="#0f172a"/>
+ <rect x="58" y="48" width="124" height="44" rx="11" fill="url(#oa-f)" stroke="#475569" stroke-width="1.5"/>
+ <path d="M66 54 L94 54 L80 84 L66 84Z" fill="#fff" opacity=".10"/>
+ <path d="M100 54 L108 54 L94 84 L86 84Z" fill="#fff" opacity=".07"/>
+ <rect x="70" y="86" width="100" height="3" rx="1.5" fill="#00d4ff"><animate attributeName="opacity" values="1;.35;1" dur="2s" repeatCount="indefinite"/></rect>
+ <circle cx="170" cy="58" r="3" fill="#f87171"><animate attributeName="opacity" values="1;.2;1" dur="1.2s" repeatCount="indefinite"/></circle>
+ ${[0, 1, 2, 3].map(i => `<rect x="${104 + i * 9}" y="42" width="5" height="4" rx="1" fill="#0f172a"/>`).join('')}
+</g>
+<text x="120" y="132" class="kp-s2">внутри экран, снаружи антенны</text>
+</svg>`;
+
+// Очки Б: очки + "что видит пилот" в очках
+RIS.ochkiB = () => `<svg viewBox="0 0 240 140" class="kpic" aria-hidden="true">
+<defs>
+ <linearGradient id="ob-b" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#64748b"/><stop offset="1" stop-color="#1e293b"/></linearGradient>
+ <linearGradient id="ob-sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#38bdf8"/><stop offset="1" stop-color="#bae6fd"/></linearGradient>
+ <clipPath id="ob-c"><rect x="112" y="14" width="118" height="86" rx="10"/></clipPath>
+</defs>
+<g class="kfly">
+ <path d="M4 82 Q2 66 24 68 L24 86 Q8 88 4 82Z M104 82 Q106 66 84 68 L84 86 Q100 88 104 82Z" fill="#7c3aed"/>
+ <path d="M36 52 L30 34" stroke="#94a3b8" stroke-width="3" stroke-linecap="round"/><rect x="24" y="26" width="13" height="10" rx="3" fill="#334155" stroke="#94a3b8" stroke-width="1.5"/>
+ <path d="M74 52 L80 32" stroke="#94a3b8" stroke-width="3" stroke-linecap="round"/><ellipse cx="81" cy="30" rx="7" ry="4" fill="#334155" stroke="#94a3b8" stroke-width="1.5"/>
+ <rect x="20" y="50" width="68" height="44" rx="12" fill="url(#ob-b)" stroke="#cbd5e1" stroke-width="2"/>
+ <rect x="27" y="56" width="54" height="28" rx="7" fill="#0b1220"/>
+ <rect x="34" y="80" width="40" height="2.5" rx="1" fill="#00d4ff"/>
+</g>
+<path d="M90 64 Q100 56 110 52" fill="none" stroke="#cbd5ff" stroke-width="2" stroke-dasharray="4 4"/>
+<g clip-path="url(#ob-c)">
+ <rect x="112" y="14" width="118" height="86" fill="url(#ob-sky)"/>
+ <path d="M112 68 Q170 60 230 66 L230 100 L112 100Z" fill="#22c55e"/>
+ <path d="M112 80 Q170 74 230 78 L230 100 L112 100Z" fill="#16a34a"/>
+ <path d="M150 74 V44 Q171 26 192 44 V74" fill="none" stroke="#f97316" stroke-width="6" stroke-linecap="round"/>
+ <path d="M164 58h14M171 51v14" stroke="#fff" stroke-width="2"/>
+ <text x="118" y="28" style="fill:#fff;font:800 11px ui-monospace,monospace">3.9V</text>
+ <text x="224" y="28" style="fill:#fff;font:800 11px ui-monospace,monospace;text-anchor:end">01:24</text>
+</g>
+<rect x="112" y="14" width="118" height="86" rx="10" fill="none" stroke="#cbd5e1" stroke-width="2"/>
+<text x="54" y="116" class="kp-s2">очки</text>
+<text x="171" y="116" class="kp-s2">что видно в очках</text>
+</svg>`;
+
+// Коптер Б: Mobula 7 вид сверху, размер 75 мм по диагонали
+RIS.mobB = () => {
+  const D = [[84, 36], [156, 36], [84, 104], [156, 104]];
+  return `<svg viewBox="0 0 240 140" class="kpic" aria-hidden="true">
+<defs><radialGradient id="mb-c" cx=".4" cy=".35" r=".8"><stop offset="0" stop-color="#fdba74"/><stop offset="1" stop-color="#ea580c"/></radialGradient></defs>
+<g class="kfly">
+ <path d="M84 36 L156 104 M156 36 L84 104" stroke="#1f2937" stroke-width="16" stroke-linecap="round"/>
+ ${D.map(p => `<circle cx="${p[0]}" cy="${p[1]}" r="27" fill="rgba(148,163,184,.10)" stroke="#475569" stroke-width="6"/><circle cx="${p[0]}" cy="${p[1]}" r="27" fill="none" stroke="#94a3b8" stroke-width="1.5"/>`).join('')}
+ ${D.map((p, i) => `<g style="transform-origin:${p[0]}px ${p[1]}px" class="${i === 0 || i === 3 ? 'kspin' : 'kspin r'}"><path d="M${p[0] - 21} ${p[1]} Q${p[0]} ${p[1] - 7} ${p[0] + 21} ${p[1]} Q${p[0]} ${p[1] + 7} ${p[0] - 21} ${p[1]}Z" fill="${i % 3 ? '#a78bfa' : '#38bdf8'}" opacity=".85"/></g><circle cx="${p[0]}" cy="${p[1]}" r="5" fill="#cbd5e1" stroke="#475569"/>`).join('')}
+ <rect x="108" y="64" width="24" height="44" rx="5" fill="#facc15" stroke="#a16207" stroke-width="1.5"/>
+ <path d="M120 40 C138 40 140 56 140 70 C140 88 132 96 120 96 C108 96 100 88 100 70 C100 56 102 40 120 40Z" fill="url(#mb-c)" stroke="#9a3412" stroke-width="1.5"/>
+ <circle cx="120" cy="50" r="7" fill="#0f172a" stroke="#cbd5e1" stroke-width="1.5"/><circle cx="118" cy="48" r="2" fill="#7dd3fc"/>
+ <text x="120" y="80" style="fill:#7c2d12;font:800 9px system-ui;text-anchor:middle">1S</text>
+</g>
+<path d="M60 112 L180 28" stroke="#facc15" stroke-width="2" stroke-dasharray="5 4"/>
+<circle cx="84" cy="104" r="3" fill="#facc15"/><circle cx="156" cy="36" r="3" fill="#facc15"/>
+<rect x="176" y="10" width="54" height="20" rx="10" fill="#facc15"/><text x="203" y="24" style="fill:#1e1b4b;font:800 12px system-ui;text-anchor:middle">75 мм</text>
+<text x="34" y="18" style="fill:#cbd5ff;font:700 11px system-ui;text-anchor:middle">камера</text><path d="M48 20 L110 46" stroke="#cbd5ff" stroke-width="1" opacity=".6"/>
+</svg>`;
+};
+
+// Коптер В: Mobula 7 в полёте, вид спереди-сбоку
+RIS.mobV = () => {
+  const F = [[68, 66], [172, 66]], B = [[88, 48], [152, 48]];
+  const duct = (p, s) => `<ellipse cx="${p[0]}" cy="${p[1]}" rx="${30 * s}" ry="${11 * s}" fill="rgba(148,163,184,.12)" stroke="#475569" stroke-width="5"/><ellipse cx="${p[0]}" cy="${p[1] + 5 * s}" rx="${30 * s}" ry="${11 * s}" fill="none" stroke="#64748b" stroke-width="2"/>`;
+  const prop = (p, s, c) => `<ellipse cx="${p[0]}" cy="${p[1] - 2}" rx="${24 * s}" ry="${4 * s}" fill="${c}" opacity=".55"><animate attributeName="rx" values="${24 * s};${8 * s};${24 * s}" dur=".18s" repeatCount="indefinite"/></ellipse>`;
+  return `<svg viewBox="0 0 240 140" class="kpic" aria-hidden="true">
+<defs><linearGradient id="mv-c" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fdba74"/><stop offset="1" stop-color="#c2410c"/></linearGradient></defs>
+<ellipse cx="120" cy="128" rx="70" ry="7" fill="#64748b" opacity=".35"/>
+<g class="kfly">
+ ${B.map(p => duct(p, .78)).join('')}${B.map(p => prop(p, .78, '#a78bfa')).join('')}
+ <path d="M86 70 L154 70 L146 82 L94 82Z" fill="#1f2937"/>
+ <rect x="104" y="80" width="32" height="10" rx="3" fill="#facc15" stroke="#a16207"/>
+ <path d="M102 74 C102 50 110 42 120 42 C130 42 138 50 138 74Z" fill="url(#mv-c)" stroke="#9a3412" stroke-width="1.5"/>
+ <circle cx="120" cy="62" r="9" fill="#0f172a" stroke="#e2e8f0" stroke-width="2"/><circle cx="120" cy="62" r="4.5" fill="#1e3a8a"/><circle cx="117" cy="59" r="2" fill="#7dd3fc"/>
+ ${F.map(p => duct(p, 1)).join('')}${F.map(p => prop(p, 1, '#38bdf8')).join('')}
+ <circle cx="104" cy="86" r="2" fill="#22c55e"><animate attributeName="opacity" values="1;.2;1" dur="1s" repeatCount="indefinite"/></circle>
+</g>
+<text x="120" y="20" class="kp-s2">Mobula 7: 75 мм, 1S, винты в защите</text>
+</svg>`;
+};
+
 function pic(k) {
   if (k && k.indexOf('e:') === 0) return `<div class="kpic-e" aria-hidden="true">${E(k.slice(2))}</div>`;
   if (k && k.indexOf('chain:') === 0) return `<div class="kchain" aria-hidden="true">${k.slice(6).split('>').map((t, i) => (i ? '<i>→</i>' : '') + `<span style="animation-delay:${i * 140}ms">${E(t)}</span>`).join('')}</div>`;
@@ -108,7 +208,10 @@ function pic(k) {
     case 'sp': return V('<g>' + [0, 1, 2].map(i => `<rect x="34" y="${78 - i * 28}" width="44" height="24" rx="5" class="kp-cs"/>`).join('') + '<path d="M56 18v-6" class="kp-w"/></g><text x="56" y="116" class="kp-s2">столбик: вольты</text>' +
       [0, 1, 2].map(i => `<rect x="${134 + i * 28}" y="50" width="22" height="52" rx="5" class="kp-cs"/>`).join('') + '<path d="M134 42h78" class="kp-w"/><text x="173" y="116" class="kp-s2">ряд: бак</text>');
     case 'hv': return V(cellSvg(60, 22, 50, 86, .9, '4,2') + cellSvg(130, 22, 50, 86, 1, '4,35') + '<text x="85" y="118" class="kp-s2">LiPo</text><text x="155" y="118" class="kp-s2">LiHV</text>');
-    case 'mob': return V('<g class="kfly"><rect x="92" y="54" width="56" height="18" rx="6" class="kp-d"/>' + [[72, 50], [168, 50], [72, 80], [168, 80]].map(p => `<circle cx="${p[0]}" cy="${p[1]}" r="16" class="kp-ring"/><ellipse cx="${p[0]}" cy="${p[1]}" rx="14" ry="3" class="kp-prop"/>`).join('') + '<rect x="110" y="40" width="20" height="12" rx="3" class="kp-blu"/></g><text x="120" y="116" class="kp-s2">Mobula 7: 75 мм, 1S</text>');
+    case 'mob': return RIS.mobB();
+    case 'mob2': return RIS.mobV();
+    case 'ochki': return RIS.ochkiB();
+    case 'ochki2': return RIS.ochkiA();
     case 'sim': return V('<rect x="40" y="20" width="160" height="84" rx="10" class="kp-g"/><path d="M60 88 Q100 30 140 60 T190 40" class="kp-path"/><circle r="5" class="kp-yel kdot"><animateMotion dur="3s" repeatCount="indefinite" path="M60 88 Q100 30 140 60 T190 40"/></circle>');
     case 'osd1': return V('<rect x="30" y="16" width="180" height="92" rx="12" class="kp-g"/><text x="48" y="44" class="kp-osd">4,10V</text><text x="160" y="44" class="kp-osd">00:00</text><path d="M110 70h20M120 60v20" class="kp-l"/><text x="120" y="100" class="kp-s2">так видно в очках (1S)</text>');
     case 'osd': return V('<rect x="30" y="16" width="180" height="92" rx="12" class="kp-g"/><text x="48" y="44" class="kp-osd">14,8V</text><text x="160" y="44" class="kp-osd">02:31</text><path d="M110 70h20M120 60v20" class="kp-l"/><text x="120" y="100" class="kp-s2">так видно в очках</text>');
