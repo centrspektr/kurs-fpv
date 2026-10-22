@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Экран задания - постранично</title>
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700&family=Manrope:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{--bg:#04050d;--fg:#f1f3ff;--dim:#a7acd2;--line:rgba(170,180,255,.24);--c:#7cf3ff;--ok:#9dff7c;--bad:#ff6b8b;
+    --display:'Unbounded','Arial Black',system-ui,sans-serif;--body:'Manrope',system-ui,-apple-system,sans-serif;color-scheme:dark}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--body);line-height:1.45}
+  main{max-width:1180px;margin:0 auto;padding:20px 16px 60px}
+  h1{font:700 clamp(20px,4.6vw,30px) var(--display);margin:6px 0 8px}
+  h2{font:700 18px var(--display);margin:0 0 6px}
+  p.d{margin:0 0 10px;color:var(--dim)} p.d b{color:var(--fg)}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:22px;margin-top:16px}
+  .tag{display:inline-block;font:800 12px var(--body);letter-spacing:.12em;color:#0b0820;background:var(--c);border-radius:99px;padding:3px 10px;margin-bottom:8px}
+  .tag.rec{background:var(--ok)}
+  button{font:inherit;color:inherit;cursor:pointer}
+  button:focus-visible{outline:2px solid var(--c);outline-offset:2px}
+
+  /* рамка телефона: фон - крыша и космос (снимок карты) */
+  .ph{position:relative;width:100%;max-width:380px;aspect-ratio:390/780;margin:0 auto;border-radius:30px;overflow:hidden;border:2px solid #2a2f52;background:#000 url(../ekran/img/tel-close.jpg) center/cover}
+  .ph:before{content:"";position:absolute;inset:0;background:rgba(4,5,13,.55);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px)}
+  .scr{position:absolute;inset:10px;border-radius:22px;display:flex;flex-direction:column;overflow:hidden}
+  .top{display:flex;align-items:center;gap:10px;padding:12px 12px 8px;position:relative;z-index:2}
+  .ib{flex:none;width:44px;height:44px;border-radius:50%;border:1px solid var(--line);background:rgba(14,18,40,.75);font-size:20px;font-weight:800;display:grid;place-items:center}
+  .tt{flex:1;min-width:0;font:700 12px var(--body);color:var(--dim);letter-spacing:.06em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:center}
+  .body{flex:1;position:relative;overflow:hidden}
+  .page{position:absolute;inset:0;padding:8px 18px 96px;display:flex;flex-direction:column;justify-content:center;text-align:center;transition:transform .45s cubic-bezier(.3,0,.2,1),opacity .45s}
+  .page .pic{font-size:64px;line-height:1;margin-bottom:14px}
+  .page h3{font:700 21px var(--display);margin:0 0 10px;text-wrap:balance}
+  .page p{margin:0;color:#dfe4ff;font-size:16px}
+  .page .kick{font:800 11px var(--body);letter-spacing:.18em;color:var(--c);margin-bottom:10px}
+  .opts{display:grid;gap:10px;margin-top:16px;text-align:left}
+  .opt{min-height:52px;padding:10px 14px;border-radius:14px;border:1px solid var(--line);background:rgba(14,18,40,.75);font-weight:700;font-size:15px;text-align:left}
+  .opt.ok{border-color:var(--ok);background:rgba(157,255,124,.15)} .opt.no{border-color:var(--bad);background:rgba(255,107,139,.15)}
+  .fb{margin-top:10px;font-size:14px;color:var(--dim);min-height:2.6em}
+  .brief{border:1px solid rgba(124,243,255,.45);border-radius:16px;padding:16px;background:rgba(124,243,255,.06);text-align:left}
+  .brief .kick:before{content:"";display:inline-block;width:8px;height:8px;border-radius:50%;background:#ff4d6d;margin-right:8px;vertical-align:1px;box-shadow:0 0 8px #ff4d6d}
+  /* стрелка "дальше" */
+  .next{position:absolute;right:16px;bottom:18px;z-index:3;border:0;display:grid;place-items:center;font-weight:900;color:#0b0820;transition:opacity .3s,transform .3s}
+  .next[disabled]{opacity:.25;cursor:default;animation:none!important}
+  /* шестерёнка */
+  .menu{position:absolute;right:12px;top:62px;z-index:5;width:220px;padding:8px;border-radius:16px;border:1px solid var(--line);background:rgba(10,13,30,.96);display:none}
+  .menu.on{display:block}
+  .menu button{display:flex;width:100%;min-height:44px;align-items:center;gap:10px;padding:0 12px;border:0;border-radius:10px;background:none;text-align:left;font-weight:700;font-size:14px}
+  .menu button:hover{background:rgba(255,255,255,.06)}
+
+  /* А - слайды как "истории": полоски сверху, круглая пульсирующая стрелка */
+  .vA .bars{display:flex;gap:4px;padding:0 14px;position:relative;z-index:2}
+  .vA .bars i{flex:1;height:4px;border-radius:2px;background:rgba(255,255,255,.18);overflow:hidden}
+  .vA .bars i.on{background:var(--c);box-shadow:0 0 8px var(--c)}
+  .vA .next{width:76px;height:76px;border-radius:50%;background:linear-gradient(135deg,#7cf3ff,#a78bfa);font-size:34px;box-shadow:0 0 0 0 rgba(124,243,255,.6);animation:pulse 1.6s infinite}
+  @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(124,243,255,.55)}70%{box-shadow:0 0 0 18px rgba(124,243,255,0)}100%{box-shadow:0 0 0 0 rgba(124,243,255,0)}}
+  .vA .scr{background:rgba(8,12,30,.55);border:1px solid rgba(124,243,255,.35)}
+
+  /* Б - дорога заданий: сверху мини-дорога с дроном, широкая стрелка со светом */
+  .vB .road{position:relative;height:28px;margin:0 22px;z-index:2}
+  .vB .road:before{content:"";position:absolute;left:0;right:0;top:13px;height:3px;border-radius:2px;background:rgba(255,255,255,.15)}
+  .vB .road b{position:absolute;top:8px;width:13px;height:13px;margin-left:-6px;border-radius:50%;background:#1b2246;border:2px solid rgba(255,255,255,.3)}
+  .vB .road b.on{background:var(--c);border-color:var(--c);box-shadow:0 0 8px var(--c)}
+  .vB .road .dr{position:absolute;top:-2px;margin-left:-14px;font-size:20px;transition:left .45s cubic-bezier(.3,0,.2,1)}
+  .vB .next{min-width:150px;height:62px;border-radius:99px;padding:0 24px;background:linear-gradient(90deg,#9dff7c,#7cf3ff);font-size:18px;overflow:hidden}
+  .vB .next span{position:relative;z-index:1;display:flex;align-items:center;gap:10px}
+  .vB .next span em{font-style:normal;font-size:26px;animation:nudge 1s ease-in-out infinite}
+  @keyframes nudge{50%{transform:translateX(6px)}}
+  .vB .scr{background:rgba(6,14,32,.62);border:1px solid rgba(157,255,124,.3)}
+
+  /* В - экран пилота: уголки FPV, номер страницы сверху, стрелка-шевроны */
+  .vC .scr{background:rgba(3,8,18,.5)}
+  .vC .scr:before,.vC .scr:after{content:"";position:absolute;width:34px;height:34px;border:3px solid var(--ok);pointer-events:none;z-index:1}
+  .vC .scr:before{left:8px;bottom:8px;border-right:0;border-top:0;border-radius:0 0 0 10px}
+  .vC .scr:after{right:8px;top:8px;border-left:0;border-bottom:0;border-radius:0 10px 0 0}
+  .vC .tt{font:800 13px ui-monospace,Menlo,Consolas,monospace;color:var(--ok)}
+  .vC .page{font-family:var(--body)}
+  .vC .page h3{color:#fff;text-shadow:0 0 14px rgba(157,255,124,.4)}
+  .vC .next{display:flex;align-items:center;justify-content:center;width:96px;height:64px;border-radius:16px;background:rgba(157,255,124,.14);border:2px solid var(--ok);color:var(--ok);font:900 26px ui-monospace,Menlo,monospace;letter-spacing:-6px}
+  .vC .next i{font-style:normal;animation:chev 1.2s infinite;opacity:.25}
+  .vC .next i:nth-child(2){animation-delay:.2s}.vC .next i:nth-child(3){animation-delay:.4s}
+  @keyframes chev{40%{opacity:1}}
+  .vC .scan{position:absolute;left:0;right:0;height:40%;top:-40%;background:linear-gradient(transparent,rgba(157,255,124,.12),transparent);pointer-events:none;z-index:2}
+  .vC .scan.go{animation:scan .5s linear}
+  @keyframes scan{to{top:100%}}
+  @media (prefers-reduced-motion:reduce){.next,.next *,.scan{animation:none!important}}
+</style>
+</head>
+<body>
+<main>
+  <h1>Задание постранично: 3 варианта</h1>
+  <p class="d">Во всех вариантах одинаково: <b>одна мысль - один экран</b>. Сверху слева стрелка "назад", внизу справа большая стрелка "дальше". В вопросе стрелка загорается после ответа. Первая страница - "Передача задания". Звук, голос, "сообщить об ошибке" и "пропустить" спрятаны под шестерёнку ⚙. Убраны "← Модуль 1", ⚠ и вкладки "Материал / Тренажёр / Проверка". Можно листать пальцем влево-вправо.</p>
+  <p class="d">Пример - задание "Золотые правила безопасности". Нажимайте стрелки прямо в макетах.</p>
+  <div class="grid">
+    <section><span class="tag rec">А - советую</span><h2>Слайды</h2><p class="d">Сверху полоски, как в "историях": видно, сколько осталось. Круглая пульсирующая стрелка. Самый простой и понятный детям.</p><div class="ph vA" data-v="A"></div></section>
+    <section><span class="tag">Б</span><h2>Дорога</h2><p class="d">Сверху маленькая дорога с точками, по ней едет дрон - как на карте. Широкая кнопка "Дальше" со стрелкой.</p><div class="ph vB" data-v="B"></div></section>
+    <section><span class="tag">В</span><h2>Экран пилота</h2><p class="d">Как вид из FPV-очков: зелёные уголки, номер "03/10", стрелка-шевроны. Самый "лётный", но строже по виду.</p><div class="ph vC" data-v="C"></div></section>
+  </div>
+  <p class="d" style="margin-top:22px">Напишите букву (А, Б или В). Можно смешать, например "А, но стрелка из В".</p>
+</main>
+<script>
+var PAGES=[
+  {k:'brief',kick:'ПЕРЕДАЧА ЗАДАНИЯ',h:'Задание 2. Золотые правила безопасности',p:'5 правил, которые знает каждый пилот. Сначала прочитаем, потом проверим себя.'},
+  {pic:'🧑‍🏫',h:'1. Летаем только с тренером',p:'На занятии запуск разрешает тренер. Он видит всю площадку и знает, кто где стоит.'},
+  {pic:'🚷',h:'2. Не над людьми',p:'Никогда не летаем над людьми и рядом с ними. Зрители стоят за сеткой.'},
+  {pic:'👀',h:'3. Рядом наблюдатель',p:'Пилот в очках видит только картинку с камеры. Наблюдатель смотрит на дрон и людей.'},
+  {pic:'🛑',h:'4. Что-то не так - дизарм',p:'Дизарм - выключить моторы тумблером. Пропало видео - сразу дизарм.'},
+  {pic:'✋',h:'5. После посадки',p:'Сначала дизарм, потом подходим. Дрон руками не ловим.'},
+  {q:'Можно или нельзя?',h:'Пролететь над головами зрителей',a:['Можно','Нельзя'],ok:1,e:'Над людьми не летаем никогда.'},
+  {q:'Вопрос 1 из 2',h:'Пропало видео в очках. Что делаешь?',a:['Лечу дальше по памяти','Сразу дизарм','Снимаю очки и ищу дрон'],ok:1,e:'Без видео пилот слеп - сразу дизарм.'},
+  {q:'Вопрос 2 из 2',h:'Кто разрешает запуск на занятии?',a:['Тренер','Любой пилот','Зрители'],ok:0,e:'Запуск разрешает тренер.'},
+  {k:'end',pic:'⭐',h:'Задание пройдено!',p:'3 из 3 верно. Звезда летит в счётчик модуля.'}
+];
+function esc(s){ return String(s).replace(/[&<>"]/g,function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
+function build(ph){ var v=ph.dataset.v, i=0, done={};
+  ph.innerHTML='<div class="scr"><div class="top"><button class="ib back" aria-label="Назад">←</button><div class="tt"></div><button class="ib gear" aria-label="Настройки">⚙</button></div>'+
+    (v==='A'?'<div class="bars">'+PAGES.map(function(){ return '<i></i>'; }).join('')+'</div>':'')+
+    (v==='B'?'<div class="road">'+PAGES.map(function(_,j){ return '<b style="left:'+(j/(PAGES.length-1)*100)+'%"></b>'; }).join('')+'<span class="dr">🛸</span></div>':'')+
+    '<div class="body"></div>'+(v==='C'?'<div class="scan"></div>':'')+
+    '<button class="next" aria-label="Дальше">'+(v==='A'?'➜':v==='B'?'<span>Дальше <em>➜</em></span>':'<i>›</i><i>›</i><i>›</i>')+'</button>'+
+    '<div class="menu"><button>🔊 Звук: вкл</button><button>🎙 Голос</button><button>▶ Проба голоса</button><button>⏭ Пропустить задание</button><button>⚠ Сообщить об ошибке</button></div></div>';
+  var body=ph.querySelector('.body'), nx=ph.querySelector('.next'), menu=ph.querySelector('.menu');
+  ph.querySelector('.gear').onclick=function(){ menu.classList.toggle('on'); };
+  function pageHTML(P,j){ if(P.k==='brief') return '<div class="brief"><div class="kick">'+P.kick+'</div><h3 style="text-align:left">'+esc(P.h)+'</h3><p>'+esc(P.p)+'</p></div>';
+    if(P.q) return '<div class="kick">'+esc(P.q)+'</div><h3>'+esc(P.h)+'</h3><div class="opts">'+P.a.map(function(a,k){ return '<button class="opt" data-k="'+k+'">'+esc(a)+'</button>'; }).join('')+'</div><div class="fb"></div>';
+    return '<div class="pic">'+P.pic+'</div><h3>'+esc(P.h)+'</h3><p>'+esc(P.p)+'</p>'; }
+  function show(dir){ var P=PAGES[i], old=body.querySelector('.page'), pg=document.createElement('div'); pg.className='page'; pg.innerHTML=pageHTML(P,i);
+    pg.style.transform='translateX('+(dir||0)*100+'%)'; pg.style.opacity=dir?0:1; body.appendChild(pg); void pg.offsetWidth; pg.style.transform='none'; pg.style.opacity=1;
+    if(old){ old.style.transform='translateX('+(-(dir||1))*60+'%)'; old.style.opacity=0; setTimeout(function(){ old.remove(); },460); }
+    if(v==='C'){ var sc=ph.querySelector('.scan'); sc.classList.remove('go'); void sc.offsetWidth; sc.classList.add('go'); }
+    ph.querySelector('.tt').textContent=v==='C'?('0'+(i+1)).slice(-2)+' / '+PAGES.length:'Задание 2 · '+(i+1)+' из '+PAGES.length;
+    if(v==='A') ph.querySelectorAll('.bars i').forEach(function(b,j){ b.classList.toggle('on',j<=i); });
+    if(v==='B'){ ph.querySelectorAll('.road b').forEach(function(b,j){ b.classList.toggle('on',j<=i); }); ph.querySelector('.road .dr').style.left=(i/(PAGES.length-1)*100)+'%'; }
+    nx.disabled=!!P.q&&!done[i]; nx.style.visibility=P.k==='end'?'hidden':'visible';
+    if(P.q) pg.querySelectorAll('.opt').forEach(function(b){ b.onclick=function(){ if(done[i]) return; done[i]=1; var k=+b.dataset.k; b.classList.add(k===P.ok?'ok':'no'); if(k!==P.ok) pg.querySelectorAll('.opt')[P.ok].classList.add('ok');
+      pg.querySelector('.fb').textContent=(k===P.ok?'Верно! ':'Не совсем. ')+P.e; nx.disabled=false; }; }); }
+  function go(d){ var j=i+d; if(j<0||j>=PAGES.length) return; if(d>0&&nx.disabled) return; i=j; show(d); menu.classList.remove('on'); }
+  nx.onclick=function(){ go(1); }; ph.querySelector('.back').onclick=function(){ go(-1); }; /* на первой странице в курсе - выход к карте */
+  var x0=null; body.addEventListener('touchstart',function(e){ x0=e.touches[0].clientX; },{passive:true});
+  body.addEventListener('touchend',function(e){ if(x0==null) return; var dx=e.changedTouches[0].clientX-x0; x0=null; if(Math.abs(dx)>50) go(dx<0?1:-1); });
+  show(0); }
+document.querySelectorAll('.ph').forEach(build);
+</script>
+</body>
+</html>
