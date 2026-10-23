@@ -804,10 +804,31 @@ function capTxt(n){ var s=n.st;
   if(s==='done') return 'Пройдено. Нажми ещё раз - <b>повторить</b>';
   return n.kind==='mod'?'Нажми ещё раз - <b>войти в модуль</b>':'Нажми ещё раз - <b>начать</b>'; }
 function showCap(n){ $('capT').textContent=n.n; $('capS').textContent=n.sub||''; $('capP').innerHTML=capTxt(n); cap.style.setProperty('--pc',n.c); cap.classList.toggle('lock',n.st==='lock'); cap.classList.add('on'); }
-function hideCap(){ cap.classList.remove('on'); }
+function hideCap(){ cap.classList.remove('on'); mbOff(); }
 $('capT').onclick=function(){ if(cur) tapNode(cur.id); };
 function shake(){ if(cap.animate) cap.animate([{transform:'translate(-50%,0)'},{transform:'translate(calc(-50% - 8px),0)'},{transform:'translate(calc(-50% + 8px),0)'},{transform:'translate(-50%,0)'}],{duration:350}); }
-function arrive(n){ cur=n; acc=0; st='node'; showCap(n); guideUI(); if(n._go){ n._go=0; enter(n); return; } if(tour){ clearTimeout(tourT); tourT=setTimeout(tourNext,red?900:1900); } }
+function arrive(n,via){ cur=n; acc=0; st='node'; showCap(n); guideUI(); if(n._go){ n._go=0; enter(n); return; } if(tour){ clearTimeout(tourT); tourT=setTimeout(tourNext,red?900:1900); return; }
+  if(via&&n.kind==='mod'&&curL===LK) modBrief(n,!MB_SAID[n.id]); }
+/* рассказ о модуле (23.10): подлетели к зданию модуля - голос говорит, чему научишься, слева печатается список заданий.
+   Голос - один раз за заход на каждый модуль (дальше только список, "Ещё раз" - повторить). "Войти", повторное нажатие на здание или "Пропустить и войти" - сразу внутрь, голос замолкает.
+   Озвучка файлом zvuk/mod-<id модуля>.mp3 (общий сценарий озвучки); нет файла - голос устройства читает текст: поле say модуля в zadaniya.js, нет его - sub */
+var mbEl=$('mb'), mbTm=[], MB_SAID={};
+function zad(k){ var a=k%10, b=k%100; return a===1&&b!==11?'задание':a>=2&&a<=4&&(b<12||b>14)?'задания':'заданий'; }
+function mbOff(){ if(!mbEl||!mbEl.classList.contains('on')) return; mbTm.forEach(clearInterval); mbTm=[]; if(GL) GL.stop(); mbEl.classList.remove('on','talk'); }
+function modBrief(n,voice){ var m=mods.find(function(x){ return x.id===n.mid; }); if(!mbEl||!m) return; mbTm.forEach(clearInterval); mbTm=[]; if(GL) GL.stop();
+  var lock=n.st==='lock', x=m.say||(m.sub?m.sub.replace(/[.!?]*$/,'.'):''), pre='Модуль '+m.n+'. '+m.t+'. ', full=pre+x+' В модуле '+m.tasks.length+' '+zad(m.tasks.length)+'.'+(lock?' Этот модуль откроет педагог.':'');
+  var rows=m.tasks.map(function(t,i){ var L=K.lib[t]||{}; return {s:I.task(t),t:(i+1)+'. '+(L.t||t)}; });
+  mbEl.style.setProperty('--pc',n.c); $('mbN').textContent='МОДУЛЬ '+m.n+' · '+m.tasks.length+' '+zad(m.tasks.length).toUpperCase(); $('mbT').textContent=m.t; $('mbLk').hidden=!lock; $('mbGo').hidden=lock;
+  $('mbL').innerHTML=rows.map(function(r){ return '<li class="s-'+esc(r.s)+'"></li>'; }).join(''); var li=$('mbL').children;
+  $('mbR').textContent=GL&&GL.on?'🔊 Ещё раз':'🔇 Звук выкл'; mbEl.classList.add('on'); mbEl.scrollTop=0;
+  var spoke=voice&&!red&&GL&&GL.on&&GL.play('mod-'+m.id+'.mp3',{text:full,onb:function(i){ said=i-pre.length; },onend:function(){ mbEl.classList.remove('talk'); }}), said=0, pos=0, lp=0, lt=rows.reduce(function(a,r){ return a+r.t.length; },0);
+  if(spoke){ MB_SAID[n.id]=1; mbEl.classList.add('talk'); }
+  if(red||!voice){ $('mbS').textContent=x; rows.forEach(function(r,i){ li[i].textContent=r.t; }); return; }
+  $('mbS').textContent=''; /* рассказ печатается вслед за голосом, список - сам по себе, строка за строкой */
+  mbTm.push(setInterval(function(){ pos=Math.max(pos+1,said); $('mbS').textContent=x.slice(0,pos); if(pos>=x.length) clearInterval(mbTm[0]); },spoke?55:24));
+  mbTm.push(setInterval(function(){ lp+=2; var k=lp; rows.forEach(function(r,i){ li[i].textContent=r.t.slice(0,Math.max(0,k)); k-=r.t.length; }); if(lp>=lt) clearInterval(mbTm[1]); },22)); }
+if(mbEl){ $('mbX').onclick=mbOff; $('mbGo').onclick=function(){ if(!fly&&cur&&cur.kind==='mod') enter(cur); };
+  $('mbR').onclick=function(){ if(!cur||cur.kind!=='mod') return; if(GL&&!GL.on) GL.setOn(true); modBrief(cur,true); }; }
 /* знакомство с курсом: при первом входе камера сама облетает главную нить и все боковые, потом ведёт к заданию */
 var TKEY=(CFG.store||'kursy')+'_tour', tour=null, tourT=0;
 function tourStart(){ if(curL!==LK||fly) return; tour=[mods[0]&&LK.by[mods[0].id]].concat(['prog','code','bug','shp','trn'].map(function(id){ return LK.by[id]; })).filter(Boolean); tourNext(); }
@@ -818,7 +839,7 @@ function goTo(n,isBack){ if(topOn){ topOn=false; topUI(); } hideCap(); if(!isBac
   /* летим плавной дугой прямо к точке обзора узла, не повторяя изгибы нити: так камера не дёргается */
   var B=viewOf(n), fwd=cur&&n.from===cur.id;
   if(passGate){ passGate=false; if(fwd&&n.kind==='task'){ var m=camP.clone().lerp(B.p,.5); m.y+=4; var u=.45, gp2=camP.clone().multiplyScalar((1-u)*(1-u)).addScaledVector(m,2*u*(1-u)).addScaledVector(B.p,u*u); gateOn(gp2,B.p.clone().sub(camP).normalize(),n); } }
-  st='fly'; startFly(B.p,B.l,null,2.4,function(){ arrive(n); }); }
+  st='fly'; startFly(B.p,B.l,null,2.4,function(){ arrive(n,1); }); }
 /* правка 6Б: после сданного задания над дорогой зажигаются ворота, камера пролетает сквозь них; сверху на секунду "Уровень N" */
 var passGate=false, GATES=[];
 function gateOn(p,tg,n){ var g=new THREE.Mesh(new THREE.TorusGeometry(3.4,.28,8,40),new THREE.MeshBasicMaterial({color:new THREE.Color(n.c),transparent:true,blending:THREE.AdditiveBlending,depthWrite:false}));
