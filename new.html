@@ -4,6 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Курс FPV - карта</title>
+<meta name="author" content="Наумов А.А.">
+<meta name="copyright" content="© Наумов А.А., 2025-2026. Все права защищены.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Marck+Script&family=Unbounded:wght@500;700&family=Manrope:wght@400;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
 <link rel="manifest" href="manifest.webmanifest">
@@ -291,5 +293,6 @@ document.getElementById('hudC').textContent = (window.KURSY && KURSY.name) || '�
 <script src="moduli.js" defer></script>
 <script src="golos.js" defer></script>
 <script src="kosmos-kurs.js" defer></script>
+<div id="copy" style="position:fixed;right:max(10px,env(safe-area-inset-right,0px));bottom:calc(6px + env(safe-area-inset-bottom,0px));z-index:4;pointer-events:none;font:500 10px var(--body);color:var(--dim);opacity:.55">© Наумов А.А., 2025-2026. Все права защищены.</div>
 </body>
 </html>
