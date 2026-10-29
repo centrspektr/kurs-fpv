@@ -1,0 +1,29 @@
+# Курс FPV: после каждого обновления main отправляет копию на GitVerse.
+# Там её публикует GitVerse Pages: https://centrspektr.gitverse.site/kurs-fpv/
+# Нужны секреты репозитория: GITVERSE_USER (логин на GitVerse) и GITVERSE_TOKEN (токен доступа GitVerse).
+# Адрес репозитория на GitVerse можно сменить переменной GITVERSE_REPO (по умолчанию centrspektr/kurs-fpv).
+name: Копия на GitVerse
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  push:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Отправить main на GitVerse
+        env:
+          GV_USER: ${{ secrets.GITVERSE_USER }}
+          GV_TOKEN: ${{ secrets.GITVERSE_TOKEN }}
+          GV_REPO: ${{ vars.GITVERSE_REPO || 'centrspektr/kurs-fpv' }}
+        run: |
+          if [ -z "$GV_USER" ] || [ -z "$GV_TOKEN" ]; then
+            echo "Нет секретов GITVERSE_USER / GITVERSE_TOKEN - пропускаю."
+            exit 0
+          fi
+          git push --force "https://${GV_USER}:${GV_TOKEN}@gitverse.ru/${GV_REPO}.git" HEAD:main
