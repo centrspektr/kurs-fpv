@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="ru"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Проба переноса</title>
+<!-- Пробник переноса входа и прогресса со старого адреса (30.10.2026, промт 16).
+     Открывать по старому адресу https://centrspektr.github.io/kurs-fpv/proba/perenos.html :
+     переадресация привезёт сюда #perenos, страница покажет, что пришло, и ничего не запишет сама. -->
+<style>
+  :root{--bg:#0b0f17;--fg:#e6edf3;--dim:#8b96a8;--ok:#5ee7c0;--bad:#ff7b7b;--line:#273041}
+  *{box-sizing:border-box} body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.45 system-ui,sans-serif;padding:20px 16px;max-width:640px;margin:0 auto}
+  h1{font-size:20px;margin:0 0 4px} h2{font-size:16px;margin:24px 0 8px} p{margin:6px 0} .dim{color:var(--dim);font-size:14px}
+  .box{border:1px solid var(--line);border-radius:10px;padding:12px;margin:8px 0} .ok{color:var(--ok)} .bad{color:var(--bad)}
+  ul{margin:4px 0;padding-left:20px} li{margin:2px 0;word-break:break-all}
+  button{font:inherit;background:#1a2333;color:var(--fg);border:1px solid var(--line);border-radius:8px;padding:10px 14px;margin:6px 6px 0 0;cursor:pointer}
+  button.main{background:#134e3f;border-color:var(--ok)} input{font:inherit;background:#111827;color:var(--fg);border:1px solid var(--line);border-radius:8px;padding:9px;width:9em;text-transform:uppercase}
+</style>
+</head><body>
+<h1>Проба переноса курса</h1>
+<p class="dim" id="where"></p>
+
+<h2>1. Что пришло со старого адреса</h2>
+<div class="box" id="came"></div>
+<div id="goWrap" hidden><button class="main" id="go">Открыть курс с этими данными</button></div>
+
+<h2>2. Что уже есть на этом адресе</h2>
+<div class="box" id="here"></div>
+
+<h2>3. Проба входа из Взлёта</h2>
+<p class="dim">Так будет работать кнопка "Открыть курс" во Взлёте. Введите код ученика: курс откроется уже с этим учеником.</p>
+<input id="code" maxlength="8" placeholder="КОД"> <input id="first" placeholder="Имя" style="width:8em;text-transform:none"> <input id="cls" placeholder="Класс" style="width:5em">
+<div><button id="vz">Открыть курс как из Взлёта</button></div>
+
+<script>
+(function () {
+  var $ = function (id) { return document.getElementById(id); };
+  var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); };
+  var pack = function (d) { return encodeURIComponent(btoa(unescape(encodeURIComponent(JSON.stringify(d))))); };
+  var json = function (v) { try { return JSON.parse(v || 'null'); } catch (e) { return null; } };
+  var KEEP = function (k) { return k === 'spk_vzlet' || /^kursy/.test(k) || /^vz_/.test(k); };
+  /* одна запись: ученик - имя и код; прогресс - сколько заданий сдано и начато */
+  var info = function (k, v) {
+    var o = json(v);
+    if (o && o.code) return (o.first || '?') + (o.cls ? ', ' + o.cls : '') + ' · код ' + o.code + (o.status ? ' · ' + o.status : '');
+    if (o && o.t) { var ids = Object.keys(o.t), d = ids.filter(function (i) { return o.t[i] && o.t[i].done; }).length; return 'заданий сдано ' + d + ', начато ' + ids.length; }
+    return String(v).length > 40 ? String(v).slice(0, 40) + '...' : String(v);
+  };
+  var list = function (d) { var ks = Object.keys(d).sort(); return ks.length ? '<ul>' + ks.map(function (k) { return '<li><b>' + esc(k) + '</b>: ' + esc(info(k, d[k])) + '</li>'; }).join('') + '</ul>' : ''; };
+
+  $('where').textContent = 'Адрес: ' + location.host + location.pathname;
+  var h = location.hash.slice(1), m = h.match(/(^|&)perenos=([^&]*)/), D = null;
+  if (m) try { D = JSON.parse(decodeURIComponent(escape(atob(decodeURIComponent(m[2]))))); } catch (e) {}
+  if (D && Object.keys(D).length) {
+    $('came').innerHTML = '<p class="ok">Перенос работает: пришло записей ' + Object.keys(D).length + '.</p>' + list(D);
+    $('goWrap').hidden = false;
+    $('go').onclick = function () { location.href = '../fpv/#perenos=' + m[2]; };
+  } else if (m) {
+    $('came').innerHTML = '<p class="bad">Метка #perenos есть, но прочитать её не удалось.</p>';
+  } else if (/github\.io$/.test(location.host)) {
+    $('came').innerHTML = '<p class="bad">Это старый адрес, а переадресация не сработала. Обновите страницу.</p>';
+  } else {
+    $('came').innerHTML = '<p>Ничего не пришло.</p><p class="dim">Откройте эту страницу по старому адресу на телефоне, где курс открывали раньше:<br>' +
+      '<a style="color:var(--ok)" href="https://centrspektr.github.io/kurs-fpv/proba/perenos.html">https://centrspektr.github.io/kurs-fpv/proba/perenos.html</a><br>' +
+      'Если и там "ничего не пришло" - на старом адресе этого телефона данных курса не было.</p>';
+  }
+
+  var L = {};
+  try { for (var i = 0; i < localStorage.length; i++) { var k = localStorage.key(i); if (KEEP(k)) L[k] = localStorage.getItem(k); } } catch (e) {}
+  $('here').innerHTML = Object.keys(L).length ? list(L) : '<p>Пока пусто: на этом адресе курс ещё не открывали.</p>';
+
+  $('vz').onclick = function () {
+    var code = $('code').value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+    if (code.length < 5) { $('code').focus(); return; }
+    location.href = '../fpv/#perenos=' + pack({ spk_vzlet: JSON.stringify({ status: 'принят', code: code, first: $('first').value.trim() || 'Ученик', cls: $('cls').value.trim() }) });
+  };
+})();
+</script>
+</body></html>
