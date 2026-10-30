@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Собирает _site: страница-переход для каждого .html курса, 404.html и sw.js.
-# Переход ведёт на тот же путь на NEW_SITE, сохраняя ?код и #метку.
+# Переход ведёт на тот же путь на NEW_SITE, сохраняя ?код и #метку,
+# и передаёт вход и прогресс из памяти браузера в #perenos (принимает perenos.js курса).
 set -euo pipefail
 NEW_SITE="${NEW_SITE:-https://centrspektr.gitverse.site}"
 mkdir -p _site
@@ -12,7 +13,16 @@ page() {
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Курс FPV переехал</title>
 <meta name="robots" content="noindex">
-<script>location.replace('$NEW_SITE' + location.pathname + location.search + location.hash);</script>
+<script>
+// Память браузера на новом адресе своя: вход (spk_vzlet) и прогресс (kursy*, vz_*) передаём в #perenos=<base64 JSON>.
+(function () {
+  var d = {}, n = 0, h = location.hash.slice(1);
+  try { for (var i = 0; i < localStorage.length; i++) { var k = localStorage.key(i);
+    if (k === 'spk_vzlet' || /^kursy/.test(k) || /^vz_/.test(k)) { d[k] = localStorage.getItem(k); n++; } } } catch (e) {}
+  if (n) try { h = (h ? h + '&' : '') + 'perenos=' + encodeURIComponent(btoa(unescape(encodeURIComponent(JSON.stringify(d))))); } catch (e) {}
+  location.replace('$NEW_SITE' + location.pathname + location.search + (h ? '#' + h : ''));
+})();
+</script>
 <meta http-equiv="refresh" content="0; url=$NEW_SITE/kurs-fpv/">
 <style>body{background:#0b0f17;color:#e6edf3;font:16px system-ui,sans-serif;padding:32px 16px;text-align:center}a{color:#5ee7c0}</style>
 </head><body>
