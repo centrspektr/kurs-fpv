@@ -2,7 +2,7 @@
 (function () {
 'use strict';
 var $ = function (s) { return document.querySelector(s); };
-var LV = /[?&]lv=1/.test(location.search) ? 1 : 2; /* 1 - младшие (без пайки и проводов), 2 - старшие */
+var LV = (window.SB_LV === 1 || /[?&]lv=1/.test(location.search)) ? 1 : 2; /* 1 - младшие (без пайки и проводов), 2 - старшие */
 var cv = $('#c'), ui = $('#ui');
 var DPR = Math.min(window.devicePixelRatio || 1, 1.6);
 var A = SB(cv, innerWidth * DPR, innerHeight * DPR), RUN = SBStage(A), X = RUN.api, P = A.P, V = A.V, THREE = window.THREE;
