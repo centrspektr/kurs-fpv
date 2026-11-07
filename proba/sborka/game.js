@@ -16,7 +16,11 @@ var camL = V(0, 6, -6), view = null, tw = [];
 function ease(t) { return t < .5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2; }
 function tween(d, fn, done) { var q = { t: 0, d: d, fn: fn, done: done }; tw.push(q); return q; }
 function wait(d, fn) { return tween(d, function () {}, fn); }
-function fit(c, dir, hw, hh, fov) { var tv = Math.tan(fov * Math.PI / 360), th = tv * innerWidth / innerHeight, d = Math.max(hw / th, hh / tv); return { p: c.clone().add(dir.clone().normalize().multiplyScalar(d)), l: c.clone(), f: fov }; }
+function fit(c, dir, hw, hh, fov, pad) { /* pad: оставить сверху место под карточку проводника */
+  var tv = Math.tan(fov * Math.PI / 360), th = tv * innerWidth / innerHeight, pf = pad ? Math.min(.32, 175 / innerHeight) : 0, d = Math.max(hw / th, hh / (1 - pf) / tv);
+  var n = dir.clone().normalize(), p = c.clone().add(n.clone().multiplyScalar(d)), l = c.clone();
+  if (pf) { var f = n.clone().negate(), r = V(0, 0, 0).crossVectors(f, V(0, 1, 0)).normalize(), up = V(0, 0, 0).crossVectors(r, f).normalize().multiplyScalar(d * tv * pf); p.add(up); l.add(up); }
+  return { p: p, l: l, f: fov }; }
 var camTw = null;
 function go(vf, dur) { view = vf; var c = vf(), p0 = cam.position.clone(), l0 = camL.clone(), f0 = cam.fov; if (camTw) { var i = tw.indexOf(camTw); if (i >= 0) tw.splice(i, 1); camTw = null; }
   if (!dur) { cam.position.copy(c.p); camL.copy(c.l); cam.fov = c.f; cam.updateProjectionMatrix(); return; }
@@ -25,11 +29,11 @@ function resize() { A.r.setSize(innerWidth * DPR, innerHeight * DPR, false); cam
 addEventListener('resize', resize); cam.aspect = innerWidth / innerHeight; cam.updateProjectionMatrix();
 var VIEW = {
   wide: function () { return fit(V(0, 5, -4), V(.15, .45, 1), 24, 19, 48); },
-  pileA: function () { return fit(V(0, 0, 3), V(0, 1, .42), 12.5, 14.5, 40); },
-  pileB: function () { return fit(V(0, 1.2, 3), V(.1, 1, .78), 12.5, 13.5, 40); },
+  pileA: function () { return fit(V(0, 0, 3), V(0, 1, .42), 12.5, 14.5, 40, 1); },
+  pileB: function () { return fit(V(0, 1.2, 3), V(.1, 1, .78), 12.5, 13.5, 40, 1); },
   station: function () { return fit(V(19, 4.5, -9), V(-.62, .42, .8), 9, 7, 40); },
-  check: function () { return fit(V(0, 2, 2), V(.45, .75, 1), 8.5, 7, 40); },
-  props: function () { return fit(V(0, 1, 6), V(0, 1, .5), 12.5, 12.5, 40); },
+  check: function () { return fit(V(0, 2, 2), V(.45, .75, 1), 8.5, 7, 40, 1); },
+  props: function () { return fit(V(0, 1, 6), V(0, 1, .5), 12.5, 12.5, 40, 1); },
   done: function () { return fit(V(0, 7.5, 2), V(.3, .5, 1), 12, 10, 36); }
 };
 
@@ -173,7 +177,7 @@ var PADV = [V(-.5, 1.225, 1.42), V(.5, 1.225, 1.42)]; /* + и - питания *
 function lin(hex) { return new T.Color(hex).convertSRGBToLinear(); }
 function drawWire(w) { if (w.mesh) { SF.remove(w.mesh); w.mesh.geometry.dispose(); } var m1 = V(0, 0, 0).lerpVectors(w.b, w.tip, .55); m1.y += .25;
   w.mesh = A.tube([w.a, w.b, m1, w.tip], w.r, w.m, SF); A.mesh(new T.SphereGeometry(w.r * 1.15, 10, 8), A.M.steel, w.tip.x, w.tip.y, w.tip.z, w.mesh); }
-function mWire(j, k) { var q = MP[j], sx = Math.sign(q[0]), sz = Math.sign(q[1]); return { a: V(q[0] - sx * .55, .55, q[1] - sz * .55 + (k - 1) * .12 * sz), b: V(sx * 3.0, .85, sz * (2.6 - k * .25)), rest: V(sx * 2.25, 1.55, sz * (1.75 - k * .5)), r: .055, m: A.M.wireK }; }
+function mWire(j, k) { var q = MP[j], sx = Math.sign(q[0]), sz = Math.sign(q[1]); return { a: V(q[0] - sx * .55, .55, q[1] - sz * .55 + (1 - k) * .12 * sz), b: V(sx * 3.0, .85, sz * (2.6 - k * .25)), rest: V(sx * 2.25, 1.55, sz * (1.75 - k * .5)), r: .055, m: A.M.wireK, k: k }; }
 function pWire(i) { var s = i ? 1 : -1; return { a: V(i ? .25 : -.2, .5, 6.6), b: V(s * .55, .5, 4.2), rest: V(s * 1.15, 1.0, 2.7), r: .12, m: i ? A.M.wireK : A.M.wireR, pol: i }; }
 function txtSprite(t, col, s) { var tx = A.cTex(128, 128, function (x) { x.font = '900 96px sans-serif'; x.textAlign = 'center'; x.fillStyle = col; x.shadowColor = col; x.shadowBlur = 12; x.fillText(t, 64, 98); });
   var sp = new T.Sprite(new T.SpriteMaterial({ map: tx, transparent: true, depthWrite: false })); sp.scale.set(s, s, 1); return sp; }
@@ -190,12 +194,12 @@ function solderStage() { step = 2; stage = 'temp'; H = {}; A.G.visible = false; 
   ask([['250°', '250° - мало: припой плавится долго, плата успеет перегреться, а пайка выйдет холодной.'], ['330°'], ['450°', '450° - слишком горячо: флюс сгорает сразу, площадки на плате могут отслоиться. Для таких плат хватает 330-350°.']], 1, function () {
     say('Верно, <b>330°</b>. Станция уже нагрета. Летим к регулятору!'); setTimeout(startGroups, 1100); }); }
 function startGroups() { step = 3; IRON = makeIron(); IF.add(IRON); IRON.visible = false;
-  for (var j = 0; j < 4; j++) GR.push({ j: j, manual: j < 2, rate: 2.6, pads: [0, 1, 2].map(function (k) { return { p: padM(j, k), done: 0, r: .17 }; }), wires: [0, 1, 2].map(function (k) { return mWire(j, k); }) });
+  for (var j = 0; j < 4; j++) GR.push({ j: j, manual: j < 2, rate: 2.6, pads: [0, 1, 2].map(function (k) { return { p: padM(j, k), done: 0, r: .17, k: k }; }), wires: [0, 1, 2].map(function (k) { return mWire(j, k); }) });
   GR.push({ power: true, manual: true, rate: 4.2, pads: [{ p: PADV[0], done: 0, r: .27, pol: 0 }, { p: PADV[1], done: 0, r: .27, pol: 1 }], wires: [pWire(0), pWire(1)] });
   var lp = txtSprite('+', '#ff5a64', .6); lp.position.copy(PADV[0]).add(V(0, .3, -.5)); SF.add(lp); var lm = txtSprite('−', '#e9f0ff', .6); lm.position.copy(PADV[1]).add(V(0, .25, -.5)); SF.add(lm); lp.visible = lm.visible = false; GR[4].labels = [lp, lm];
   for (var i = 0; i < 14; i++) { var s = A.glow('#d8d2ff', .4, 0); s.userData.life = 0; IF.add(s); SMOKE.push(s); }
   ticks.push(solderTick); nextGroup(); }
-function gView(g) { return function () { if (g.power) return fit(W(V(0, 1.22, 2.0)), V(0, 1, .85), 1.8, 2.4, 40); var q = MP[g.j], sx = Math.sign(q[0]), sz = Math.sign(q[1]); return fit(W(V(sx * 1.7, 1.22, sz * 1.05)), V(-sx * .72, 1, sz * .16), 1.6, 2.3, 40); }; }
+function gView(g) { return function () { if (g.power) return fit(W(V(0, 1.22, 2.0)), V(0, 1, .85), 1.8, 2.4, 40, 1); var q = MP[g.j], sx = Math.sign(q[0]), sz = Math.sign(q[1]); return fit(W(V(sx * 1.7, 1.22, sz * 1.05)), V(-sx * .72, 1, sz * .16), 1.6, 2.3, 40, 1); }; }
 function camDir() { var c = view(), f = c.l.clone().sub(c.p).normalize(), r = V(0, 0, 0).crossVectors(f, V(0, 1, 0)).normalize(); return { f: f, r: r }; }
 function nextGroup() { gi++; if (gi >= GR.length) return solderDone(); cur = GR[gi]; var g = cur, power = !!g.power;
   step = power ? 4 : 3;
@@ -216,11 +220,23 @@ function nextGroup() { gi++; if (gi >= GR.length) return solderDone(); cur = GR[
   H.down = function (e) { if (cur.st === 'wire') wireDown(e); else if (cur.st === 'heat') heatDown(); else if (cur.st === 'flux') oops('Сначала <b>флюс</b>: без него припой скатывается шариком и не держится на площадке.'); };
   H.move = function (e) { if (cur.dragW) wireMove(e); };
   H.up = function (e) { if (cur.dragW) wireUp(e); else heatUp(); }; }
+function makePen() { var g = new T.Group(), body = new T.MeshPhysicalMaterial({ color: lin(0xffc23a), transparent: true, opacity: .75, roughness: .1, clearcoat: 1 });
+  A.mesh(new T.CylinderGeometry(.025, .025, .6, 10), A.M.steel, 0, .3, 0, g); A.mesh(new T.CylinderGeometry(.09, .16, .4, 16), A.M.white, 0, .8, 0, g);
+  A.mesh(new T.CylinderGeometry(.32, .32, 3.2, 20), body, 0, 2.6, 0, g); A.mesh(new T.CylinderGeometry(.34, .34, .3, 20), A.M.white, 0, 4.3, 0, g);
+  var lb = A.mesh(new T.CylinderGeometry(.33, .33, 1.2, 20, 1, true), new T.MeshStandardMaterial({ color: lin(0xff4f6a), roughness: .5 }), 0, 2.6, 0, g); return g; }
 function fluxTap() { var g = cur; if (g.st !== 'flux') { if (g.st !== 'busy') say('Флюс уже есть. ' + (g.st === 'wire' ? 'Теперь положи провод на площадку.' : 'Прижми жало и держи.')); return; } g.st = 'busy'; $('#flux').classList.remove('go');
-  g.pads.forEach(function (p, i) { var m = new T.Mesh(new T.CylinderGeometry(p.r * .95, p.r * .95, .02, 20), new T.MeshStandardMaterial({ color: lin(0xffc23a), transparent: true, opacity: 0, roughness: .05, metalness: 0, polygonOffset: true, polygonOffsetFactor: -2 }));
-    m.position.copy(p.p).add(V(0, .015, 0)); SF.add(m); p.flux = m; wait(i * .18, function () { tween(.35, function (e) { m.material.opacity = .62 * e; m.scale.setScalar(.4 + .6 * e); }); }); });
-  wait(.5 + g.pads.length * .18, function () { toast('✓ Флюс на площадках');
-    if (g.manual) { g.st = 'wire'; say(g.power ? 'Тяни <b>красный провод</b> на площадку плюса, чёрный - на минус.' : 'Теперь <b>тяни серебристый кончик провода</b> на площадку. Порядок трёх проводов мотора любой: если мотор крутится не туда, это меняют в настройках.'); }
+  say('Шприц с флюсом: капаем <b>по капле на каждую площадку</b>. Флюс снимает окисел, и припой растечётся ровно.');
+  var d = camDir(), pd = g.left.clone().multiplyScalar(.45).add(V(0, 1, 0)).add(d.f.clone().multiplyScalar(-.15)).normalize(), pen = makePen(); pen.quaternion.setFromUnitVectors(V(0, 1, 0), pd); IF.add(pen);
+  var start = W(g.pads[0].p).add(pd.clone().multiplyScalar(4)), T0 = 0; pen.position.copy(start);
+  function mv(to, dur, at) { wait(at, function () { var f = pen.position.clone(); tween(dur, function (e) { pen.position.lerpVectors(f, to, e); }); }); }
+  g.pads.forEach(function (p, i) { var above = W(p.p).add(pd.clone().multiplyScalar(.9)), touch = W(p.p).add(pd.clone().multiplyScalar(.12));
+    mv(above, .45, T0); mv(touch, .25, T0 + .5); mv(above, .3, T0 + 1.35);
+    var m = new T.Mesh(new T.SphereGeometry(p.r * 1.05, 20, 12), new T.MeshPhysicalMaterial({ color: lin(0xffb52e), transparent: true, opacity: .8, roughness: .02, metalness: 0, clearcoat: 1, emissive: lin(0x5a3000) }));
+    m.position.copy(p.p).add(V(0, .01, 0)); m.scale.set(.01, .01, .01); m.visible = false; SF.add(m); p.flux = m;
+    wait(T0 + .75, function () { m.visible = true; tween(.55, function (e) { m.scale.set(e, .38 * e, e); }); });
+    T0 += 1.7; });
+  mv(start, .5, T0); wait(T0 + .55, function () { IF.remove(pen); toast('✓ Флюс на площадках');
+    if (g.manual) { g.st = 'wire'; say(g.power ? 'Флюс есть. Тяни <b>красный провод</b> на площадку плюса, чёрный - на минус.' : 'Флюс есть. Теперь <b>тяни серебристый кончик провода</b> на площадку. Каждый провод - на площадку <b>напротив него</b>, по порядку, без перекрещивания.'); }
     else autoLay(); }); }
 function autoLay() { var g = cur; g.wires.forEach(function (w, k) { var p = g.pads[k], t0 = w.tip.clone(), t1 = p.p.clone().add(V(0, .03, 0)); wait(k * .3, function () { tween(.4, function (e) { w.tip.lerpVectors(t0, t1, e); drawWire(w); }); }); w.pad = p; p.wire = w; });
   wait(1.4, function () { activate(g.pads[0]); say('Провода на месте. <b>Держи жало</b> на площадке и отпусти, когда стрелка в <b>зелёной</b> зоне.'); }); }
@@ -234,10 +250,11 @@ function wireUp(e) { var g = cur, w = g.dragW; g.dragW = null; var best = null, 
   function back() { var t0 = w.tip.clone(); tween(.35, function (e2) { w.tip.lerpVectors(t0, w.rest, e2); drawWire(w); }); }
   if (!best) { back(); say('Отпусти кончик провода <b>прямо на золотую площадку</b>.'); return; }
   if (g.power && best.pol !== w.pol) { back(); oops(w.pol === 0 ? '<b>Красный провод - плюс</b> аккумулятора. Его паяют на площадку со знаком <b>+</b>. Перепутаешь - регулятор сгорит при первом включении!' : 'Чёрный провод - <b>минус</b>, ему нужна площадка со знаком <b>−</b>. Плюс и минус путать нельзя!'); return; }
+  if (!g.power && best.k !== w.k) { back(); oops('Провода не перекрещивают: каждый провод идёт на площадку <b>напротив него</b>, по порядку. Перекрещенные провода натягиваются, трутся о раму и могут замкнуть.'); return; }
   w.tip.copy(best.p).add(V(0, .03, 0)); drawWire(w); w.pad = best; best.wire = w; activate(best);
   say(g.power ? 'Провод на площадке. Толстый провод забирает много тепла - <b>греть придётся дольше</b>. Держи жало до зелёной зоны.' : 'Провод лежит на площадке. Теперь <b>держи жало</b> (кнопка или палец на экране) и отпусти, когда стрелка в <b>зелёной</b> зоне.'); }
 /* пруток припоя: подаётся сбоку к площадке */
-function makeSolderWire(g) { if (SOLD) IF.remove(SOLD); var ax = g.left.clone().multiplyScalar(.85).add(V(0, .35, 0)).add(camDir().f.multiplyScalar(.6)).normalize(); g.ax = ax;
+function makeSolderWire(g) { if (SOLD) IF.remove(SOLD); var ax = g.left.clone().multiplyScalar(.8).add(V(0, .75, 0)).add(camDir().f.multiplyScalar(-.3)).normalize(); g.ax = ax;
   SOLD = A.tube([ax.clone().multiplyScalar(7).add(V(0, .8, 0)), ax.clone().multiplyScalar(3.5).add(V(0, .2, 0)), V(0, 0, 0)], .05, A.M.steel, IF); SOLD.visible = false; }
 function placeSolder(p, feed) { SOLD.visible = feed > 0; SOLD.position.copy(W(p.p)).add(cur.left.clone().multiplyScalar(.15)).add(V(0, .06, 0)).add(cur.ax.clone().multiplyScalar((1 - feed) * 1.6)); }
 function heatDown() { var g = cur; if (!g || heat.on) return;
@@ -252,7 +269,7 @@ function heatUp() { if (!heat.on) return; heat.on = false; var g = cur, p = g.ac
 function ironLift(p, dur, done) { var from = IRON.position.clone(), park = W(p.p).add(cur.dir.clone().multiplyScalar(1.5)).add(V(0, .5, 0));
   /* жало уходит плавно: сначала чуть вверх, потом в сторону */
   tween(dur, function (e, l) { var up = Math.min(1, l * 3); IRON.position.lerpVectors(from, park, e); IRON.position.y += Math.sin(up * Math.PI / 2) * .5 * (1 - e); }, done); }
-function good(p) { var g = cur; p.done = 1; var bm = p.blob.material; if (p.flux) { var fm = p.flux; tween(.6, function (e) { fm.material.opacity = .62 * (1 - e); }, function () { SF.remove(fm); }); }
+function good(p) { var g = cur; p.done = 1; var bm = p.blob.material; if (p.flux) { var fm = p.flux; tween(.6, function (e) { fm.material.opacity = .8 * (1 - e); fm.scale.y = .38 * (1 - e * .7); }, function () { SF.remove(fm); }); }
   p.blob.scale.set(1, .5, 1); placeSolder(p, 0); ironLift(p, 1.4);
   tween(1.6, function (e) { bm.emissiveIntensity = 1.4 * (1 - e); }, function () { toast(g.power ? '✓ ' + (p.pol ? 'Минус' : 'Плюс') + ' припаян' : '✓ Контакт припаян'); sparkle(W(p.p), 6); after(); });
   say(['Отлично: припой растёкся и лёг <b>блестящим конусом</b>. Не шевели провод, пока припой застывает.', 'Ровная блестящая пайка - так и надо!', 'Есть! Припой застывает - провод не трогаем.'][g.pads.filter(function (q) { return q.done; }).length % 3]);
