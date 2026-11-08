@@ -37,15 +37,15 @@ a.ic{color:inherit;text-decoration:none}#err{font-weight:800;font-size:14px;colo
 @keyframes pu{50%{box-shadow:0 0 0 9px #ffd16610,0 0 26px #ffd166aa}}
 /* кольцо нагрева вокруг площадки */
 .hr{display:none;width:84px;height:84px;margin:-42px 0 0 -42px;border-radius:50%;pointer-events:none!important;--h:0;
- background:conic-gradient(#3b5bdb 0 38%,#2fbf71 38% 82%,#e03131 82% 100%);-webkit-mask:radial-gradient(circle,transparent 33px,#000 34px,#000 40px,transparent 41px);mask:radial-gradient(circle,transparent 33px,#000 34px,#000 40px,transparent 41px);opacity:.55}
+ background:conic-gradient(#3b5bdb 0 50%,#2fbf71 50% 86%,#e03131 86% 100%);-webkit-mask:radial-gradient(circle,transparent 33px,#000 34px,#000 40px,transparent 41px);mask:radial-gradient(circle,transparent 33px,#000 34px,#000 40px,transparent 41px);opacity:.55}
 .hr i{position:absolute;inset:0;border-radius:50%;background:conic-gradient(#fff calc(var(--h)*360deg),transparent 0)}
-.hr.on{opacity:1}
-.toast{position:fixed;left:50%;top:150px;transform:translateX(-50%);background:#0f2a26f0;border:1px solid #5effc4;color:#5effc4;font-weight:800;font-size:13px;padding:7px 15px;border-radius:30px;z-index:9;animation:tin .3s;pointer-events:none}
+.hr.on{opacity:1}.hr.melt{opacity:1;filter:hue-rotate(160deg)}
+.toast{position:fixed;left:50%;bottom:80px;transform:translateX(-50%);background:#0f2a26f0;border:1px solid #5effc4;color:#5effc4;font-weight:800;font-size:13px;padding:7px 15px;border-radius:30px;z-index:9;animation:tin .3s;pointer-events:none}
 @keyframes tin{from{opacity:0;transform:translate(-50%,-10px)}}
 .big{left:0;right:0;top:90px;text-align:center;pointer-events:none!important}.big b{font-size:30px;font-weight:900;color:#5effc4;text-shadow:0 0 18px #5effc4aa;display:block}.big span{font-size:13.5px;color:#e9d8ff}
 .stats{display:inline-flex;gap:8px;margin-top:10px}.stats span{padding:6px 11px;border-radius:20px;background:#ffffff14;font-size:12px;font-weight:800}
 .next{right:18px;bottom:20px;width:62px;height:62px;border-radius:50%;background:var(--a);color:#14051f;display:grid;place-items:center;font-size:28px;font-weight:800;box-shadow:0 0 0 8px #c77dff40,0 0 34px var(--a)}
 @media (min-width:760px){.bub{font-size:14.5px;width:470px}}
 </style></head><body><canvas id="c"></canvas><div id="ui"></div>
-<script src="three.min.js"></script><script src="RoomEnvironment.js"></script><script src="scene.js"></script><script src="stage.js"></script><script>window.SB_LV=1;</script><script src="game.js"></script>
+<script>window.KURSY={store:"kursy_fpv_gorod"};</script><script src="golos.js"></script><script src="three.min.js"></script><script src="RoomEnvironment.js"></script><script src="scene.js"></script><script src="stage.js"></script><script>window.SB_LV=1;</script><script src="game.js"></script>
 </body></html>
