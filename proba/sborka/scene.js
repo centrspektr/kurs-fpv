@@ -144,7 +144,20 @@ function antenna() { var g = new THREE.Group(); var tp = plate(1.4, 1.2, .3, .7,
 function rx() { var g = new THREE.Group(); var p = plate(1.0, 1.2, .15, .08, M.pcbK); g.add(p); var led = glow('#ff4f6a', .6, .9); led.position.set(.2, .2, .2); g.add(led);
   [-1, 1].forEach(function (s) { tube([V(0, .12, .5), V(s * .9, .35, 1.2), V(s * 1.9, .4, 2.3)], .045, M.wireK, g); var tp = mesh(new THREE.CylinderGeometry(.07, .07, .7, 10), M.white, s * 2.15, .42, 2.62, g); tp.rotation.x = Math.PI / 2; tp.rotation.z = s * .55; });
   chipOn(g, .4, .4, -.1, -.1, .1); return g; }
-function battLead() { var g = new THREE.Group(); tube([V(-.5, 1.25, 1.42), V(-.55, .9, 2.6), V(-.45, .5, 4.6), V(-.2, .5, 6.6)], .13, M.wireR, g); tube([V(.5, 1.25, 1.42), V(.55, .9, 2.6), V(.5, .5, 4.6), V(.25, .5, 6.6)], .13, M.wireK, g);
+/* разъём XT30: жёлтый корпус со скошенными углами (вставляется только одной стороной), латунные контакты, пайка в термоусадке сзади.
+   Лицом к +z. male - штыри, иначе гнёзда; redX - где красный провод (x) */
+function xt30(male, redX) { var g = new THREE.Group(), w = 1.0, h = .52, c = .15, sh = new THREE.Shape();
+  sh.moveTo(-w / 2, -h / 2); sh.lineTo(w / 2, -h / 2); sh.lineTo(w / 2, h / 2 - c); sh.lineTo(w / 2 - c, h / 2); sh.lineTo(-w / 2 + c, h / 2); sh.lineTo(-w / 2, h / 2 - c); sh.lineTo(-w / 2, -h / 2);
+  var geo = new THREE.ExtrudeGeometry(sh, { depth: .9, bevelEnabled: true, bevelThickness: .03, bevelSize: .03, bevelSegments: 2 }); geo.translate(0, 0, -.45);
+  var ym = new THREE.MeshStandardMaterial({ color: 0xf0b820, roughness: .5 }); var b = new THREE.Mesh(geo, ym); b.castShadow = true; g.add(b);
+  var brass = M.gold, hole = new THREE.MeshBasicMaterial({ color: 0x0a0806 });
+  [-.22, .22].forEach(function (x) {
+    if (male) { var pin = mesh(new THREE.CylinderGeometry(.075, .075, .36, 12), brass, x, -.02, .62, g); pin.rotation.x = Math.PI / 2; mesh(new THREE.BoxGeometry(.012, .15, .3), hole, x, -.02, .64, g); }
+    else { var hl = mesh(new THREE.CylinderGeometry(.11, .11, .04, 14), hole, x, -.02, .47, g); hl.rotation.x = Math.PI / 2; var rim = mesh(new THREE.TorusGeometry(.1, .02, 6, 14), brass, x, -.02, .475, g); }
+    var cup = mesh(new THREE.CylinderGeometry(.09, .09, .2, 10), brass, x, -.02, -.55, g); cup.rotation.x = Math.PI / 2;
+    var hs = mesh(new THREE.CylinderGeometry(.14, .14, .45, 14), new THREE.MeshStandardMaterial({ color: Math.abs(x - redX) < .01 ? 0xc0222b : 0x1a1a1f, roughness: .6 }), x, -.02, -.82, g); hs.rotation.x = Math.PI / 2; }); /* термоусадка */
+  return g; }
+function battLead() { var g = new THREE.Group(); tube([V(-.5, 1.25, 1.42), V(-.55, .9, 2.6), V(-.45, .5, 4.6), V(-.22, .48, 6.4)], .11, M.wireR, g); tube([V(.5, 1.25, 1.42), V(.55, .9, 2.6), V(.5, .5, 4.6), V(.22, .48, 6.4)], .11, M.wireK, g);
   /* конденсатор 35 В 470 мкФ: синяя гильза с полосой минуса, алюминиевый торец с насечкой, ножки к проводам питания */
   var cap = new THREE.Group(); cap.position.set(0, 1.3, 3.7); g.add(cap); g.userData.cap = cap;
   var sl = mesh(new THREE.CylinderGeometry(.4, .4, 1.5, 28), new THREE.MeshStandardMaterial({ color: 0x1d2f6a, roughness: .35, metalness: .1 }), 0, 0, 0, cap); sl.rotation.x = Math.PI / 2;
@@ -153,7 +166,7 @@ function battLead() { var g = new THREE.Group(); tube([V(-.5, 1.25, 1.42), V(-.5
   [0, Math.PI / 2].forEach(function (r) { var l = mesh(new THREE.BoxGeometry(.5, .02, .03), M.dark, 0, 0, .785, cap); l.rotation.z = r; });
   mesh(new THREE.TorusGeometry(.39, .03, 8, 28), M.dark, 0, 0, -.55, cap);
   tube([V(-.15, 0, -.76), V(-.2, -.1, -1.0), V(-.5, -.42, -1.0)], .035, M.steel, cap); tube([V(.15, 0, -.76), V(.2, -.1, -1.0), V(.5, -.42, -1.0)], .035, M.steel, cap);
-  mesh(new THREE.BoxGeometry(1.1, .65, 1.3), M.yellow, 0, .5, 7.3, g); return g; }
+  var xm = xt30(true, -.22); xm.position.set(0, .5, 7.4); g.add(xm); return g; }
 function prop(col) { var g = new THREE.Group(), m = M.prop.clone(); m.color = new THREE.Color(col);
   for (var k = 0; k < 3; k++) { var s = new THREE.Shape(); s.moveTo(0, -.18); s.bezierCurveTo(1.2, -.55, 2.6, -.5, 3.8, -.18); s.bezierCurveTo(3.9, .05, 3.7, .3, 3.4, .32); s.bezierCurveTo(2.2, .5, 1, .4, 0, .2); s.lineTo(0, -.18);
     var geo = new THREE.ExtrudeGeometry(s, { depth: .05, bevelEnabled: true, bevelThickness: .02, bevelSize: .02, bevelSegments: 1 }); geo.rotateX(-Math.PI / 2 + .25);
@@ -277,7 +290,7 @@ W.SB = function (canvas, w, h) {
   W.SBlin = function (root) { var seen = new Set(); root.traverse(function (o) { var m = o.material; if (!m || seen.has(m)) return; seen.add(m); if (m.color && !m.map) m.color.convertSRGBToLinear(); if (m.isMeshStandardMaterial) m.envMapIntensity = m.metalness > .5 ? .55 : .18; }); };
   W.SBlin(S);
   var cam = new THREE.PerspectiveCamera(38, w / h, .3, 800);
-  return { r: r, S: S, D: D, P: D.userData.P, G: G, cam: cam, key: key, glow: glow, mesh: mesh, tube: tube, M: M, V: V, cTex: cTex, motor: motor, prop: prop, fc: fc, neon: neon, MP: MP,
+  return { r: r, S: S, D: D, P: D.userData.P, G: G, cam: cam, key: key, glow: glow, mesh: mesh, tube: tube, M: M, V: V, cTex: cTex, motor: motor, prop: prop, xt30: xt30, fc: fc, neon: neon, MP: MP,
     render: function () { r.render(S, cam); } };
 };
 })();

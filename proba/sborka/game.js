@@ -140,8 +140,8 @@ function makeLipo() { var g = new T.Group(), wm = new T.MeshStandardMaterial({ r
   var sm = A.M.chip; [[0, .66, 0, 2.5, .08, .5], [0, -.66, 0, 2.5, .08, .5], [1.24, 0, 0, .08, 1.4, .5], [-1.24, 0, 0, .08, 1.4, .5]].forEach(function (b) { A.mesh(new T.BoxGeometry(b[3], b[4], b[5]), sm, b[0], b[1], b[2], strap); });
   A.mesh(new T.BoxGeometry(.5, .1, .55), new T.MeshStandardMaterial({ color: lin(0xff4f6a), roughness: .5 }), 0, .72, 0, strap); /* пряжка */
   var stub = new T.Group(); g.add(stub); g.userData.stub = stub; /* свой провод с разъёмом, пока лежит на столе */
-  A.tube([V(.75, -.2, 1.6), V(.8, -.3, 2.4), V(.5, -.5, 3.0)], .1, A.M.wireR, stub); A.tube([V(.45, -.2, 1.6), V(.5, -.3, 2.4), V(.3, -.5, 3.0)], .1, A.M.wireK, stub);
-  A.mesh(new T.BoxGeometry(.9, .55, 1.0), A.M.yellow, .4, -.45, 3.4, stub); return g; }
+  [[-.12, A.M.wireR], [.12, A.M.wireK]].forEach(function (q) { A.tube([V(1.15, -.2 + q[0], 1.2), V(1.6, -.3 + q[0], 1.6), V(1.9, -.5, 2.6 + q[0]), V(1.4 + q[0], -.55, 3.6)], .085, q[1], stub); });
+  var xf = A.xt30(false, -.22); xf.position.set(1.4, -.55, 4.55); stub.add(xf); return g; }
 var LIPO = makeLipo(); D.add(LIPO); X.home.lipo = { p: V(0, 3.82, -.6), r: new T.Euler(0, 0, 0) };
 reg('lipo', LIPO, 'lipo');
 function byId(id) { for (var i = 0; i < PK.length; i++) if (PK[i].id === id) return PK[i]; }
@@ -403,7 +403,7 @@ function drawWire(w) { if (w.mesh) { SF.remove(w.mesh); w.mesh.geometry.dispose(
   w.mesh = A.tube([w.a, w.b, m1, w.tip], w.r, w.m, SF); A.mesh(new T.SphereGeometry(w.r * 1.15, 10, 8), A.M.steel, w.tip.x, w.tip.y, w.tip.z, w.mesh);
   if (w.k != null) { var bp = V(0, 0, 0).lerpVectors(m1, w.tip, .82); A.mesh(new T.SphereGeometry(w.r * 1.45, 10, 8), BAND[w.k], bp.x, bp.y, bp.z, w.mesh); } }
 function mWire(j, k) { var q = MP[j], sx = Math.sign(q[0]), sz = Math.sign(q[1]); return { a: V(q[0] - sx * .55, .55, q[1] - sz * .55 + (1 - k) * .12 * sz), b: V(sx * 3.0, .85, sz * (2.6 - k * .25)), rest: V(sx * 2.25, 1.55, sz * (1.75 - k * .5)), r: .055, m: A.M.wireK, k: k }; }
-function pWire(i) { var s = i ? 1 : -1; return { a: V(i ? .25 : -.2, .5, 6.6), b: V(s * .55, .5, 4.2), rest: V(s * 1.15, 1.0, 2.7), r: .12, m: i ? A.M.wireK : A.M.wireR, pol: i }; }
+function pWire(i) { var s = i ? 1 : -1; return { a: V(s * .22, .48, 6.4), b: V(s * .55, .5, 4.2), rest: V(s * 1.15, 1.0, 2.7), r: .12, m: i ? A.M.wireK : A.M.wireR, pol: i }; }
 function txtSprite(t, col, s) { var tx = A.cTex(128, 128, function (x) { x.font = '900 96px sans-serif'; x.textAlign = 'center'; x.fillStyle = col; x.shadowColor = col; x.shadowBlur = 12; x.fillText(t, 64, 98); });
   var sp = new T.Sprite(new T.SpriteMaterial({ map: tx, transparent: true, depthWrite: false })); sp.scale.set(s, s, 1); return sp; }
 function makeIron() { var g = new T.Group(), M = A.M, grip = new T.MeshStandardMaterial({ color: lin(0x8b3dff), roughness: .5, metalness: .2 }); grip.envMapIntensity = .18;
@@ -662,7 +662,7 @@ function lipoStage() { stage = 'Z'; phase = 'Z'; view0 = VIEW.lipo; go(VIEW.lipo
   say(K('Остался <b>аккумулятор</b> - это батарейка дрона. Положи его сверху на дрон.', 'Последний шаг - <b>аккумулятор</b>. Его ставят на верхнюю пластину и держат ремешком. Пропеллеры уже стоят: дальше всё делаем аккуратно.')); marks(); pileMode();
   onAllIn = function () { return !!inst.lipo; }; next = function () { onAllIn = null; done(); }; }
 /* ремешок, вопрос о порядке включения, разъём XT30 */
-var XT = { a: V(.9, 3.6, 1.0), b: V(2.1, 3.0, 2.2), rest: V(2.5, 1.0, 6.2), to: V(0, .5, 8.55), male: V(0, .5, 7.3) };
+var XT = { a: V(1.15, 3.6, .6), b: V(1.7, 3.45, .9), c: V(2.35, 2.6, 1.7), d: V(2.55, 1.4, 4.4), rest: V(2.4, .8, 7.8), to: V(0, .5, 8.45), male: V(0, .5, 7.4) }; /* провод выходит сбоку аккумулятора, идёт мимо пластин и заходит в разъём сзади */
 function lipoStep(cb) { var st = LIPO.userData.strap; go(function () { return fit(W(V(0, 3.6, -.4)), V(.6, .9, .9), 2.6, 2.6, 40, 1); }, 1);
   st.scale.set(1.25, 1.6, 1); st.position.y = .35;
   wait(1.2, function () { say(K('Затягиваем <b>ремешок</b>: он держит аккумулятор, чтобы тот не слетел в полёте.', 'Затягиваем <b>ремешок</b> туго: снизу резиновая накладка, аккумулятор не должен ёрзать. Слетит в полёте - дрон упадёт.'));
@@ -671,14 +671,14 @@ function lipoStep(cb) { var st = LIPO.userData.strap; go(function () { return fi
     ask([['Пульт, потом очки, потом аккумулятор'], ['Сначала аккумулятор дрона', 'Если дрон включится раньше пульта, он не услышит команд. Порядок: <b>пульт, очки, аккумулятор</b>. Выключают наоборот: сначала отключают аккумулятор.'], ['Неважно', 'Важно! Сначала <b>пульт</b>, чтобы дрон сразу слушался команд, потом <b>очки</b>, и только потом <b>аккумулятор</b>.']], 0,
       function () { say('Верно: пульт, очки, аккумулятор. Пульт и очки уже включены.'); setTimeout(plugXT, 1300); }); }
   function plugXT() { var stub = LIPO.userData.stub; stub.visible = false; var tip = XT.rest.clone(), dr = false, cab = [], cabX = [];
-    var plug = new T.Group(); A.mesh(new T.BoxGeometry(.9, .55, 1.0), A.M.yellow, 0, 0, 0, plug); plug.add(xr(new T.Mesh(new T.BoxGeometry(.9, .55, 1.0)))); SF.add(plug);
+    var plug = new T.Group(), xf = A.xt30(false, .22); xf.rotation.y = Math.PI; plug.add(xf); plug.add(xr(new T.Mesh(new T.BoxGeometry(1.0, .52, .9)))); SF.add(plug);
     var pgl = A.glow('#7cf3ff', 1.6, .8); pgl.material.depthTest = false; pgl.renderOrder = 5; plug.add(pgl);
     var hole = A.glow('#5effc4', 2, .7); hole.material.depthTest = false; hole.renderOrder = 5; hole.position.copy(XT.male).add(V(0, .3, .7)); SF.add(hole);
     var lb = labSprite('XT30'); lb.position.copy(XT.male).add(V(0, 1.0, 0)); SF.add(lb);
     var pulse = function (dt, t) { var a = .5 + Math.sin(t * 6) * .35; pgl.material.opacity = dr ? .3 : a; hole.material.opacity = a; }; ticks.push(pulse);
     function draw() { cab.forEach(function (m) { SF.remove(m); m.geometry.dispose(); }); cabX.forEach(function (m) { SF.remove(m); }); cab = []; cabX = [];
-      [[0, A.M.wireR], [-.3, A.M.wireK]].forEach(function (q) { var o = V(q[0], 0, 0), end = tip.clone().add(V(q[0] + .15, 0, -.5)), m = V(0, 0, 0).lerpVectors(XT.b, end, .5); m.y += .4;
-        var t = A.tube([XT.a.clone().add(o), XT.b.clone().add(o), m, end], .1, q[1], SF); cab.push(t); var x = xr(new T.Mesh(t.geometry)); SF.add(x); cabX.push(x); }); plug.position.copy(tip); }
+      [[-.22, A.M.wireR], [.22, A.M.wireK]].forEach(function (q) { var o = V(0, q[0] * .5, q[0] * .3), end = tip.clone().add(V(q[0], -.02, .95)), pre = tip.clone().add(V(q[0] * 1.2, .05, 1.9)), m = V(0, 0, 0).lerpVectors(XT.d, pre, .5); m.y += .3; m.z += 1.2;
+        var t = A.tube([XT.a.clone().add(o), XT.b.clone().add(o), XT.c.clone().add(o), XT.d.clone().add(V(q[0] * .5, 0, 0)), m, pre, end], .085, q[1], SF); cab.push(t); var x = xr(new T.Mesh(t.geometry)); SF.add(x); cabX.push(x); }); plug.position.copy(tip); }
     draw(); go(function () { return fit(W(V(1.1, 1.4, 5.6)), V(.55, 1.15, .9), 4.2, 3.6, 40, 1); }, 1.1);
     say(K('Теперь <b>подключи аккумулятор</b>: тяни жёлтый разъём к такому же жёлтому разъёму сзади дрона.', 'Подключаем разъём <b>XT30</b>: он вставляется только одной стороной - скошенные углы должны совпасть. Тяни жёлтый разъём к разъёму на проводах питания сзади.'));
     hint(K('Тяни жёлтый разъём к зелёному кружку', 'Тяни разъём аккумулятора к разъёму XT30'));
@@ -687,7 +687,7 @@ function lipoStep(cb) { var st = LIPO.userData.strap; go(function () { return fi
     H.up = function (e) { if (!dr) return; dr = false;
       if (dist(scr(W(XT.male)), e.clientX, e.clientY) > 80) { var t0 = tip.clone(); tween(.35, function (e2) { tip.lerpVectors(t0, XT.rest, e2); draw(); }); say(K('Отпусти разъём прямо у <b>зелёного кружка</b>.', 'Отпусти разъём прямо у разъёма <b>XT30</b> сзади дрона.')); return; }
       H = {}; var t0 = tip.clone(); tween(.45, function (e2) { tip.lerpVectors(t0, XT.to, e2); draw(); }, function () {
-        ticks.splice(ticks.indexOf(pulse), 1); plug.remove(pgl); SF.remove(hole); SF.remove(lb); cabX.forEach(function (m) { SF.remove(m); }); plug.remove(plug.children[1]);
+        ticks.splice(ticks.indexOf(pulse), 1); plug.remove(pgl); SF.remove(hole); SF.remove(lb); cabX.forEach(function (m) { SF.remove(m); }); plug.remove(plug.children[1]); /* убрали рентген-коробку */
         sparkle(W(XT.male), 14); SFX.click(); setTimeout(SFX.beeps, 300); toast('♪ Пик-пик-пик! Аккумулятор подключён');
         var led = A.glow('#5effc4', 1.2, .95); led.position.copy(W(V(.9, 2.15, -1.2))); FX.add(led);
         say(K('Дрон пискнул - он <b>проснулся</b> и готов к полёту! Отходим подальше от пропеллеров.', 'Регуляторы пропищали мелодию, на полётнике загорелся огонёк - <b>всё работает</b>. Дрон на землю, сами отходим подальше от пропеллеров.'));
