@@ -52,8 +52,13 @@ var TOTAL = LV === 1 ? 6 : 8, step = 0, err = 0, stage = '';
 function top(s, t) { return '<div class="top"><a class="ic" href="javascript:history.back()">←</a><div class="ttl"><small>' + s + '</small><b>' + t + '</b></div><button class="ic" id="snd" title="Голос проводника">' + (sndOn() ? '🔊' : '🔇') + '</button><div class="ic" id="err" title="ошибки">' + err + '</div></div>'; }
 /* голос проводника: тот же голос, что в курсе (golos.js, выбор голоса и "выкл" общие с курсом) */
 function sndOn() { return !!(window.GOLOS && GOLOS.on); }
-function speak(html) { if (!sndOn()) return; var d = document.createElement('div'); d.innerHTML = html; var t = d.textContent.replace(/\s+/g, ' ').replace(/ x /g, ' на ').trim(); if (t) GOLOS.say(t); }
-document.addEventListener('click', function (e) { var b = e.target.closest && e.target.closest('#snd'); if (!b || !window.GOLOS) return; GOLOS.setOn(!GOLOS.on); b.textContent = GOLOS.on ? '🔊' : '🔇'; if (GOLOS.on) { var t = $('#sayT'); speak(t ? t.innerHTML : 'Голос включён'); } });
+var SAID = {}; /* одну и ту же фразу голос не повторяет */
+function speak(html, force) { if (!sndOn()) return; var d = document.createElement('div'); d.innerHTML = html; var t = d.textContent.replace(/\s+/g, ' ').replace(/ x /g, ' на ').trim(); if (!t || (SAID[t] && !force)) return; SAID[t] = 1;
+  /* длинную фразу не обрываем: следующая ждёт своей очереди (в очереди только самая свежая), ошибка и кнопка звука перебивают сразу */
+  var cut = force || stage === 'lesson' || stage === 'quiz' || /^Стоп\./.test(t) || Date.now() - spk.t > 25000; if (spk.on && !cut) { spk.next = t; return; } sayNow(t); }
+var spk = { on: false, next: null, t: 0 };
+function sayNow(t) { spk.on = true; spk.t = Date.now(); spk.next = null; var ok = GOLOS.say(t, { onend: function () { spk.on = false; if (spk.next) { var n = spk.next; spk.next = null; sayNow(n); } } }); if (!ok) spk.on = false; }
+document.addEventListener('click', function (e) { var b = e.target.closest && e.target.closest('#snd'); if (!b || !window.GOLOS) return; GOLOS.setOn(!GOLOS.on); b.textContent = GOLOS.on ? '🔊' : '🔇'; if (GOLOS.on) { var t = $('#sayT'); speak(t ? t.innerHTML : 'Голос включён', true); } });
 function bars() { var o = '<div class="bars">'; for (var i = 0; i < TOTAL; i++) o += '<i class="' + (i < step ? 'd' : i === step ? 'h' : '') + '"></i>'; return o + '</div>'; }
 function head(s, t, extra) { ui.innerHTML = top(s, t) + bars() + '<div class="bub glass" id="say"><div id="sayT"></div><div class="qs" id="qs"></div></div><div class="tag" id="tag"></div>' + (extra || ''); }
 function say(txt, bad) { var b = $('#say'), t = $('#sayT'); if (!t) return; t.innerHTML = (bad ? '<span class="chip bad">ПОЧЕМУ НЕТ</span> ' : '') + txt; speak((bad ? 'Стоп. ' : '') + txt); b.classList.toggle('bad', !!bad); if (bad) { b.classList.remove('shake'); void b.offsetWidth; b.classList.add('shake'); } }
@@ -200,9 +205,12 @@ function makeDriver(nut) { var g = new T.Group(), hm = new T.MeshStandardMateria
   A.mesh(new T.CylinderGeometry(.42, .5, .5, 16), A.M.dark, 0, 3.0, 0, g); A.mesh(new T.CylinderGeometry(.55, .5, 3.4, 16), hm, 0, 4.9, 0, g);
   for (var i = 0; i < 8; i++) { var r = A.mesh(new T.BoxGeometry(.08, 2.8, .08), A.M.dark, 0, 4.9, 0, g); var a = i / 8 * Math.PI * 2; r.position.x = Math.cos(a) * .55; r.position.z = Math.sin(a) * .55; }
   return g; }
+var DRV = {}; /* отвёртки лежат на столе и берутся оттуда */
+function getDriver(nut) { var k = nut ? 'n' : 's'; if (DRV[k]) return DRV[k]; var d = makeDriver(nut); TOOL.add(d); d.userData.rest = { p: V(nut ? 10.7 : 9.1, .46, -2.6), q: new T.Quaternion().setFromEuler(new T.Euler(Math.PI / 2, 0, 0)) }; /* лежит на столе справа от рамы, ручкой к нам */ d.position.copy(d.userData.rest.p); d.quaternion.copy(d.userData.rest.q); d.scale.setScalar(.8); return (DRV[k] = d); }
+function driverHome(d, cb) { var p0 = d.position.clone(), q0 = d.quaternion.clone(), r = d.userData.rest; tween(.45, function (e) { d.position.lerpVectors(p0, r.p, e); d.position.y += Math.sin(e * Math.PI) * 1.2; d.quaternion.copy(q0).slerp(r.q, e); }, cb); }
 function screwMesh(nut) { var g = new T.Group();
   if (nut) { A.mesh(new T.CylinderGeometry(.3, .3, .26, 6), A.M.steel, 0, .13, 0, g); A.mesh(new T.CylinderGeometry(.33, .33, .06, 6), A.M.dark, 0, .02, 0, g); }
-  else { A.mesh(new T.CylinderGeometry(.2, .2, .12, 16), A.M.steel, 0, .06, 0, g); A.mesh(new T.BoxGeometry(.26, .03, .06), A.M.dark, 0, .1, 0, g); A.mesh(new T.CylinderGeometry(.065, .065, .6, 8), A.M.steel, 0, -.3, 0, g); }
+  else { A.mesh(new T.CylinderGeometry(.2, .2, .12, 16), A.M.steel, 0, .06, 0, g); A.mesh(new T.BoxGeometry(.26, .03, .06), A.M.dark, 0, .12, 0, g); A.mesh(new T.BoxGeometry(.06, .03, .26), A.M.dark, 0, .12, 0, g); /* крестик */ A.mesh(new T.CylinderGeometry(.065, .065, .6, 8), A.M.steel, 0, -.3, 0, g); }
   return g; }
 /* o: holes - точки в координатах дрона, out - куда смотрит головка, group - винтов в одной детали (после первой детали - одним нажатием) */
 var SCRL = null, SCRN = 0, CONN = null; /* для проверки */
@@ -210,20 +218,19 @@ function screwStep(o, done) { H = {}; SCRN++; var list = SCRL = o.holes.map(func
     m.quaternion.setFromUnitVectors(V(0, 1, 0), out); m.position.copy(h).add(out.clone().multiplyScalar(.75)); m.scale.setScalar(.01); SCR.add(m); var gl = A.glow('#ffd166', o.nut ? 2 : 1.4, .9); gl.position.y = .15; m.add(gl); m.userData.gl = gl;
     tween(.3, function (e) { m.scale.setScalar(Math.max(.01, e)); }); return { h: h, out: out, m: m, done: 0, g: Math.floor(i / (o.group || 1)) }; });
   if (o.view) go(o.view, 1.1); if (o.say) say(o.say); hint(o.hint || K('Нажми на винт - отвёртка закрутит его', 'Нажимай на винты: отвёртка закручивает'));
-  var drv = makeDriver(o.nut); drv.visible = false; TOOL.add(drv); var busy = false, first = !(o.group > 1) || !o.firstManual, nDone = 0;
+  var drv = getDriver(o.nut); var busy = false, first = !(o.group > 1) || !o.firstManual, nDone = 0;
   var queue = [];
   H.down = function (e) { var best = null, bd = 70; list.forEach(function (s) { if (s.done || s.q) return; var d = dist(scr(DW(s.m.position)), e.clientX, e.clientY); if (d < bd) { bd = d; best = s; } });
-    if (!best) { say(o.miss || K('Нажми прямо на <b>винт</b>.', 'Нажми прямо на <b>головку винта</b>.')); return; }
+    if (!best) { if (busy || list.some(function (s) { return (s.q || s.done) && dist(scr(DW(s.m.position)), e.clientX, e.clientY) < 90; })) return; say(o.miss || K('Нажми прямо на <b>винт</b>.', 'Нажми прямо на <b>головку винта</b>.')); return; }
     var batch = (o.group > 1 && first) ? list.filter(function (s) { return !s.done && !s.q && s.g === best.g; }) : [best]; batch.forEach(function (s) { s.q = 1; }); queue = queue.concat(batch); if (!busy) { busy = true; run(); } };
   function run() { var s = queue.shift(); if (!s) { busy = false; check(); return; } turn(s, run); } /* нажатия во время работы отвёртки ставятся в очередь */
-  function turn(s, cb) { var wout = DWdir(s.h, s.out), head = DW(s.m.position), from = head.clone().add(wout.clone().multiplyScalar(3)), q0 = new T.Quaternion().setFromUnitVectors(V(0, 1, 0), wout), qs = s.m.quaternion.clone(), qr = new T.Quaternion();
-    drv.visible = true; drv.quaternion.copy(q0); drv.position.copy(from);
-    tween(.28, function (e) { drv.position.lerpVectors(from, head, e); }, function () { var p0 = s.m.position.clone(), p1 = s.h.clone().add(s.out.clone().multiplyScalar(o.nut ? 0 : .01));
+  function turn(s, cb) { var wout = DWdir(s.h, s.out), head = DW(s.m.position), from = drv.position.clone(), qf = drv.quaternion.clone(), q0 = new T.Quaternion().setFromUnitVectors(V(0, 1, 0), wout), qs = s.m.quaternion.clone(), qr = new T.Quaternion(), far = from.distanceTo(head) > 4;
+    tween(far ? .5 : .28, function (e) { drv.position.lerpVectors(from, head, e); if (far) drv.position.y += Math.sin(e * Math.PI) * 1.5; drv.quaternion.copy(qf).slerp(q0, Math.min(1, e * 1.6)); }, function () { var p0 = s.m.position.clone(), p1 = s.h.clone().add(s.out.clone().multiplyScalar(o.nut ? 0 : .01));
       tween(o.fast ? .45 : .75, function (e, l) { s.m.position.lerpVectors(p0, p1, l); qr.setFromAxisAngle(V(0, 1, 0), -l * 14); s.m.quaternion.copy(qs).multiply(qr); drv.position.copy(DW(s.m.position)); drv.quaternion.copy(q0).multiply(qr); },
         function () { s.done = 1; nDone++; if (s.m.userData.gl) { s.m.remove(s.m.userData.gl); s.m.userData.gl = null; } sparkle(DW(s.h), 4); var back = drv.position.clone(), away = back.clone().add(wout.clone().multiplyScalar(2.5));
           if (o.group > 1 && list.filter(function (q) { return q.g === s.g && !q.done; }).length === 0) { if (!first && o.afterFirst) say(o.afterFirst); first = true; }
           tween(.22, function (e) { drv.position.lerpVectors(back, away, e); }, cb); }); }); }
-  function check() { if (list.some(function (s) { return !s.done; })) return; TOOL.remove(drv); H = {}; SCRL = null; toast('✓ ' + (o.doneText || 'Винты закручены')); setTimeout(done, 500); } }
+  function check() { if (list.some(function (s) { return !s.done; })) return; H = {}; SCRL = null; toast('✓ ' + (o.doneText || 'Винты закручены')); driverHome(drv, function () { setTimeout(done, 200); }); } }
 
 /* переворачиваем раму: винты стоек и моторов закручивают снизу */
 var parked = [];
@@ -477,10 +484,54 @@ function solderDone() { cur = null; ticks.splice(ticks.indexOf(solderTick), 1); 
   say('Питание подключено. Чёрный бочонок у разъёма - <b>конденсатор</b>: он гасит скачки напряжения, без него в видео будут помехи.'); setTimeout(stackStage, 2600); }
 
 /* ---------- этапы ---------- */
-function intro() { stage = 'intro'; A.G.position.set(9, 13, -2); go(VIEW.wide, 0);
+function intro() { stage = 'intro'; getDriver(false); getDriver(true); A.G.position.set(9, 13, -2); go(VIEW.wide, 0);
   ui.innerHTML = top('МАСТЕРСКАЯ · ' + (LV === 1 ? 'МЛАДШИЕ' : 'ГОНОЧНЫЙ 3"'), 'Собери дрон') + '<div class="bub glass" id="say"><div id="sayT"></div></div><button class="btn" id="go">Начать сборку</button>';
   say(K('Привет, пилот! Собираем <b>гоночный дрон</b>, как в настоящей мастерской: ставим детали, крутим винты, подключаем провода. Все детали лежат на столе.',
-    'Привет, пилот! Собираем <b>гоночный дрон 3 дюйма</b> от начала до конца, как в настоящей мастерской: детали, винты, пайка, разъёмы и проверка. На столе есть и <b>лишние</b> детали - от других дронов.')); $('#go').onclick = assembleA; }
+    'Привет, пилот! Собираем <b>гоночный дрон 3 дюйма</b> от начала до конца, как в настоящей мастерской: детали, винты, пайка, разъёмы и проверка. На столе есть и <b>лишние</b> детали - от других дронов.')); $('#go').onclick = lesson; }
+/* ---------- урок, тест и показ сборки перед своей сборкой ---------- */
+var LESSON = [
+  [['frame'], K('Это <b>рама</b> из карбона - скелет дрона. На ней уже стоят <b>стойки</b>: на них сядет электроника.', 'Это <b>рама 3 дюйма</b> из карбона: лёгкая и прочная. Четыре <b>стойки</b> M3 держат стек электроники, сверху его закроет <b>верхняя пластина</b>.')],
+  [['m0', 'm1', 'm2', 'm3'], K('<b>Моторы</b> ставят на концы лучей. У мотора <b>три провода</b>. Два мотора крутятся в одну сторону, два - в другую.', '<b>Моторы 1404</b>: 14 мм - диаметр, 04 - высота статора. У мотора <b>три провода</b> - три обмотки, <b>плюса и минуса нет</b>. Направление вращения зависит от порядка проводов: поменяешь любые два - мотор закрутится наоборот. Крепятся 4 винтами <b>M2</b> снизу через луч.')],
+  [['esc'], K('<b>Регулятор</b> раздаёт ток моторам. Он стоит в самом низу, к нему припаивают провода моторов и аккумулятора.', '<b>Регулятор 4в1 (ESC) 20x20</b> - нижняя плата стека. Он управляет всеми четырьмя моторами: к нему <b>паяют</b> по три провода каждого мотора и толстые провода питания. Конденсатор на питании гасит скачки напряжения.')],
+  [['fc'], K('<b>Полётный контроллер</b> - мозг дрона. Он ставится над регулятором, к нему подключают всё остальное.', '<b>Полётный контроллер 20x20</b> - мозг: гироскоп чувствует наклоны, процессор управляет моторами. Ставится над регулятором <b>стрелкой к носу</b>, соединяется с ним кабелем. К нему же подключают камеру, видеопередатчик и приёмник - <b>разъёмами</b>.')],
+  [['cam'], K('<b>Камера</b> стоит спереди и смотрит вперёд - через неё пилот видит полёт.', '<b>Камера</b> стоит спереди на двух винтах: ими выставляют угол наклона. Видео идёт в полётник, он накладывает на картинку цифры: напряжение, время.')],
+  [['vtx', 'ant'], K('<b>Видеопередатчик</b> с <b>антенной</b> отправляет картинку в очки.', '<b>Видеопередатчик (VTX)</b> отправляет картинку в очки на 5,8 ГГц через <b>антенну</b> с разъёмом u.FL. Без антенны VTX включать нельзя - сгорит.')],
+  [['rx'], K('<b>Приёмник</b> ловит команды с пульта.', '<b>Приёмник (RX)</b> ловит команды пульта и по проводам TX/RX передаёт их полётнику. Крепится сверху, на верхнюю пластину.')],
+  [['p0', 'p1', 'p2', 'p3'], K('<b>Пропеллеры</b> ставят в самом конце. Пропеллер ставят на мотор со стрелкой <b>того же цвета</b>.', '<b>Пропеллеры 3 дюйма</b> - последний шаг, только без аккумулятора. Лопасти изогнуты в разные стороны: пропеллер ставят на мотор с тем же направлением вращения и затягивают гайкой.')],
+  [['frame'], K('Порядок такой: моторы и винты, регулятор, электроника с разъёмами, проверка, пропеллеры.', 'Порядок сборки: моторы и винты, регулятор, <b>пайка</b> моторов и питания с проверкой вращения, стек и <b>разъёмы</b>, проверка через смоук-стоппер, пропеллеры. Сначала проверим, что ты запомнил.')] ];
+var QUIZ = LV > 1 ? [
+  ['Сколько проводов у мотора и где у него плюс?', [['3 провода, плюса и минуса нет'], ['2 провода: плюс и минус', 'У бесколлекторного мотора <b>три</b> провода - три обмотки. Плюса и минуса у него нет.'], ['4 провода, плюс красный', 'У мотора <b>три</b> провода, и полярности у них нет: регулятор сам по очереди подаёт ток на обмотки.']]],
+  ['Мотор крутится не в ту сторону. Что делаем?', [['Меняем местами два провода'], ['Меняем мотор', 'Мотор исправен! Достаточно <b>поменять местами любые два провода</b> - он закрутится наоборот.'], ['Ставим пропеллер наоборот', 'Пропеллер вверх ногами будет толкать дрон вниз. Направление меняют проводами: <b>любые два местами</b>.']]],
+  ['Что ставят на стойки первым, в самый низ?', [['Регулятор (ESC)'], ['Полётный контроллер', 'Полётник ставят <b>над</b> регулятором: внизу толстые провода питания и моторов идут к регулятору.'], ['Видеопередатчик', 'Видеопередатчик ставят выше. Внизу - <b>регулятор</b>: к нему паяют моторы и питание.']]] ] : [
+  ['Куда ставят моторы?', [['На концы лучей'], ['В центр рамы', 'В центре стоит электроника. Моторы - <b>на концах лучей</b>.']]],
+  ['Какой пропеллер на какой мотор?', [['Со стрелкой того же цвета'], ['Любой на любой', 'Пропеллеры изогнуты в разные стороны. Ставь на мотор со стрелкой <b>того же цвета</b>.']]] ];
+var lessonSp = [], tmpShown = [];
+function cloneBare(o) { var keep = []; o.traverse(function (n) { keep.push([n, n.userData]); n.userData = {}; }); var c = o.clone(); keep.forEach(function (k) { k[0].userData = k[1]; }); return c; } /* userData деталей ссылается само на себя - копию делаем без него */
+function showTmp(pk) { if (pk.state !== 'hide' || pk.o.visible) return; var p = pk.pile; pk.o.position.set(p[0], p[1], p[2]); pk.o.rotation.set(0, p[3], 0); pk.o.visible = true; tmpShown.push(pk); }
+function hideTmp() { tmpShown.forEach(function (pk) { pk.o.visible = false; }); tmpShown = []; }
+function lessonGlow(ids) { lessonSp.forEach(function (g) { FX.remove(g); }); lessonSp = []; var c = V(0, 0, 0), n = 0;
+  ids.forEach(function (id) { var p = V(0, 0, 0); if (id === 'frame') p = W(V(0, 1, 0)); else { showTmp(byId(id)); byId(id).o.getWorldPosition(p); } c.add(p); n++; if (id !== 'frame') { var g = A.glow('#ffd166', 4, .85); g.position.copy(p).add(V(0, 1, 0)); g.userData.p = p; FX.add(g); lessonSp.push(g); } });
+  c.multiplyScalar(1 / n); var spread = ids[0] === 'frame' ? 6 : 3.6; lessonSp.forEach(function (g) { spread = Math.max(spread, Math.abs(g.position.x - c.x) + 2.5, Math.abs(g.position.z - c.z) * 1.2 + 2.5); }); go(function () { return fit(c, V(.15, 1, .75), spread, spread, 40, 1); }, 1.1); }
+function lesson() { stage = 'lesson'; A.G.visible = false; H = {}; var i = 0;
+  head('УРОК · ДЕТАЛИ ДРОНА', 'Из чего собираем', '<div class="tools"><button class="tb" id="skip">Пропустить</button><button class="tb hold" id="nx">Дальше ›</button></div>');
+  function show() { var L = LESSON[i]; lessonGlow(L[0]); say(L[1]); hint(''); $('#nx').innerHTML = i < LESSON.length - 1 ? 'Дальше ›' : 'К тесту ›'; }
+  $('#nx').onclick = function () { i++; if (i < LESSON.length) show(); else quiz(); }; $('#skip').onclick = function () { if (window.GOLOS) GOLOS.stop(); lessonGlow([]); hideTmp(); assembleA(); }; show(); }
+function quiz() { stage = 'quiz'; var i = 0; lessonGlow(['frame']); head('ТЕСТ ПЕРЕД СБОРКОЙ', 'Проверь себя', '');
+  function q() { if (i >= QUIZ.length) return demo(); say('<b>Вопрос ' + (i + 1) + ' из ' + QUIZ.length + '.</b> ' + QUIZ[i][0]); ask(QUIZ[i][1], 0, function () { toast('✓ Верно'); i++; setTimeout(q, 400); }); }
+  q(); }
+/* показ: копии деталей сами встают на места, потом исчезают - собирать будешь сам */
+function demo() { stage = 'demo'; H = {}; lessonGlow([]); go(VIEW.pileB, 1.2); head('ПОКАЗ СБОРКИ', 'Смотри, как собирают', '<div class="tools"><button class="tb" id="skip">Пропустить показ</button></div>');
+  var seq = [['m0', 'm1', 'm2', 'm3'], ['esc'], ['fc'], ['vtx'], ['cam'], ['top'], ['rx', 'ant'], ['p0', 'p1', 'p2', 'p3']];
+  var cap = [K('Сначала моторы - на концы лучей, и прикручиваем винтами.', 'Моторы на лучи, 16 винтов M2 снизу.'), K('Регулятор - на стойки, в самый низ.', 'Регулятор на стойки, паяем моторы и питание.'), K('Полётный контроллер - над регулятором.', 'Полётник над регулятором, стрелкой к носу, кабель к регулятору.'),
+    K('Видеопередатчик.', 'Видеопередатчик на стек, разъём к полётнику.'), K('Камера спереди.', 'Камера на два винта, разъём к полётнику.'), K('Верхняя пластина закрывает стек.', 'Верхняя пластина на 4 винта.'), K('Приёмник и антенна сверху.', 'Приёмник и антенна, разъёмы.'), K('И в конце пропеллеры. Готово!', 'Проверка, потом пропеллеры. Готово!')];
+  var clones = [], k = 0, stop = false;
+  function home(id) { return id[0] === 'm' && id.length === 2 ? X.home[id] : id[0] === 'p' && id.length === 2 ? X.home[id] : X.home[id]; }
+  function stepD() { if (stop) return; if (k >= seq.length) return wait(1.6, finish); say(cap[k]);
+    seq[k].forEach(function (id, n) { var pk = byId(id); showTmp(pk); var c = cloneBare(pk.o); c.visible = true; pk.o.parent.add(c); pk.o.visible = false; clones.push([pk, c]); var h = home(id); wait(n * .15, function () { if (!stop) fly(c, h.p.clone(), h.r, .7); }); });
+    k++; wait(2.4, stepD); }
+  function finish() { if (stop) return; stop = true; say(K('Вот так! <b>Теперь собери сам.</b>', 'Вот и вся сборка. <b>Теперь собери сам</b> - с винтами, пайкой и разъёмами.'));
+    tween(.5, function (e) { clones.forEach(function (q) { q[1].scale.setScalar(Math.max(.01, 1 - e)); }); }, function () { clones.forEach(function (q) { q[1].parent.remove(q[1]); q[0].o.visible = true; }); clones = []; hideTmp(); wait(1.2, assembleA); }); }
+  $('#skip').onclick = function () { if (stop) return; if (window.GOLOS) GOLOS.stop(); finish(); }; wait(1.2, stepD); }
 function assembleA() { stage = 'A'; phase = 'A'; A.G.visible = false; view0 = VIEW.pileA; go(VIEW.pileA, 1.4);
   head('СБОРКА · ВИД СВЕРХУ', 'Рама и моторы', '<div class="hint" id="hint">Тяни деталь со стола на раму</div>'); setStep(ST.mot);
   say('На раме уже стоят стойки. <b>Найди моторы</b> и поставь их на концы лучей - на светящиеся круги.'); marks(); pileMode();
