@@ -48,15 +48,27 @@ function scr(w) { var p = w.clone().project(cam); return { x: (p.x + 1) / 2 * in
 function dist(a, x, y) { return Math.hypot(a.x - x, a.y - y); }
 
 /* ---------- интерфейс ---------- */
-var TOTAL = LV === 1 ? 6 : 8, step = 0, err = 0, stage = '';
+var TOTAL = LV === 1 ? 7 : 9, step = 0, err = 0, stage = '';
 function top(s, t) { return '<div class="top"><a class="ic" href="javascript:history.back()">←</a><div class="ttl"><small>' + s + '</small><b>' + t + '</b></div><button class="ic" id="snd" title="Голос проводника">' + (sndOn() ? '🔊' : '🔇') + '</button><div class="ic" id="err" title="ошибки">' + err + '</div></div>'; }
 /* голос проводника: тот же голос, что в курсе (golos.js, выбор голоса и "выкл" общие с курсом) */
 function sndOn() { return !!(window.GOLOS && GOLOS.on); }
 var SAID = {}; /* одну и ту же фразу голос не повторяет */
-function speak(html, force) { if (!sndOn()) return; var d = document.createElement('div'); d.innerHTML = html; var t = d.textContent.replace(/\s+/g, ' ').replace(/ x /g, ' на ').trim(); if (!t || (SAID[t] && !force)) return; SAID[t] = 1;
+function speak(html, force) { if (!sndOn()) return; var d = document.createElement('div'); d.innerHTML = html; var t = d.textContent.replace(/\s+/g, ' ').trim(); if (!t || (SAID[t] && !force)) return; SAID[t] = 1; t = spoken(t);
   /* длинную фразу не обрываем: следующая ждёт своей очереди (в очереди только самая свежая), ошибка и кнопка звука перебивают сразу */
   var cut = force || stage === 'lesson' || stage === 'quiz' || /^Стоп\./.test(t) || Date.now() - spk.t > 25000; if (spk.on && !cut) { spk.next = t; return; } sayNow(t); }
 var spk = { on: false, next: null, t: 0 };
+/* как читать вслух: латиница, числа, размеры и единицы - словами, чтобы голос не коверкал (на экране текст остаётся как есть) */
+var SPK = [
+  [/\b(\d+),(\d)\s*ГГц/g, '$1 и $2 десятых гигагерца'], [/14,8 вольта/g, 'четырнадцать и восемь десятых вольта'], [/ГГц/g, 'гигагерц'],
+  [/\bM2\s*x\s*6 мм/g, 'эм два на шесть миллиметров'], [/\bM2\s*x\s*10 мм/g, 'эм два на десять миллиметров'], [/\bM3\s*x\s*8 мм/g, 'эм три на восемь миллиметров'], [/\bM2x6\b/g, 'эм два на шесть'],
+  [/\bM2\b/g, 'эм два'], [/\bM3\b/g, 'эм три'], [/2-3 мм/g, 'два-три миллиметра'], [/(\d+) мм(?![а-яё])/g, '$1 миллиметров'],
+  [/\b1404\b/g, 'четырнадцать ноль четыре'], [/\b2207\b/g, 'двадцать два ноль семь'], [/, 04 -/g, ', ноль четыре -'],
+  [/(\d+)x(\d+)/g, '$1 на $2'], [/ x /g, ' на '], [/4в1/g, 'четыре в одном'],
+  [/330-350°/g, 'от трёхсот тридцати до трёхсот пятидесяти градусов'], [/20-30°/g, 'двадцать - тридцать градусов'], [/(\d+)°/g, '$1 градусов'],
+  [/\(ESC\)|\(VTX\)|\(RX\)/g, ''], [/TX\/RX/g, 'Ти-Икс и Эр-Икс'], [/\bTX\b/g, 'Ти-Икс'], [/\bRX\b/g, 'Эр-Икс'], [/\bVTX\b/g, 'Ви-Ти-Икс'], [/\bESC\b/g, 'И-Эс-Си'], [/\bCAM\b/g, 'кам'],
+  [/u\.FL/g, 'ю-эф-эл'], [/\bXT30\b/g, 'икс-тэ тридцать'], [/LiPo 4S/g, 'липо четыре эс'], [/\b4S\b/g, 'четыре эс'], [/\bAIO\b/g, 'эй-ай-оу'], [/Tinywhoop/g, 'тайни-вупа'], [/из TPU/g, 'из мягкого пластика'],
+  [/\b5 В(?![а-яё])/g, 'пять вольт'], [/знаком \+/g, 'знаком плюс'], [/знаком −/g, 'знаком минус'], [/Вопрос (\d) из (\d)/g, function (m, a, b) { return 'Вопрос ' + ['', 'один', 'два', 'три', 'четыре', 'пять'][a] + ' из ' + ['', '', 'двух', 'трёх', 'четырёх', 'пяти'][b]; }], [/\s+-\s+/g, ' - '], [/\s{2,}/g, ' ']];
+function spoken(t) { SPK.forEach(function (r) { t = t.replace(r[0], r[1]); }); return t.trim(); }
 function sayNow(t) { spk.on = true; spk.t = Date.now(); spk.next = null; var ok = GOLOS.say(t, { onend: function () { spk.on = false; if (spk.next) { var n = spk.next; spk.next = null; sayNow(n); } } }); if (!ok) spk.on = false; }
 document.addEventListener('click', function (e) { var b = e.target.closest && e.target.closest('#snd'); if (!b || !window.GOLOS) return; GOLOS.setOn(!GOLOS.on); b.textContent = GOLOS.on ? '🔊' : '🔇'; if (GOLOS.on) { var t = $('#sayT'); speak(t ? t.innerHTML : 'Голос включён', true); } });
 function bars() { var o = '<div class="bars">'; for (var i = 0; i < TOTAL; i++) o += '<i class="' + (i < step ? 'd' : i === step ? 'h' : '') + '"></i>'; return o + '</div>'; }
@@ -87,18 +99,32 @@ var BIG = A.motor(); BIG.scale.setScalar(1.6); D.add(BIG);
 var BIGP = A.prop('#ffb020'); BIGP.scale.setScalar(1.55); BIGP.children[0].material.color.convertSRGBToLinear(); D.add(BIGP);
 var AIO = A.fc(); AIO.scale.set(.7, 1, .7); linNew(AIO); D.add(AIO);
 var NAME = { mot: 'Мотор 1404', esc: 'Регулятор 4в1 (ESC) 20x20', fc: 'Полётный контроллер 20x20', vtx: 'Видеопередатчик (VTX)', cam: 'Камера', top: 'Верхняя пластина рамы', rx: 'Приёмник (RX)', ant: 'Антенна видео',
-  prop: 'Пропеллер 3"', big: 'Мотор 2207', aio: 'Плата AIO 16x16', bigp: 'Пропеллер 5"' };
+  prop: 'Пропеллер 3"', lipo: 'Аккумулятор 4S', big: 'Мотор 2207', aio: 'Плата AIO 16x16', bigp: 'Пропеллер 5"' };
 var PILE = { esc: [-8.5, .06, -10.5, .3], fc: [-3.6, .06, -12, -.2], aio: [1.2, .06, -11, .5], vtx: [5.2, .05, -12, .4], top: [9.4, .02, -10.5, .15],
   m0: [-9, .05, 9.2, 0], m1: [-6, .05, 10.8, 1], m2: [-3, .05, 9.2, 2], m3: [0, .05, 10.8, 3], big: [4, .05, 9.8, 0], cam: [8.6, .05, 9.4, -.8], rx: [10, .08, 11.4, 0], ant: [-7.4, .05, 11.6, .3],
-  p0: [-7.6, .35, 9.5, 0], p1: [-2.6, .4, 15.5, .7], p2: [2.6, .35, 9.5, 1.4], p3: [7.6, .4, 15.5, 2.1], bigp: [-5.5, .8, -12, .4] };
+  lipo: [-9.5, .7, 3.5, .35], p0: [-7.6, .35, 9.5, 0], p1: [-2.6, .4, 15.5, .7], p2: [2.6, .35, 9.5, 1.4], p3: [7.6, .4, 15.5, 2.1], bigp: [-5.5, .8, -12, .4] };
 var PK = [];
 function reg(id, o, kind, x) { var pk = { id: id, o: o, kind: kind, name: NAME[kind === 'x' ? id : kind], state: 'hide', pile: PILE[id] }; for (var k in x) pk[k] = x[k]; o.userData.pk = pk; PK.push(pk); return pk; }
 P.motors.forEach(function (m, i) { reg('m' + i, m, 'mot'); });
 ['esc', 'fc', 'vtx', 'cam', 'top', 'rx', 'ant'].forEach(function (k) { reg(k, P[k], k); });
 P.props.forEach(function (p, i) { reg('p' + i, p, 'prop', { idx: i }); });
-reg('big', BIG, 'x', { why: 'Это мотор <b>2207</b> для дрона 5 дюймов: он в 3 раза тяжелее, и его крепёж шире, чем на нашей раме. Для 3 дюймов нужен маленький <b>1404</b> - их на столе четыре.' });
+reg('big', BIG, 'x', { why: 'Это мотор <b>2207</b> для дрона 5 дюймов: он в три раза тяжелее, и его крепёж шире, чем на нашей раме. Для трёх дюймов нужен маленький <b>1404</b> - их на столе четыре.' });
 reg('aio', AIO, 'x', { why: 'Это плата <b>AIO 16x16</b> для маленького Tinywhoop: всё в одной плате, но она слабая для моторов 1404, и отверстия не совпадут. На эту раму ставим стек <b>20x20</b>: регулятор и полётник отдельно.' });
 reg('bigp', BIGP, 'x', { why: 'Пропеллер <b>5 дюймов</b> заденет раму и соседние пропеллеры. На раму 3 дюйма ставят пропеллеры 3 дюйма.' });
+/* аккумулятор: ставят в самом конце, на верхнюю пластину, под ремешок */
+function makeLipo() { var g = new T.Group(), wm = new T.MeshStandardMaterial({ roughness: .5, map: A.cTex(256, 384, function (x, w, h) { x.fillStyle = '#1d2a4a'; x.fillRect(0, 0, w, h); x.fillStyle = '#ffd166'; x.fillRect(0, 0, w, 70);
+    x.fillStyle = '#1a1300'; x.font = '900 46px sans-serif'; x.textAlign = 'center'; x.fillText('LiPo 4S', w / 2, 52); x.fillStyle = '#e9f0ff'; x.font = '800 40px sans-serif'; x.fillText('650 mAh', w / 2, 170); x.fillText('14,8 V', w / 2, 230);
+    x.fillStyle = '#ff5d6c'; x.font = '700 26px sans-serif'; x.fillText('НЕ ПРОКАЛЫВАТЬ', w / 2, 330); }) });
+  wm.envMapIntensity = .18; var side = new T.MeshStandardMaterial({ color: lin(0x1d2a4a), roughness: .5 }); side.envMapIntensity = .18;
+  var body = new T.Mesh(new T.BoxGeometry(2.3, 1.2, 3.2), [side, side, wm, side, side, side]); body.castShadow = true; g.add(body);
+  var strap = new T.Group(); g.add(strap); g.userData.strap = strap; /* ремешок */
+  var sm = A.M.chip; [[0, .66, 0, 2.5, .08, .5], [0, -.66, 0, 2.5, .08, .5], [1.24, 0, 0, .08, 1.4, .5], [-1.24, 0, 0, .08, 1.4, .5]].forEach(function (b) { A.mesh(new T.BoxGeometry(b[3], b[4], b[5]), sm, b[0], b[1], b[2], strap); });
+  A.mesh(new T.BoxGeometry(.5, .1, .55), new T.MeshStandardMaterial({ color: lin(0xff4f6a), roughness: .5 }), 0, .72, 0, strap); /* пряжка */
+  var stub = new T.Group(); g.add(stub); g.userData.stub = stub; /* свой провод с разъёмом, пока лежит на столе */
+  A.tube([V(.75, -.2, 1.6), V(.8, -.3, 2.4), V(.5, -.5, 3.0)], .1, A.M.wireR, stub); A.tube([V(.45, -.2, 1.6), V(.5, -.3, 2.4), V(.3, -.5, 3.0)], .1, A.M.wireK, stub);
+  A.mesh(new T.BoxGeometry(.9, .55, 1.0), A.M.yellow, .4, -.45, 3.4, stub); return g; }
+var LIPO = makeLipo(); D.add(LIPO); X.home.lipo = { p: V(0, 3.82, -.6), r: new T.Euler(0, 0, 0) };
+reg('lipo', LIPO, 'lipo');
 function byId(id) { for (var i = 0; i < PK.length; i++) if (PK[i].id === id) return PK[i]; }
 function toPile(pk) { var s = pk.pile; pk.state = 'pile'; pk.o.visible = true; pk.o.position.set(s[0], s[1], s[2]); pk.o.rotation.set(0, s[3], 0); }
 function fly(o, p1, r1, dur, done) { var p0 = o.position.clone(), r0 = o.rotation.clone();
@@ -121,6 +147,7 @@ function openSlots() { var L = [], j;
   if (phase === 'E' && !inst.esc) L.push({ k: 'esc', c: V(0, 1.06, 0), w: 3.4, d: 3.4 });
   if (phase === 'B') { if (!inst.fc) L.push({ k: 'fc', c: V(0, 1.96, 0), w: 3.4, d: 3.4 }); else { if (!inst.vtx) L.push({ k: 'vtx', c: V(0, 2.62, 1.4), w: 2, d: 2 }); if (!inst.cam) L.push({ k: 'cam', c: V(0, 1.6, -3), w: 1.7, d: 1.7 });
       if (inst.vtx && !inst.top) L.push({ k: 'top', c: V(0, 3.1, 0), w: 3.6, d: 6.6 }); if (inst.top) { if (!inst.rx) L.push({ k: 'rx', c: V(0, 3.32, 1.9), w: 1.1, d: 1.3 }); if (!inst.ant) L.push({ k: 'ant', c: V(0, 3.5, 3), w: 1.5, d: 1.3 }); } } }
+  if (phase === 'Z' && !inst.lipo) L.push({ k: 'lipo', c: V(0, 3.82, -.6), w: 2.6, d: 3.5 });
   if (phase === 'P') for (j = 0; j < 4; j++) if (!propAt[j]) L.push({ k: 'prop', j: j, c: V(MP[j][0], 2.4, MP[j][1]) });
   return L; }
 function whyNot(pk) { if (pk.kind === 'x') return pk.why; var L = openSlots(); for (var i = 0; i < L.length; i++) if (L[i].k === pk.kind) return null; var k = pk.kind;
@@ -174,7 +201,7 @@ function K(kid, adult) { return LV === 1 ? kid : adult; }
 function DW(p) { D.updateMatrixWorld(true); return D.localToWorld(p.clone()); }
 function DWdir(p, d) { return DW(p.clone().add(d)).sub(DW(p)).normalize(); }
 function setStep(n) { step = n; var b = document.querySelectorAll('.bars i'); for (var i = 0; i < b.length; i++) b[i].className = i < n ? 'd' : i === n ? 'h' : ''; }
-var ST = LV > 1 ? { mot: 0, scr: 1, esc: 2, sold: 3, pow: 4, stack: 5, check: 6, props: 7 } : { mot: 0, scr: 1, esc: 2, stack: 3, check: 4, props: 5 };
+var ST = LV > 1 ? { mot: 0, scr: 1, esc: 2, sold: 3, pow: 4, stack: 5, check: 6, props: 7, lipo: 8 } : { mot: 0, scr: 1, esc: 2, stack: 3, check: 4, props: 5, lipo: 6 };
 var DONE_MSG = {
   esc: K('Регулятор на месте! Он раздаёт ток моторам.', 'Верно! <b>Регулятор 4в1</b> управляет всеми четырьмя моторами. Он надет на стойки через резиновые демпферы: они гасят вибрацию.'),
   fc: K('Полётник на месте! Это "мозг" дрона.', '<b>Полётный контроллер</b> - "мозг": гироскоп чувствует наклоны, а процессор тысячи раз в секунду решает, как крутить моторы.'),
@@ -182,6 +209,7 @@ var DONE_MSG = {
   cam: K('Камера на носу: ты увидишь то, что видит она.', 'Камера на носу, в мягком креплении из TPU: оно спасает камеру при ударе.'),
   top: K('Верхняя пластина закрыла электронику.', 'Верхняя пластина закрывает стек, на ней держатся приёмник и антенна.'),
   rx: K('Приёмник ловит команды с пульта.', '<b>Приёмник (RX)</b> ловит команды пульта и передаёт их полётнику.'),
+  lipo: K('Аккумулятор лёг на место!', 'Аккумулятор на верхней пластине: так он дальше от пропеллеров и лучше охлаждается в полёте.'),
   ant: K('Антенна сзади, подальше от пропеллеров.', 'Антенна сзади и сверху: так её не заденут пропеллеры, а рама не загородит сигнал.') };
 function install(pk, s) { var home; pk.state = 'inst'; H = {};
   if (pk.kind === 'mot') { motorAt[s.j] = pk.o; home = X.home['m' + s.j]; } else if (pk.kind === 'prop') { propAt[s.j] = pk.o; home = X.home['p' + s.j]; } else { inst[pk.kind] = true; home = X.home[pk.kind]; }
@@ -274,25 +302,42 @@ var CAB = {
     ok: K('Видеопередатчик подключён.', 'По этому кабелю идёт картинка от полётника (с цифрами на экране) и питание видеопередатчика.') },
   cam: { s: 'CAM', a: V(0, 1.35, -2.35), b: V(-.4, 2.0, -2.1), rest: V(-1.2, 2.6, -2.4), col: 0xeeeeee, dir: V(.4, 1, -.9),
     ok: K('Камера подключена.', 'Камера отдаёт видео полётнику: он рисует на картинке напряжение и время полёта, а потом передаёт её в видеопередатчик.') },
-  rx: { s: 'RX', a: V(.25, 3.32, 1.85), b: V(1.9, 3.2, 1.0), rest: V(2.5, 2.7, -.2), col: 0xeeeeee, dir: V(1, .5, .2),
+  rx: { s: 'RX', a: V(.25, 3.32, 1.85), b: V(1.9, 3.2, 1.0), rest: V(2.5, 2.7, -.2), col: 0xeeeeee, dir: V(.7, 1, .35),
     ok: K('Приёмник подключён.', 'Приёмник подключён: 4 провода - питание 5 В, земля и пара TX/RX для команд.') },
-  ant: { s: 'u.FL', a: V(0, 3.4, 2.75), b: V(.5, 3.5, 2.55), rest: V(.95, 3.3, 2.05), col: 0x23252c, thin: 1, dir: V(.5, .9, 1),
+  ant: { s: 'u.FL', a: V(0, 3.4, 2.75), b: V(.5, 3.5, 2.55), rest: V(.95, 3.3, 2.05), col: 0x23252c, thin: 1, dir: V(.35, 1, .7),
     ok: K('Антенна защёлкнута.', 'Разъём u.FL маленький и нежный: защёлкивают прямо сверху, без перекоса. <b>Без антенны видеопередатчик включать нельзя</b> - он сгорит.') } };
 var plugM = new T.MeshStandardMaterial({ color: lin(0xf4efe4), roughness: .5 }); plugM.envMapIntensity = .18;
-function connectStep(kind, done) { var c = CAB[kind], tip = c.rest.clone(), cab = null, plug = new T.Group(), dr = false, sk = SOCK[c.s]; CONN = { tip: tip, s: c.s };
-  A.mesh(new T.BoxGeometry(c.thin ? .12 : .4, .12, c.thin ? .12 : .2), c.thin ? A.M.gold : plugM, 0, 0, 0, plug); SF.add(plug);
-  function draw() { if (cab) { SF.remove(cab); cab.geometry.dispose(); } var m = V(0, 0, 0).lerpVectors(c.b, tip, .5); m.y += .3; cab = A.tube([c.a, c.b, m, tip.clone().add(V(0, .1, 0))], c.thin ? .03 : .055, c.col === 0x23252c ? A.M.wireK : plugM, SF); plug.position.copy(tip); }
-  draw(); SOCKG.visible = true; Object.keys(SOCK).forEach(function (k) { SOCK[k].lab.visible = k !== 'u.FL' || !!inst.vtx; });
+/* "рентген": кабель, штекер и нужный разъём видны и сквозь платы - провод не пропадает в плоскостях */
+var xrM = new T.MeshBasicMaterial({ color: 0x7cf3ff, transparent: true, opacity: .5, depthTest: false, depthWrite: false });
+var xrS = new T.MeshBasicMaterial({ color: 0x5effc4, transparent: true, opacity: .6, depthTest: false, depthWrite: false });
+function xr(o, m) { o.material = m || xrM; o.renderOrder = 4; o.castShadow = false; return o; }
+/* крышка (верхняя пластина) на время подключения становится прозрачной */
+var GHM = {};
+function ghost(o, on) { o.traverse(function (n) { if (!n.isMesh) return;
+  if (on) { if (n.userData.m0) return; var m = n.material, k = m.uuid; n.userData.m0 = m; if (!GHM[k]) { GHM[k] = m.clone(); GHM[k].transparent = true; GHM[k].opacity = .2; GHM[k].depthWrite = false; } n.material = GHM[k]; }
+  else if (n.userData.m0) { n.material = n.userData.m0; delete n.userData.m0; } }); }
+function lid(on) { if (!inst.top) return; ghost(P.top, on); if (inst.rx) ghost(P.rx, on); if (inst.ant) ghost(P.ant, on); }
+function connectStep(kind, done) { var c = CAB[kind], tip = c.rest.clone(), cab = null, cabX = null, plug = new T.Group(), dr = false, sk = SOCK[c.s]; CONN = { tip: tip, s: c.s };
+  var pg = new T.BoxGeometry(c.thin ? .16 : .4, .12, c.thin ? .16 : .2); A.mesh(pg, c.thin ? A.M.gold : plugM, 0, 0, 0, plug); plug.add(xr(new T.Mesh(pg)));
+  var pgl = A.glow('#7cf3ff', c.thin ? .9 : 1.2, .8); pgl.material.depthTest = false; pgl.renderOrder = 5; plug.add(pgl); SF.add(plug); /* штекер светится - его легко найти */
+  var hole = new T.Group(); hole.position.copy(sk.p); SOCKG.add(hole); hole.add(xr(new T.Mesh(new T.BoxGeometry(sk.small ? .24 : .5, .2, sk.small ? .24 : .28)), xrS));
+  var hgl = A.glow('#5effc4', sk.small ? 1.1 : 1.4, .7); hgl.material.depthTest = false; hgl.renderOrder = 5; hole.add(hgl); /* куда подключать - тоже светится */
+  var pulse = function (dt, t) { var a = .5 + Math.sin(t * 6) * .35; pgl.material.opacity = dr ? .35 : a; hgl.material.opacity = a; }; ticks.push(pulse);
+  function draw() { if (cab) { SF.remove(cab); SF.remove(cabX); cab.geometry.dispose(); } var m = V(0, 0, 0).lerpVectors(c.b, tip, .5); m.y += .3; var pts = [c.a, c.b, m, tip.clone().add(V(0, .1, 0))];
+    cab = A.tube(pts, c.thin ? .03 : .055, c.col === 0x23252c ? A.M.wireK : plugM, SF); cabX = xr(new T.Mesh(cab.geometry)); SF.add(cabX); plug.position.copy(tip); }
+  draw(); SOCKG.visible = true; Object.keys(SOCK).forEach(function (k) { SOCK[k].lab.visible = k !== 'u.FL' || !!inst.vtx; }); lid(true);
   go(function () { var ctr = V(0, 0, 0).lerpVectors(sk.p, c.rest, .5); return fit(W(ctr), c.dir, 2.3, 2.3, 40, 1); }, 1.1);
-  hint(K('Тяни белый штекер к разъёму', 'Тяни штекер кабеля к нужному разъёму'));
-  H.down = function (e) { if (dist(scr(W(tip)), e.clientX, e.clientY) < 70) dr = true; else say(K('Тяни <b>штекер</b> - белую коробочку на конце провода.', 'Тяни <b>штекер</b> на конце кабеля.')); };
+  hint(K('Тяни светящийся штекер к зелёному разъёму', 'Тяни светящийся штекер к нужному разъёму'));
+  if (inst.top) toast(K('Крышка прозрачная - видно провода', 'Пластина стала прозрачной - видно разъёмы'));
+  H.down = function (e) { if (dist(scr(W(tip)), e.clientX, e.clientY) < 70) dr = true; else say(K('Тяни <b>штекер</b> - светящуюся коробочку на конце провода.', 'Тяни <b>штекер</b> на конце кабеля - он светится.')); };
   H.move = function (e) { if (!dr) return; var h = planeHit(e, sk.p.y + .5); if (h) { tip.set(h.x, sk.p.y + .5, h.z - 2); draw(); } };
   H.up = function (e) { if (!dr) return; dr = false; var best = null, bd = 60;
     Object.keys(SOCK).forEach(function (k) { if (!SOCK[k].lab.visible) return; var d = dist(scr(W(SOCK[k].p)), e.clientX, e.clientY); if (d < bd) { bd = d; best = k; } });
     if (!best) { back(); say(K('Отпусти штекер прямо над <b>разъёмом</b> с надписью.', 'Отпусти штекер прямо над <b>разъёмом</b> - у каждого есть надпись.')); return; }
     if (best !== c.s) { back(); oops('Это разъём <b>' + best + '</b> - для ' + SOCK[best].f + '. ' + K('Ищи надпись <b>' + c.s + '</b>.', 'Этому кабелю нужен разъём <b>' + c.s + '</b>: перепутаешь - устройство не заработает, а по питанию можно и сжечь.')); return; }
     H = {}; var t0 = tip.clone(), t1 = sk.p.clone().add(V(0, sk.small ? .05 : .1, 0)); tween(.35, function (e2) { tip.lerpVectors(t0, t1, e2); draw(); }, function () {
-      sparkle(W(sk.p), 8); toast('✓ Щёлк! ' + c.s); say(c.ok); SOCKG.visible = false; setTimeout(done, 1500); }); };
+      ticks.splice(ticks.indexOf(pulse), 1); plug.remove(pgl); SOCKG.remove(hole);
+      sparkle(W(sk.p), 8); toast('✓ Щёлк! ' + c.s); say(c.ok); setTimeout(function () { SOCKG.visible = false; SF.remove(cabX); plug.children.slice(1).forEach(function (o) { plug.remove(o); }); lid(false); done(); }, 1500); }); };
   function back() { var t0 = tip.clone(); tween(.35, function (e) { tip.lerpVectors(t0, c.rest, e); draw(); }); } }
 
 /* что делаем после установки детали */
@@ -308,6 +353,7 @@ var EXTRA = {
     if (LV === 1) return c2(); say('Провод <b>TX</b> приёмника идёт на...'); hint('Выбери ответ в карточке сверху');
     ask([['RX полётника'], ['TX полётника', 'TX - это "передаю", RX - "принимаю". Передатчик одного соединяют с приёмником другого: <b>TX к RX, крест-накрест</b>. TX к TX работать не будет.']], 0, function () { say('Верно: TX к RX, крест-накрест. В нашем кабеле это уже сделано.'); setTimeout(c2, 1300); }); },
   ant: function (pk, s, cb) { connectStep('ant', cb); },
+  lipo: function (pk, s, cb) { lipoStep(cb); },
   prop: function (pk, s, cb) { screwStep({ holes: [V(MP[s.j][0], 2.7, MP[s.j][1])], out: V(0, 1, 0), nut: true, fast: true, say: K('Закрути гайку пропеллера.', 'Закрути гайку: придерживай колокол мотора, чтобы он не проворачивался.'),
     hint: 'Нажми на гайку', miss: 'Нажми на <b>гайку</b> на моторе.', doneText: 'Гайка затянута' }, cb); } };
 
@@ -491,14 +537,15 @@ function intro() { stage = 'intro'; getDriver(false); getDriver(true); A.G.posit
 /* ---------- урок, тест и показ сборки перед своей сборкой ---------- */
 var LESSON = [
   [['frame'], K('Это <b>рама</b> из карбона - скелет дрона. На ней уже стоят <b>стойки</b>: на них сядет электроника.', 'Это <b>рама 3 дюйма</b> из карбона: лёгкая и прочная. Четыре <b>стойки</b> M3 держат стек электроники, сверху его закроет <b>верхняя пластина</b>.')],
-  [['m0', 'm1', 'm2', 'm3'], K('<b>Моторы</b> ставят на концы лучей. У мотора <b>три провода</b>. Два мотора крутятся в одну сторону, два - в другую.', '<b>Моторы 1404</b>: 14 мм - диаметр, 04 - высота статора. У мотора <b>три провода</b> - три обмотки, <b>плюса и минуса нет</b>. Направление вращения зависит от порядка проводов: поменяешь любые два - мотор закрутится наоборот. Крепятся 4 винтами <b>M2</b> снизу через луч.')],
+  [['m0', 'm1', 'm2', 'm3'], K('<b>Моторы</b> ставят на концы лучей. У мотора <b>три провода</b>. Два мотора крутятся в одну сторону, два - в другую.', '<b>Моторы 1404</b>: 14 мм - диаметр, 04 - высота статора. У мотора <b>три провода</b> - три обмотки, <b>плюса и минуса нет</b>. Направление вращения зависит от порядка проводов: поменяешь любые два - мотор закрутится наоборот. Крепятся четырьмя винтами <b>M2</b> снизу через луч.')],
   [['esc'], K('<b>Регулятор</b> раздаёт ток моторам. Он стоит в самом низу, к нему припаивают провода моторов и аккумулятора.', '<b>Регулятор 4в1 (ESC) 20x20</b> - нижняя плата стека. Он управляет всеми четырьмя моторами: к нему <b>паяют</b> по три провода каждого мотора и толстые провода питания. Конденсатор на питании гасит скачки напряжения.')],
   [['fc'], K('<b>Полётный контроллер</b> - мозг дрона. Он ставится над регулятором, к нему подключают всё остальное.', '<b>Полётный контроллер 20x20</b> - мозг: гироскоп чувствует наклоны, процессор управляет моторами. Ставится над регулятором <b>стрелкой к носу</b>, соединяется с ним кабелем. К нему же подключают камеру, видеопередатчик и приёмник - <b>разъёмами</b>.')],
   [['cam'], K('<b>Камера</b> стоит спереди и смотрит вперёд - через неё пилот видит полёт.', '<b>Камера</b> стоит спереди на двух винтах: ими выставляют угол наклона. Видео идёт в полётник, он накладывает на картинку цифры: напряжение, время.')],
   [['vtx', 'ant'], K('<b>Видеопередатчик</b> с <b>антенной</b> отправляет картинку в очки.', '<b>Видеопередатчик (VTX)</b> отправляет картинку в очки на 5,8 ГГц через <b>антенну</b> с разъёмом u.FL. Без антенны VTX включать нельзя - сгорит.')],
   [['rx'], K('<b>Приёмник</b> ловит команды с пульта.', '<b>Приёмник (RX)</b> ловит команды пульта и по проводам TX/RX передаёт их полётнику. Крепится сверху, на верхнюю пластину.')],
   [['p0', 'p1', 'p2', 'p3'], K('<b>Пропеллеры</b> ставят в самом конце. Пропеллер ставят на мотор со стрелкой <b>того же цвета</b>.', '<b>Пропеллеры 3 дюйма</b> - последний шаг, только без аккумулятора. Лопасти изогнуты в разные стороны: пропеллер ставят на мотор с тем же направлением вращения и затягивают гайкой.')],
-  [['frame'], K('Порядок такой: моторы и винты, регулятор, электроника с разъёмами, проверка, пропеллеры.', 'Порядок сборки: моторы и винты, регулятор, <b>пайка</b> моторов и питания с проверкой вращения, стек и <b>разъёмы</b>, проверка через смоук-стоппер, пропеллеры. Сначала проверим, что ты запомнил.')] ];
+  [['lipo'], K('<b>Аккумулятор</b> - батарейка дрона. Его ставят в самом конце, перед полётом, и крепят ремешком.', '<b>Аккумулятор LiPo 4S</b>: 4 банки, 14,8 вольта, 650 миллиампер-часов. Ставится на верхнюю пластину под ремешок, подключается разъёмом <b>XT30</b> - только перед полётом.')],
+  [['frame'], K('Порядок такой: моторы и винты, регулятор, электроника с разъёмами, проверка, пропеллеры и аккумулятор.', 'Порядок сборки: моторы и винты, регулятор, <b>пайка</b> моторов и питания с проверкой вращения, стек и <b>разъёмы</b>, проверка через смоук-стоппер, пропеллеры и в самом конце <b>аккумулятор</b>. Сначала проверим, что ты запомнил.')] ];
 var QUIZ = LV > 1 ? [
   ['Сколько проводов у мотора и где у него плюс?', [['3 провода, плюса и минуса нет'], ['2 провода: плюс и минус', 'У бесколлекторного мотора <b>три</b> провода - три обмотки. Плюса и минуса у него нет.'], ['4 провода, плюс красный', 'У мотора <b>три</b> провода, и полярности у них нет: регулятор сам по очереди подаёт ток на обмотки.']]],
   ['Мотор крутится не в ту сторону. Что делаем?', [['Меняем местами два провода'], ['Меняем мотор', 'Мотор исправен! Достаточно <b>поменять местами любые два провода</b> - он закрутится наоборот.'], ['Ставим пропеллер наоборот', 'Пропеллер вверх ногами будет толкать дрон вниз. Направление меняют проводами: <b>любые два местами</b>.']]],
@@ -521,9 +568,9 @@ function quiz() { stage = 'quiz'; var i = 0; lessonGlow(['frame']); head('ТЕС
   q(); }
 /* показ: копии деталей сами встают на места, потом исчезают - собирать будешь сам */
 function demo() { stage = 'demo'; H = {}; lessonGlow([]); go(VIEW.pileB, 1.2); head('ПОКАЗ СБОРКИ', 'Смотри, как собирают', '<div class="tools"><button class="tb" id="skip">Пропустить показ</button></div>');
-  var seq = [['m0', 'm1', 'm2', 'm3'], ['esc'], ['fc'], ['vtx'], ['cam'], ['top'], ['rx', 'ant'], ['p0', 'p1', 'p2', 'p3']];
+  var seq = [['m0', 'm1', 'm2', 'm3'], ['esc'], ['fc'], ['vtx'], ['cam'], ['top'], ['rx', 'ant'], ['p0', 'p1', 'p2', 'p3'], ['lipo']];
   var cap = [K('Сначала моторы - на концы лучей, и прикручиваем винтами.', 'Моторы на лучи, 16 винтов M2 снизу.'), K('Регулятор - на стойки, в самый низ.', 'Регулятор на стойки, паяем моторы и питание.'), K('Полётный контроллер - над регулятором.', 'Полётник над регулятором, стрелкой к носу, кабель к регулятору.'),
-    K('Видеопередатчик.', 'Видеопередатчик на стек, разъём к полётнику.'), K('Камера спереди.', 'Камера на два винта, разъём к полётнику.'), K('Верхняя пластина закрывает стек.', 'Верхняя пластина на 4 винта.'), K('Приёмник и антенна сверху.', 'Приёмник и антенна, разъёмы.'), K('И в конце пропеллеры. Готово!', 'Проверка, потом пропеллеры. Готово!')];
+    K('Видеопередатчик.', 'Видеопередатчик на стек, разъём к полётнику.'), K('Камера спереди.', 'Камера на два винта, разъём к полётнику.'), K('Верхняя пластина закрывает стек.', 'Верхняя пластина на 4 винта.'), K('Приёмник и антенна сверху.', 'Приёмник и антенна, разъёмы.'), K('Пропеллеры.', 'Проверка, потом пропеллеры.'), K('И аккумулятор. Готово!', 'Аккумулятор на пластину, разъём XT30. Готово!')];
   var clones = [], k = 0, stop = false;
   function home(id) { return id[0] === 'm' && id.length === 2 ? X.home[id] : id[0] === 'p' && id.length === 2 ? X.home[id] : X.home[id]; }
   function stepD() { if (stop) return; if (k >= seq.length) return wait(1.6, finish); say(cap[k]);
@@ -560,10 +607,48 @@ function checkStage() { stage = 'check'; H = {}; go(VIEW.check, 1.2);
     if (i === 1) { spinOn = true; say('Смоук-стоппер не загорелся - замыкания нет. Моторы пищат и готовы. Дальше?'); }
     if (i === 2) { arrows(); say('Все моторы крутятся по стрелкам: <b>голубые и розовые</b> - в разные стороны. Так дрон не закручивается вокруг себя.'); setTimeout(propsStage, 2600); } }; }); }
 function propsStage() { stage = 'P'; phase = 'P'; spinOn = false; view0 = VIEW.props; go(VIEW.props, 1.3);
-  head('ПОСЛЕДНИЙ ШАГ', 'Пропеллеры', '<div class="hint" id="hint">Тяни пропеллер на мотор со стрелкой того же цвета</div>'); setStep(ST.props);
+  head('СБОРКА · ПРОПЕЛЛЕРЫ', 'Пропеллеры', '<div class="hint" id="hint">Тяни пропеллер на мотор со стрелкой того же цвета</div>'); setStep(ST.props);
   byId('big').pile = [6, .05, -12, 0]; BIG.position.set(6, .05, -12); ['p0', 'p1', 'p2', 'p3', 'bigp'].forEach(function (id) { var pk = byId(id); toPile(pk); var y = pk.o.position.y; pk.o.position.y = y + 8; pk.state = 'fly'; tween(.6, function (e) { pk.o.position.y = y + 8 * (1 - e); }, function () { pk.state = 'pile'; }); });
   say(K('Аккумулятор отключили. Ставим <b>пропеллеры</b>: каждый пропеллер на мотор со стрелкой <b>своего цвета</b>.', 'Аккумулятор отключён - пропеллеры ставят только без питания. Каждый пропеллер - на мотор со стрелкой <b>своего цвета</b>: лопасти у пропеллеров изогнуты в разные стороны.')); marks(); pileMode();
-  onAllIn = function () { return nProp() === 4; }; next = function () { onAllIn = null; done(); }; }
+  onAllIn = function () { return nProp() === 4; }; next = function () { onAllIn = null; lipoStage(); }; }
+/* ---------- последний шаг: аккумулятор ---------- */
+VIEW.lipo = function () { return fit(W(V(-4, 1.8, 2.5)), V(.1, 1, .7), 9.5, 8.5, 40, 1); };
+function lipoStage() { stage = 'Z'; phase = 'Z'; view0 = VIEW.lipo; go(VIEW.lipo, 1.3);
+  head('ПОСЛЕДНИЙ ШАГ', 'Аккумулятор', '<div class="hint" id="hint">Тяни аккумулятор на верхнюю пластину</div>'); setStep(ST.lipo);
+  var pk = byId('lipo'); toPile(pk); var y = pk.o.position.y; pk.o.position.y = y + 8; pk.state = 'fly'; tween(.6, function (e) { pk.o.position.y = y + 8 * (1 - e); }, function () { pk.state = 'pile'; });
+  say(K('Остался <b>аккумулятор</b> - это батарейка дрона. Положи его сверху на дрон.', 'Последний шаг - <b>аккумулятор</b>. Его ставят на верхнюю пластину и крепят ремешком. Пропеллеры уже стоят: дальше всё делаем аккуратно.')); marks(); pileMode();
+  onAllIn = function () { return !!inst.lipo; }; next = function () { onAllIn = null; done(); }; }
+/* ремешок, вопрос о порядке включения, разъём XT30 */
+var XT = { a: V(.9, 3.6, 1.0), b: V(2.1, 3.0, 2.2), rest: V(2.5, 1.0, 6.2), to: V(0, .5, 8.55), male: V(0, .5, 7.3) };
+function lipoStep(cb) { var st = LIPO.userData.strap; go(function () { return fit(W(V(0, 3.6, -.4)), V(.6, .9, .9), 2.6, 2.6, 40, 1); }, 1);
+  st.scale.set(1.25, 1.6, 1); st.position.y = .35;
+  wait(1.2, function () { say(K('Затягиваем <b>ремешок</b>: он держит аккумулятор, чтобы тот не слетел в полёте.', 'Затягиваем <b>ремешок</b> туго: снизу резиновая накладка, аккумулятор не должен ёрзать. Слетит в полёте - дрон упадёт.'));
+    tween(.9, function (e) { st.scale.set(1.25 - .25 * e, 1.6 - .6 * e, 1); st.position.y = .35 * (1 - e); }, function () { toast('✓ Ремешок затянут'); setTimeout(LV > 1 ? askOrder : plugXT, 1200); }); });
+  function askOrder() { say('Перед тем как подключить аккумулятор, <b>что включают первым?</b>'); hint('Выбери ответ в карточке сверху');
+    ask([['Пульт, потом очки, потом аккумулятор'], ['Сначала аккумулятор дрона', 'Если дрон включится раньше пульта, он не услышит команд. Порядок: <b>пульт, очки, аккумулятор</b>. Выключают наоборот: сначала отключают аккумулятор.'], ['Неважно', 'Важно! Сначала <b>пульт</b>, чтобы дрон сразу слушался команд, потом <b>очки</b>, и только потом <b>аккумулятор</b>.']], 0,
+      function () { say('Верно: пульт, очки, аккумулятор. Пульт и очки уже включены.'); setTimeout(plugXT, 1300); }); }
+  function plugXT() { var stub = LIPO.userData.stub; stub.visible = false; var tip = XT.rest.clone(), dr = false, cab = [], cabX = [];
+    var plug = new T.Group(); A.mesh(new T.BoxGeometry(.9, .55, 1.0), A.M.yellow, 0, 0, 0, plug); plug.add(xr(new T.Mesh(new T.BoxGeometry(.9, .55, 1.0)))); SF.add(plug);
+    var pgl = A.glow('#7cf3ff', 1.6, .8); pgl.material.depthTest = false; pgl.renderOrder = 5; plug.add(pgl);
+    var hole = A.glow('#5effc4', 2, .7); hole.material.depthTest = false; hole.renderOrder = 5; hole.position.copy(XT.male).add(V(0, .3, .7)); SF.add(hole);
+    var lb = labSprite('XT30'); lb.position.copy(XT.male).add(V(0, 1.0, 0)); SF.add(lb);
+    var pulse = function (dt, t) { var a = .5 + Math.sin(t * 6) * .35; pgl.material.opacity = dr ? .3 : a; hole.material.opacity = a; }; ticks.push(pulse);
+    function draw() { cab.forEach(function (m) { SF.remove(m); m.geometry.dispose(); }); cabX.forEach(function (m) { SF.remove(m); }); cab = []; cabX = [];
+      [[0, A.M.wireR], [-.3, A.M.wireK]].forEach(function (q) { var o = V(q[0], 0, 0), end = tip.clone().add(V(q[0] + .15, 0, -.5)), m = V(0, 0, 0).lerpVectors(XT.b, end, .5); m.y += .4;
+        var t = A.tube([XT.a.clone().add(o), XT.b.clone().add(o), m, end], .1, q[1], SF); cab.push(t); var x = xr(new T.Mesh(t.geometry)); SF.add(x); cabX.push(x); }); plug.position.copy(tip); }
+    draw(); go(function () { return fit(W(V(1.1, 1.4, 5.6)), V(.55, 1.15, .9), 4.2, 3.6, 40, 1); }, 1.1);
+    say(K('Теперь <b>подключи аккумулятор</b>: тяни жёлтый разъём к такому же жёлтому разъёму сзади дрона.', 'Подключаем разъём <b>XT30</b>: он вставляется только одной стороной - скошенные углы должны совпасть. Тяни жёлтый разъём к разъёму на проводах питания сзади.'));
+    hint(K('Тяни жёлтый разъём к зелёному кружку', 'Тяни разъём аккумулятора к разъёму XT30'));
+    H.down = function (e) { if (dist(scr(W(tip)), e.clientX, e.clientY) < 75) dr = true; else say(K('Тяни <b>жёлтый разъём</b> на проводе аккумулятора - он светится.', 'Тяни <b>разъём аккумулятора</b> - светящуюся жёлтую коробочку.')); };
+    H.move = function (e) { if (!dr) return; var h = planeHit(e, 1.0); if (h) { tip.set(h.x, 1.0, h.z - 2); draw(); } };
+    H.up = function (e) { if (!dr) return; dr = false;
+      if (dist(scr(W(XT.male)), e.clientX, e.clientY) > 80) { var t0 = tip.clone(); tween(.35, function (e2) { tip.lerpVectors(t0, XT.rest, e2); draw(); }); say(K('Отпусти разъём прямо у <b>зелёного кружка</b>.', 'Отпусти разъём прямо у разъёма <b>XT30</b> сзади дрона.')); return; }
+      H = {}; var t0 = tip.clone(); tween(.45, function (e2) { tip.lerpVectors(t0, XT.to, e2); draw(); }, function () {
+        ticks.splice(ticks.indexOf(pulse), 1); plug.remove(pgl); SF.remove(hole); SF.remove(lb); cabX.forEach(function (m) { SF.remove(m); }); plug.remove(plug.children[1]);
+        sparkle(W(XT.male), 14); toast('♪ Пик-пик-пик! Аккумулятор подключён');
+        var led = A.glow('#5effc4', 1.2, .95); led.position.copy(W(V(.9, 2.15, -1.2))); FX.add(led);
+        say(K('Дрон пискнул - он <b>проснулся</b> и готов к полёту! Отходим подальше от пропеллеров.', 'Регуляторы пропищали мелодию, на полётнике загорелся огонёк - <b>всё работает</b>. Дрон на землю, сами отходим подальше от пропеллеров.'));
+        setTimeout(function () { FX.remove(led); cb(); }, 2800); }); }; } }
 function done() { step = TOTAL; stage = 'done'; H = {}; clr(MK); clr(ARW); hintOff();
   PK.forEach(function (pk) { if (pk.state !== 'inst') pk.o.visible = false; });
   for (var j = 0; j < 4; j++) { P.motors[j] = motorAt[j]; P.props[j] = propAt[j]; }
@@ -573,7 +658,7 @@ function done() { step = TOTAL; stage = 'done'; H = {}; clr(MK); clr(ARW); hintO
     motorAt.forEach(function (m, i) { var w = V(0, 0, 0); m.localToWorld(w.set(0, 2.0, 0)); X.blur(w, i % 2 ? '#ff4fd8' : '#3ee6ff'); }); X.sparks(V(0, 10, 2), 40, 16); });
   ticks.push(function (dt, t) { if (D.position.y > 8.9) D.position.y = 9 + Math.sin(t * 2.2) * .35; });
   var pts = Math.max(30, 100 - err * 4), best = +(localStorage.getItem('kursy_fpv_sborka') || 0); if (pts > best) localStorage.setItem('kursy_fpv_sborka', pts);
-  ui.innerHTML = top('МАСТЕРСКАЯ', 'Сборка завершена') + '<div class="big"><b>ДРОН СОБРАН!</b><span>' + K('Ты собрал дрон: детали, винты и разъёмы', 'Гоночный 3 дюйма · 14 паек · 30 винтов · 5 разъёмов') + '</span><br><div class="stats"><span>ошибок: ' + err + '</span><span style="color:#5effc4">+' + pts + ' "Сборка"</span></div></div>' +
+  ui.innerHTML = top('МАСТЕРСКАЯ', 'Сборка завершена') + '<div class="big"><b>ДРОН СОБРАН!</b><span>' + K('Ты собрал дрон: детали, винты, разъёмы и аккумулятор', 'Гоночный 3 дюйма · 14 паек · 30 винтов · 6 разъёмов') + '</span><br><div class="stats"><span>ошибок: ' + err + '</span><span style="color:#5effc4">+' + pts + ' "Сборка"</span></div></div>' +
     '<div class="bub glass end" id="say"><div id="sayT"></div></div><button class="next" id="again" title="Ещё раз">↻</button>';
   say(err ? 'Дрон летает! Ошибок было: ' + err + '. Попробуй ещё раз без ошибок - очков будет больше.' : 'Без единой ошибки! <b>Ты собрал гоночный дрон</b> как настоящий техник.'); $('#again').onclick = function () { location.reload(); }; }
 
@@ -591,5 +676,6 @@ window.SBG = { iron: function () { return IRON; }, A: A, PK: PK, byId: byId, scr
     if (n === 'R') ['fc', 'vtx', 'cam', 'top'].forEach(function (k) { var pk = byId(k); pk.state = 'inst'; inst[k] = true; pk.o.position.copy(X.home[k].p); pk.o.rotation.copy(X.home[k].r); });
     if (n === 'B' || n === 'R') { stackStage(); return; }
     ['fc', 'vtx', 'cam', 'top', 'rx', 'ant'].forEach(function (k) { var pk = byId(k); pk.state = 'inst'; inst[k] = true; pk.o.position.copy(X.home[k].p); pk.o.rotation.copy(X.home[k].r); });
+    if (n === 'Z') { for (j = 0; j < 4; j++) { var pp = byId('p' + j); pp.state = 'inst'; propAt[j] = pp.o; pp.o.visible = true; pp.o.position.copy(X.home['p' + j].p); pp.o.rotation.copy(X.home['p' + j].r); } lipoStage(); return; }
     if (n === 'check') checkStage(); else propsStage(); } };
 })();
