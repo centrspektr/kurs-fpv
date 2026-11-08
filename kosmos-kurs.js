@@ -450,7 +450,9 @@ mods.forEach(function(m,i){ var a=i*1.02, r=RI*.62-i*1.6, st0=i<6?i+1:6, h=TOPH[
  {id:'code',n:'Вход по коду',act:'code',c:'#7cf3ff',st0:'kc',a:-.66,tip:'Код от педагога: тогда он видит твой прогресс и открывает модули'},
  {id:'shp',n:'Шпаргалка',act:'soon',c:'#ff9f5a',st0:'k',a:-.9,tip:'Скоро: главные правила и цифры на одной странице'},
  {id:'bug',n:'Сообщить об ошибке',act:'bug',c:'#facc15',st0:'kb',a:.4,tip:'Мастерская: нашёл ошибку в задании - напиши, педагог поправит'},
- {id:'trn',n:'Тренажёр',act:'soon',c:'#ff7ce0',st0:'kt',a:.66,tip:'Скоро: тренажёры просто потренироваться, без заданий'}
+ /* тренажёры (08.11): если подключён trenazhery.js (window.KURS_TREN) - окно со списком тренажёров, иначе "скоро" */
+ window.KURS_TREN?{id:'trn',n:'Тренажёры',act:'trn',c:'#ff7ce0',st0:'kt',a:.66,tip:'Тренажёры просто потренироваться, без заданий: "Собери дрон" и другие'}
+  :{id:'trn',n:'Тренажёр',act:'soon',c:'#ff7ce0',st0:'kt',a:.66,tip:'Скоро: тренажёры просто потренироваться, без заданий'}
 ].forEach(function(t){ var r=RI-8, h=TOPH[t.st0];
   t.kind='tab'; t.sub=t.tip; t.s=t.st0==='k'?1.2:1.5; t.city=1; t.h=h; t.p=[Math.sin(t.a)*r,topY(t.st0),CZ+Math.cos(t.a)*r]; mkNode(LK,t); LK.order.push(t.id); });
 /* сама платформа: верх с сеткой, светящийся край, скала снизу, двигатели, посадочная площадка */
@@ -885,7 +887,7 @@ function enter(n){
     var gp=sv.c.clone().addScaledVector(sv.nm.clone().applyAxisAngle(UP,.5),sv.D*1.5); gp.y-=.4; /* сначала экран под углом - приветствие, потом прямо к нему */
     startFly(gp,sv.c.clone(),null,1.4,function(){ greet(n,function(){ startFly(sv.p,sv.l,null,.9,inWin); }); }); return; }
   startFly(p.clone().addScaledVector(d,-n.s*.2),p.clone().addScaledVector(d,60),null,red?.4:1.2,function(){
-    flashOn(n.c+'dd',function(){ camP.copy(diveBack.p); camL.copy(diveBack.l); openWin(n.kind==='tab'?'prog':'task',n); flashOff(); }); }); }
+    flashOn(n.c+'dd',function(){ camP.copy(diveBack.p); camL.copy(diveBack.l); openWin(n.act==='trn'?'trn':n.kind==='tab'?'prog':'task',n); flashOff(); }); }); }
 /* правка 7: переход в модуль, у модулей разные (MOD_TRANS): portal, fpv, hyper. В конце - заставка модуля и новая локация */
 function modIn(n,col){ flashOn(col||n.c+'dd',function(){ var L=LBY[n.mid], wp=$('warp'); osdOff(); hyperOff();
   wp.style.setProperty('--wc',n.c); $('warpT').textContent=n.n+'. '+n.sub; wp.classList.add('on'); flashOff();
@@ -931,7 +933,7 @@ var LIVE=false; document.body.classList.toggle('mobi',mob);
 function setBg(n,live){ var kd=n.kind==='task'?bgKind(n.tid):'aur'; LIVE=!!live&&!(n.tid&&FONY[n.tid]); document.body.classList.toggle('livebg',LIVE); wbg.className='wbg '+(LIVE?'live':'bg-'+kd); win.style.setProperty('--mr',rgb(n.c)); wbg.style.backgroundImage=n.tid&&FONY[n.tid]?'url("'+FONY[n.tid]+'")':'';
   $('winT').textContent=n.kind==='task'?'Модуль '+(mods.find(function(m){ return m.id===n.mid; })||{}).n+' · '+n.n:n.n; }
 function openWin(mode,n,from){ winOn=true; winMode=mode; st='win'; cur=n; winTask=n.tid||null; wasDone=n.st==='done'; setBg(n,!!from); hud.classList.remove('on'); backB.classList.remove('on'); guideUI(); win.classList.add('on'); pane.scrollTop=0;
-  lvlStars(); if(mode==='task') I.go.task(n.tid); else I.go.home(); brief(mode==='task'?n:null);
+  lvlStars(); if(mode==='task') I.go.task(n.tid); else if(mode==='trn'&&window.KURS_TREN) KURS_TREN.mount(tk); else I.go.home(); brief(mode==='task'?n:null);
   /* окно вырастает из экрана у зоны: стартует ровно на месте экрана и раскрывается */
   var bx=win.querySelector('.wbox'); if(from&&bx.animate&&!red){ var r=bx.getBoundingClientRect(), vh=Math.min(r.height,innerHeight-r.top), sx=from.w/r.width, sy=from.h/Math.max(1,vh);
     bx.animate([{transform:'translate('+(from.l-r.left)+'px,'+(from.t-r.top)+'px) scale('+sx+','+sy+')',transformOrigin:'0 0',opacity:.6},{transform:'none',transformOrigin:'0 0',opacity:1}],{duration:650,easing:'cubic-bezier(.3,0,.2,1)'}); } }
