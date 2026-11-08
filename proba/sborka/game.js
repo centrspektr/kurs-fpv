@@ -49,8 +49,9 @@ function dist(a, x, y) { return Math.hypot(a.x - x, a.y - y); }
 
 /* ---------- интерфейс ---------- */
 var TOTAL = LV === 1 ? 7 : 9, step = 0, err = 0, stage = '';
-function top(s, t) { return '<div class="top"><a class="ic" href="javascript:history.back()">←</a><div class="ttl"><small>' + s + '</small><b>' + t + '</b></div><button class="ic" id="snd" title="Голос проводника">' + (sndOn() ? '🔊' : '🔇') + '</button><div class="ic" id="err" title="ошибки">' + err + '</div></div>'; }
+function top(s, t) { return '<div class="top"><a class="ic" href="javascript:history.back()">←</a><div class="ttl"><small>' + s + '</small><b>' + t + '</b></div><button class="ic" id="snd" title="Голос проводника">' + (sndOn() ? '🔊' : '🔇') + '</button><input type="range" id="vol" min="0" max="100" step="5" value="' + volPct() + '" title="Громкость" aria-label="Громкость"><div class="ic" id="err" title="ошибки">' + err + '</div></div>'; }
 /* голос проводника: тот же голос, что в курсе (golos.js, выбор голоса и "выкл" общие с курсом) */
+function volPct() { return Math.round((window.GOLOS && GOLOS.vol != null ? GOLOS.vol : 1) * 100); }
 function sndOn() { return !!(window.GOLOS && GOLOS.on); }
 var SAID = {}; /* одну и ту же фразу голос не повторяет */
 function speak(html, force) { if (!sndOn()) return; var d = document.createElement('div'); d.innerHTML = html; var t = d.textContent.replace(/\s+/g, ' ').trim(); if (!t || (SAID[t] && !force)) return; SAID[t] = 1; t = spoken(t);
@@ -72,13 +73,13 @@ function spoken(t) { SPK.forEach(function (r) { t = t.replace(r[0], r[1]); }); r
 function sayNow(t) { spk.on = true; spk.t = Date.now(); spk.next = null; var ok = GOLOS.say(t, { onend: function () { spk.on = false; if (spk.next) { var n = spk.next; spk.next = null; sayNow(n); } } }); if (!ok) spk.on = false; }
 /* звуки мастерской: тихие, синтез WebAudio (без файлов); выключаются той же кнопкой 🔊 */
 var AC = null;
-function ac() { if (!sndOn()) return null; try { if (!AC) AC = new (window.AudioContext || window.webkitAudioContext)(); if (AC.state === 'suspended') AC.resume(); } catch (e) { AC = null; } return AC; }
+function ac() { if (!sndOn()) return null; try { if (!AC) AC = new (window.AudioContext || window.webkitAudioContext)(); if (AC.state === 'suspended') AC.resume(); if (!AC._m) { AC._m = AC.createGain(); AC._m.connect(AC.destination); } AC._m.gain.value = window.GOLOS ? GOLOS.vol : 1; } catch (e) { AC = null; } return AC; }
 function noiseBuf(c) { if (c._nb) return c._nb; var b = c.createBuffer(1, c.sampleRate, c.sampleRate), d = b.getChannelData(0); for (var i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1; return (c._nb = b); }
 function burst(c, t, dur, f, q, vol) { var s = c.createBufferSource(), bp = c.createBiquadFilter(), g = c.createGain(); s.buffer = noiseBuf(c); bp.type = 'bandpass'; bp.frequency.value = f; bp.Q.value = q;
-  g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(.0001, t + dur); s.connect(bp); bp.connect(g); g.connect(c.destination); s.start(t, Math.random() * .5); s.stop(t + dur + .02); }
+  g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(.0001, t + dur); s.connect(bp); bp.connect(g); g.connect(c._m); s.start(t, Math.random() * .5); s.stop(t + dur + .02); }
 function tone(c, t, dur, f1, f2, vol, type) { var o = c.createOscillator(), g = c.createGain(), lp = c.createBiquadFilter(); o.type = type || 'sine'; o.frequency.setValueAtTime(f1, t); o.frequency.exponentialRampToValueAtTime(f2, t + dur);
   lp.type = 'lowpass'; lp.frequency.value = 1800; g.gain.setValueAtTime(.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + .03); g.gain.setValueAtTime(vol, t + dur - .08); g.gain.exponentialRampToValueAtTime(.0001, t + dur);
-  o.connect(lp); lp.connect(g); g.connect(c.destination); o.start(t); o.stop(t + dur + .02); }
+  o.connect(lp); lp.connect(g); g.connect(c._m); o.start(t); o.stop(t + dur + .02); }
 var SFX = {
   screw: function (d) { var c = ac(); if (!c) return; var t = c.currentTime, n = Math.round((d || .6) / .07); for (var i = 0; i < n; i++) burst(c, t + i * .07, .03, 3200 + Math.random() * 600, 6, .05); }, /* трещотка отвёртки */
   click: function () { var c = ac(); if (!c) return; var t = c.currentTime; burst(c, t, .04, 2500, 3, .12); burst(c, t + .05, .03, 4200, 4, .08); }, /* щёлк разъёма */
@@ -88,7 +89,12 @@ var SFX = {
   hiss: null,
   sizzle: function (on) { var c = ac(); if (!on) { if (SFX.hiss) { try { SFX.hiss.g.gain.setTargetAtTime(.0001, c ? c.currentTime : 0, .08); SFX.hiss.s.stop((c ? c.currentTime : 0) + .4); } catch (e) {} SFX.hiss = null; } return; }
     if (!c || SFX.hiss) return; var s = c.createBufferSource(), hp = c.createBiquadFilter(), g = c.createGain(); s.buffer = noiseBuf(c); s.loop = true; hp.type = 'highpass'; hp.frequency.value = 2600;
-    g.gain.setValueAtTime(.0001, c.currentTime); g.gain.exponentialRampToValueAtTime(.025, c.currentTime + .3); s.connect(hp); hp.connect(g); g.connect(c.destination); s.start(); SFX.hiss = { s: s, g: g }; } }; /* шипение флюса */
+    g.gain.setValueAtTime(.0001, c.currentTime); g.gain.exponentialRampToValueAtTime(.025, c.currentTime + .3); s.connect(hp); hp.connect(g); g.connect(c._m); s.start(); SFX.hiss = { s: s, g: g }; } }; /* шипение флюса */
+/* ползунок громкости: голос и звуки вместе; сдвинул при выключенном звуке - звук включается */
+var volT = 0;
+document.addEventListener('input', function (e) { if (!e.target || e.target.id !== 'vol' || !window.GOLOS) return; var v = e.target.value / 100; GOLOS.setVol(v);
+  var b = $('#snd'); if (v > 0 && !GOLOS.on) { GOLOS.setOn(true); if (b) b.textContent = '🔊'; } if (b) b.textContent = GOLOS.on && v > 0 ? '🔊' : '🔇';
+  if (AC && AC._m) AC._m.gain.value = v; clearTimeout(volT); volT = setTimeout(function () { SFX.click(); }, 120); });
 document.addEventListener('click', function (e) { var b = e.target.closest && e.target.closest('#snd'); if (!b || !window.GOLOS) return; GOLOS.setOn(!GOLOS.on); b.textContent = GOLOS.on ? '🔊' : '🔇'; if (GOLOS.on) { var t = $('#sayT'); speak(t ? t.innerHTML : 'Голос включён', true); } });
 function bars() { var o = '<div class="bars">'; for (var i = 0; i < TOTAL; i++) o += '<i class="' + (i < step ? 'd' : i === step ? 'h' : '') + '"></i>'; return o + '</div>'; }
 function head(s, t, extra) { ui.innerHTML = top(s, t) + bars() + '<div class="bub glass" id="say"><div id="sayT"></div><div class="qs" id="qs"></div></div><div class="tag" id="tag"></div>' + (extra || ''); }
