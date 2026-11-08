@@ -67,7 +67,7 @@ var SPK = [
   [/330-350°/g, 'от трёхсот тридцати до трёхсот пятидесяти градусов'], [/20-30°/g, 'двадцать - тридцать градусов'], [/(\d+)°/g, '$1 градусов'],
   [/\(ESC\)|\(VTX\)|\(RX\)/g, ''], [/TX\/RX/g, 'Ти-Икс и Эр-Икс'], [/\bTX\b/g, 'Ти-Икс'], [/\bRX\b/g, 'Эр-Икс'], [/\bVTX\b/g, 'Ви-Ти-Икс'], [/\bESC\b/g, 'И-Эс-Си'], [/\bCAM\b/g, 'кам'],
   [/u\.FL/g, 'ю-эф-эл'], [/\bXT30\b/g, 'икс-тэ тридцать'], [/LiPo 4S/g, 'липо четыре эс'], [/\b4S\b/g, 'четыре эс'], [/\bAIO\b/g, 'эй-ай-оу'], [/Tinywhoop/g, 'тайни-вупа'], [/из TPU/g, 'из мягкого пластика'],
-  [/\b5 В(?![а-яё])/g, 'пять вольт'], [/знаком \+/g, 'знаком плюс'], [/знаком −/g, 'знаком минус'], [/Вопрос (\d) из (\d)/g, function (m, a, b) { return 'Вопрос ' + ['', 'один', 'два', 'три', 'четыре', 'пять'][a] + ' из ' + ['', '', 'двух', 'трёх', 'четырёх', 'пяти'][b]; }], [/\s+-\s+/g, ' - '], [/\s{2,}/g, ' ']];
+  [/\b5 В(?![а-яё])/g, 'пять вольт'], [/знаком \+/g, 'знаком плюс'], [/знаком −/g, 'знаком минус'], [/Вопрос (\d) из (\d)/g, function (m, a, b) { return 'Вопрос ' + ['', 'один', 'два', 'три', 'четыре', 'пять'][a] + ' из ' + ['', '', 'двух', 'трёх', 'четырёх', 'пяти'][b]; }], [/на носу/g, 'спереди'], [/\s+-\s+/g, ' - '], [/\s{2,}/g, ' ']];
 function spoken(t) { SPK.forEach(function (r) { t = t.replace(r[0], r[1]); }); return t.trim(); }
 function sayNow(t) { spk.on = true; spk.t = Date.now(); spk.next = null; var ok = GOLOS.say(t, { onend: function () { spk.on = false; if (spk.next) { var n = spk.next; spk.next = null; sayNow(n); } } }); if (!ok) spk.on = false; }
 document.addEventListener('click', function (e) { var b = e.target.closest && e.target.closest('#snd'); if (!b || !window.GOLOS) return; GOLOS.setOn(!GOLOS.on); b.textContent = GOLOS.on ? '🔊' : '🔇'; if (GOLOS.on) { var t = $('#sayT'); speak(t ? t.innerHTML : 'Голос включён', true); } });
@@ -132,7 +132,7 @@ function fly(o, p1, r1, dur, done) { var p0 = o.position.clone(), r0 = o.rotatio
 function backToPile(pk) { var s = pk.pile; pk.state = 'fly'; fly(pk.o, V(s[0], s[1], s[2]), new T.Euler(0, s[3], 0), .5, function () { pk.state = 'pile'; }); }
 
 /* начальная раскладка: рама со стойками, всё остальное кучей на столе */
-P.frame.visible = true; P.so.visible = true; P.batt.visible = false; P.wires.forEach(function (w) { w.visible = false; });
+P.frame.visible = true; P.so.visible = true; P.camMount.visible = false; /* крепление камеры появляется к этапу электроники, чтобы не мешать пайке */ P.batt.visible = false; P.wires.forEach(function (w) { w.visible = false; });
 PK.forEach(function (pk) { pk.o.visible = false; pk.state = 'hide'; });
 ['m0', 'm1', 'm2', 'm3', 'big', 'esc', 'fc', 'vtx', 'top', 'cam', 'rx', 'ant'].concat(LV > 1 ? ['aio'] : []).forEach(function (id) { toPile(byId(id)); });
 
@@ -156,8 +156,8 @@ function whyNot(pk) { if (pk.kind === 'x') return pk.why; var L = openSlots(); f
   if (phase === 'E') { return k === 'fc' ? 'Внизу стека стоит <b>регулятор (ESC)</b>: к нему паяют толстые провода моторов и питания. Полётный контроллер ставят над ним.' : 'Сначала основа: регулятор, к нему потом паяют моторы и питание. Камеру и остальную электронику ставим после.'; }
   if (phase === 'B') { if (!inst.fc) return 'Сначала <b>полётный контроллер</b>: он встаёт на стойки над регулятором, к нему подключают всё остальное.';
     if (k === 'top') return 'Верхняя пластина закроет стек. Сначала поставь под неё <b>видеопередатчик</b>.';
-    if (k === 'rx') return 'Приёмник крепится сверху на верхнюю пластину. Сначала поставь пластину.';
-    if (k === 'ant') return 'Антенна крепится к верхней пластине сзади. Сначала пластина.'; }
+    if (k === 'rx') return 'Приёмник ставится сверху на верхнюю пластину. Сначала поставь пластину.';
+    if (k === 'ant') return 'Антенну ставят на верхнюю пластину сзади. Сначала пластина.'; }
   return 'Эта деталь пока не нужна.'; }
 function marks() { clr(MK);
   openSlots().forEach(function (s) { var g = new T.Group(); g.position.copy(W(s.c)); MK.add(g);
@@ -247,9 +247,12 @@ function screwStep(o, done) { H = {}; SCRN++; var list = SCRL = o.holes.map(func
     tween(.3, function (e) { m.scale.setScalar(Math.max(.01, e)); }); return { h: h, out: out, m: m, done: 0, g: Math.floor(i / (o.group || 1)) }; });
   if (o.view) go(o.view, 1.1); if (o.say) say(o.say); hint(o.hint || K('Нажми на винт - отвёртка закрутит его', 'Нажимай на винты: отвёртка закручивает'));
   var drv = getDriver(o.nut); var busy = false, first = !(o.group > 1) || !o.firstManual, nDone = 0;
+  if (o.cross) { var gt = function () { if (SCRL !== list) { ticks.splice(ticks.indexOf(gt), 1); return; } var nx = first ? null : list.filter(function (s) { return s.g === 0 && !s.done && !s.q; })[0];
+      list.forEach(function (s) { if (s.m.userData.gl) s.m.userData.gl.visible = first || s.g !== 0 || s === nx; }); }; ticks.push(gt); }
   var queue = [];
   H.down = function (e) { var best = null, bd = 70; list.forEach(function (s) { if (s.done || s.q) return; var d = dist(scr(DW(s.m.position)), e.clientX, e.clientY); if (d < bd) { bd = d; best = s; } });
     if (!best) { if (busy || list.some(function (s) { return (s.q || s.done) && dist(scr(DW(s.m.position)), e.clientX, e.clientY) < 90; })) return; say(o.miss || K('Нажми прямо на <b>винт</b>.', 'Нажми прямо на <b>головку винта</b>.')); return; }
+    if (o.cross && !first) { var nx = list.filter(function (s) { return s.g === best.g && !s.done && !s.q; })[0]; if (nx && nx !== best) { say(K('Крест-накрест: следующий - <b>светящийся винт</b> напротив.', 'Крест-накрест: следующим закручиваем винт <b>напротив</b> - он светится.')); return; } }
     var batch = (o.group > 1 && first) ? list.filter(function (s) { return !s.done && !s.q && s.g === best.g; }) : [best]; batch.forEach(function (s) { s.q = 1; }); queue = queue.concat(batch); if (!busy) { busy = true; run(); } };
   function run() { var s = queue.shift(); if (!s) { busy = false; check(); return; } turn(s, run); } /* нажатия во время работы отвёртки ставятся в очередь */
   function turn(s, cb) { var wout = DWdir(s.h, s.out), head = DW(s.m.position), from = drv.position.clone(), qf = drv.quaternion.clone(), q0 = new T.Quaternion().setFromUnitVectors(V(0, 1, 0), wout), qs = s.m.quaternion.clone(), qr = new T.Quaternion(), far = from.distanceTo(head) > 4;
@@ -267,13 +270,13 @@ function pileIn() { parked.forEach(function (pk) { D.attach(pk.o); }); parked = 
 VIEW.flip = function () { return fit(V(0, 3.1, 2), V(0, 1, .4), 7.8, 7.8, 40, 1); };
 function screwStage() { setStep(ST.scr); stage = 'screw'; H = {}; clr(MK); pileOut();
   head('ОТВЁРТКА · ВИД СНИЗУ', 'Винты рамы и моторов', '<div class="hint" id="hint"></div>'); setStep(ST.scr);
-  say(K('Переворачиваем раму: винты закручивают <b>снизу</b>.', 'Переворачиваем раму: и стойки, и моторы крепят винтами <b>снизу, через раму</b>. Так винты не мешают электронике сверху.'));
+  say(K('Переворачиваем раму: винты закручивают <b>снизу</b>.', 'Переворачиваем раму: и стойки, и моторы прикручивают винтами <b>снизу, через раму</b>. Так винты не мешают электронике сверху.'));
   go(VIEW.flip, 1.4); tween(1.3, function (e) { D.rotation.z = Math.PI * e; D.position.y = 3.05 * e + Math.sin(e * Math.PI) * 3; }, function () {
     var so = [[1.5, -2.6], [-1.5, -2.6], [1.5, 2.6], [-1.5, 2.6]].map(function (q) { return V(q[0], 0, q[1]); });
     screwStep({ holes: so, out: V(0, -1, 0), say: K('Сначала 4 винта держат <b>стойки</b> - на них потом встанет электроника.', 'Сначала 4 винта M3 держат <b>стойки</b>: на них потом наденут регулятор и полётник. Затягиваем крепко, но без силы - резьба в алюминии мягкая.'), doneText: 'Стойки прикручены' }, motorsScrews); }); }
 function motorsScrews() { var holes = [];
-  MP.forEach(function (q) { for (var k = 0; k < 4; k++) { var a = k * Math.PI / 2 + Math.PI / 4; holes.push(V(q[0] + Math.cos(a) * .55, 0, q[1] + Math.sin(a) * .55)); } });
-  function go2() { screwStep({ holes: holes, out: V(0, -1, 0), group: 4, firstManual: true,
+  MP.forEach(function (q) { [0, 2, 1, 3].forEach(function (k) { var a = k * Math.PI / 2 + Math.PI / 4; /* крест-накрест: винт, потом напротив */ holes.push(V(q[0] + Math.cos(a) * .55, 0, q[1] + Math.sin(a) * .55)); }); });
+  function go2() { screwStep({ holes: holes, out: V(0, -1, 0), group: 4, firstManual: true, cross: true,
     say: K('Теперь <b>моторы</b>: по 4 винта на каждый. Первый мотор закрути сам по одному винту.', 'Теперь <b>моторы</b>: по 4 винта M2x6 на мотор. Первый мотор - по одному винту, <b>крест-накрест</b>: так мотор прижимается ровно.'),
     afterFirst: K('Отлично! Остальные моторы - одним нажатием на любой винт мотора.', 'Отлично! Остальные моторы закручу быстрее: нажми на любой винт мотора, и все четыре закрутятся крест-накрест.'), doneText: 'Моторы прикручены' }, flipBack); }
   if (LV > 1) { say('Какие винты берём для моторов 1404?'); hint('Выбери ответ в карточке сверху');
@@ -343,7 +346,7 @@ function connectStep(kind, done) { var c = CAB[kind], tip = c.rest.clone(), cab 
 /* что делаем после установки детали */
 var EXTRA = {
   fc: function (pk, s, cb) { connectStep('fc', function () { if (LV === 1) return cb(); go(view0, .8); say('<b>Куда должна смотреть стрелка</b> на полётнике?'); hint('Выбери ответ в карточке сверху');
-    ask([['Вперёд, к камере'], ['Назад', 'Если стрелка смотрит назад, полётник перепутает наклоны, и дрон <b>кувыркнётся при взлёте</b>. Стрелку ставят к носу (или поворачивают в настройках).'], ['Неважно', 'Важно! Гироскоп должен знать, где у дрона нос, иначе при взлёте дрон перевернётся.']], 0, function () { say('Верно: стрелка - к носу, туда же, куда смотрит камера.'); setTimeout(cb, 1200); }); }); },
+    ask([['Вперёд, к камере'], ['Назад', 'Если стрелка смотрит назад, полётник перепутает наклоны, и дрон <b>кувыркнётся при взлёте</b>. Стрелку ставят вперёд (или поворачивают в настройках).'], ['Неважно', 'Важно! Гироскоп должен знать, где у дрона нос, иначе при взлёте дрон перевернётся.']], 0, function () { say('Верно: стрелка - вперёд, туда же, куда смотрит камера.'); setTimeout(cb, 1200); }); }); },
   vtx: function (pk, s, cb) { connectStep('vtx', cb); },
   cam: function (pk, s, cb) { screwStep({ holes: [V(.97, 1.55, -3.2), V(-.97, 1.55, -3.2)], outs: [V(1, 0, 0), V(-1, 0, 0)], view: function () { return fit(W(V(0, 1.5, -3.2)), V(.35, .55, -1), 2.4, 2.2, 40, 1); },
     say: K('Прикрути камеру двумя винтами по бокам.', 'Камера держится на двух боковых винтах: ими же выставляют <b>угол наклона</b> - для гонок камеру наклоняют назад на 20-30°.'), doneText: 'Камера прикручена' }, function () { connectStep('cam', cb); }); },
@@ -424,12 +427,15 @@ function fluxTap() { var g = cur; if (g.st !== 'flux') { if (g.st !== 'busy') sa
   var d = camDir(), pd = g.left.clone().multiplyScalar(.45).add(V(0, 1, 0)).add(d.f.clone().multiplyScalar(-.15)).normalize(), pen = makePen(); pen.quaternion.setFromUnitVectors(V(0, 1, 0), pd); IF.add(pen);
   var start = W(g.pads[0].p).add(pd.clone().multiplyScalar(4)), T0 = 0; pen.position.copy(start);
   function mv(to, dur, at) { wait(at, function () { var f = pen.position.clone(); tween(dur, function (e) { pen.position.lerpVectors(f, to, e); }); }); }
-  g.pads.forEach(function (p) { var above = W(p.p).add(pd.clone().multiplyScalar(.9)), touch = W(p.p).add(pd.clone().multiplyScalar(.12));
-    mv(above, .45, T0); mv(touch, .25, T0 + .5); mv(above, .3, T0 + 1.35);
+  /* шприц опускается один раз и быстро проходит по площадкам: кап, кап, кап */
+  var low = function (p) { return W(p.p).add(pd.clone().multiplyScalar(.14)); };
+  mv(W(g.pads[0].p).add(pd.clone().multiplyScalar(.9)), .4, 0); mv(low(g.pads[0]), .2, .42); T0 = .65;
+  g.pads.forEach(function (p, i) { if (i) mv(low(p), .22, T0);
     var m = new T.Mesh(new T.SphereGeometry(p.r * 1.05, 20, 12), new T.MeshPhysicalMaterial({ color: lin(0xffb52e), transparent: true, opacity: .8, roughness: .02, metalness: 0, clearcoat: 1, emissive: lin(0x5a3000) }));
     m.position.copy(p.p).add(V(0, .01, 0)); m.scale.set(.01, .01, .01); m.visible = false; SF.add(m); p.flux = m;
-    wait(T0 + .75, function () { m.visible = true; tween(.55, function (e) { m.scale.set(e, .38 * e, e); }); });
-    T0 += 1.7; });
+    wait(T0 + (i ? .24 : .05), function () { m.visible = true; tween(.3, function (e) { m.scale.set(e, .38 * e, e); }); });
+    T0 += (i ? .38 : .3); });
+  mv(W(g.pads[g.pads.length - 1].p).add(pd.clone().multiplyScalar(.9)), .25, T0); T0 += .3;
   mv(start, .5, T0); wait(T0 + .55, function () { IF.remove(pen); toast('✓ Флюс на площадках');
     if (g.manual) { g.st = 'wire'; say(g.power ? 'Флюс есть. Тяни <b>красный провод</b> на площадку плюса, чёрный - на минус.' : 'Флюс есть. Тяни <b>кончики проводов</b> на площадки. Провода помечены цветом: жёлтый, белый, синий. Положи <b>по порядку</b>, потом проверим, куда крутится мотор.'); }
     else autoLay(); }); }
@@ -537,14 +543,14 @@ function intro() { stage = 'intro'; getDriver(false); getDriver(true); A.G.posit
 /* ---------- урок, тест и показ сборки перед своей сборкой ---------- */
 var LESSON = [
   [['frame'], K('Это <b>рама</b> из карбона - скелет дрона. На ней уже стоят <b>стойки</b>: на них сядет электроника.', 'Это <b>рама 3 дюйма</b> из карбона: лёгкая и прочная. Четыре <b>стойки</b> M3 держат стек электроники, сверху его закроет <b>верхняя пластина</b>.')],
-  [['m0', 'm1', 'm2', 'm3'], K('<b>Моторы</b> ставят на концы лучей. У мотора <b>три провода</b>. Два мотора крутятся в одну сторону, два - в другую.', '<b>Моторы 1404</b>: 14 мм - диаметр, 04 - высота статора. У мотора <b>три провода</b> - три обмотки, <b>плюса и минуса нет</b>. Направление вращения зависит от порядка проводов: поменяешь любые два - мотор закрутится наоборот. Крепятся четырьмя винтами <b>M2</b> снизу через луч.')],
+  [['m0', 'm1', 'm2', 'm3'], K('<b>Моторы</b> ставят на концы лучей. У мотора <b>три провода</b>. Два мотора крутятся в одну сторону, два - в другую.', '<b>Моторы 1404</b>: 14 мм - диаметр, 04 - высота статора. У мотора <b>три провода</b> - три обмотки, <b>плюса и минуса нет</b>. Направление вращения зависит от порядка проводов: поменяешь любые два - мотор закрутится наоборот. Прикручиваются четырьмя винтами <b>M2</b> снизу через луч.')],
   [['esc'], K('<b>Регулятор</b> раздаёт ток моторам. Он стоит в самом низу, к нему припаивают провода моторов и аккумулятора.', '<b>Регулятор 4в1 (ESC) 20x20</b> - нижняя плата стека. Он управляет всеми четырьмя моторами: к нему <b>паяют</b> по три провода каждого мотора и толстые провода питания. Конденсатор на питании гасит скачки напряжения.')],
-  [['fc'], K('<b>Полётный контроллер</b> - мозг дрона. Он ставится над регулятором, к нему подключают всё остальное.', '<b>Полётный контроллер 20x20</b> - мозг: гироскоп чувствует наклоны, процессор управляет моторами. Ставится над регулятором <b>стрелкой к носу</b>, соединяется с ним кабелем. К нему же подключают камеру, видеопередатчик и приёмник - <b>разъёмами</b>.')],
+  [['fc'], K('<b>Полётный контроллер</b> - мозг дрона. Он ставится над регулятором, к нему подключают всё остальное.', '<b>Полётный контроллер 20x20</b> - мозг: гироскоп чувствует наклоны, процессор управляет моторами. Ставится над регулятором <b>стрелкой вперёд</b>, соединяется с ним кабелем. К нему же подключают камеру, видеопередатчик и приёмник - <b>разъёмами</b>.')],
   [['cam'], K('<b>Камера</b> стоит спереди и смотрит вперёд - через неё пилот видит полёт.', '<b>Камера</b> стоит спереди на двух винтах: ими выставляют угол наклона. Видео идёт в полётник, он накладывает на картинку цифры: напряжение, время.')],
   [['vtx', 'ant'], K('<b>Видеопередатчик</b> с <b>антенной</b> отправляет картинку в очки.', '<b>Видеопередатчик (VTX)</b> отправляет картинку в очки на 5,8 ГГц через <b>антенну</b> с разъёмом u.FL. Без антенны VTX включать нельзя - сгорит.')],
-  [['rx'], K('<b>Приёмник</b> ловит команды с пульта.', '<b>Приёмник (RX)</b> ловит команды пульта и по проводам TX/RX передаёт их полётнику. Крепится сверху, на верхнюю пластину.')],
+  [['rx'], K('<b>Приёмник</b> ловит команды с пульта.', '<b>Приёмник (RX)</b> ловит команды пульта и по проводам TX/RX передаёт их полётнику. Ставится сверху, на верхнюю пластину.')],
   [['p0', 'p1', 'p2', 'p3'], K('<b>Пропеллеры</b> ставят в самом конце. Пропеллер ставят на мотор со стрелкой <b>того же цвета</b>.', '<b>Пропеллеры 3 дюйма</b> - последний шаг, только без аккумулятора. Лопасти изогнуты в разные стороны: пропеллер ставят на мотор с тем же направлением вращения и затягивают гайкой.')],
-  [['lipo'], K('<b>Аккумулятор</b> - батарейка дрона. Его ставят в самом конце, перед полётом, и крепят ремешком.', '<b>Аккумулятор LiPo 4S</b>: 4 банки, 14,8 вольта, 650 миллиампер-часов. Ставится на верхнюю пластину под ремешок, подключается разъёмом <b>XT30</b> - только перед полётом.')],
+  [['lipo'], K('<b>Аккумулятор</b> - батарейка дрона. Его ставят в самом конце, перед полётом, и держат ремешком.', '<b>Аккумулятор LiPo 4S</b>: 4 банки, 14,8 вольта, 650 миллиампер-часов. Ставится на верхнюю пластину под ремешок, подключается разъёмом <b>XT30</b> - только перед полётом.')],
   [['frame'], K('Порядок такой: моторы и винты, регулятор, электроника с разъёмами, проверка, пропеллеры и аккумулятор.', 'Порядок сборки: моторы и винты, регулятор, <b>пайка</b> моторов и питания с проверкой вращения, стек и <b>разъёмы</b>, проверка через смоук-стоппер, пропеллеры и в самом конце <b>аккумулятор</b>. Сначала проверим, что ты запомнил.')] ];
 var QUIZ = LV > 1 ? [
   ['Сколько проводов у мотора и где у него плюс?', [['3 провода, плюса и минуса нет'], ['2 провода: плюс и минус', 'У бесколлекторного мотора <b>три</b> провода - три обмотки. Плюса и минуса у него нет.'], ['4 провода, плюс красный', 'У мотора <b>три</b> провода, и полярности у них нет: регулятор сам по очереди подаёт ток на обмотки.']]],
@@ -567,9 +573,9 @@ function quiz() { stage = 'quiz'; var i = 0; lessonGlow(['frame']); head('ТЕС
   function q() { if (i >= QUIZ.length) return demo(); say('<b>Вопрос ' + (i + 1) + ' из ' + QUIZ.length + '.</b> ' + QUIZ[i][0]); ask(QUIZ[i][1], 0, function () { toast('✓ Верно'); i++; setTimeout(q, 400); }); }
   q(); }
 /* показ: копии деталей сами встают на места, потом исчезают - собирать будешь сам */
-function demo() { stage = 'demo'; H = {}; lessonGlow([]); go(VIEW.pileB, 1.2); head('ПОКАЗ СБОРКИ', 'Смотри, как собирают', '<div class="tools"><button class="tb" id="skip">Пропустить показ</button></div>');
+function demo() { stage = 'demo'; P.camMount.visible = true; H = {}; lessonGlow([]); go(VIEW.pileB, 1.2); head('ПОКАЗ СБОРКИ', 'Смотри, как собирают', '<div class="tools"><button class="tb" id="skip">Пропустить показ</button></div>');
   var seq = [['m0', 'm1', 'm2', 'm3'], ['esc'], ['fc'], ['vtx'], ['cam'], ['top'], ['rx', 'ant'], ['p0', 'p1', 'p2', 'p3'], ['lipo']];
-  var cap = [K('Сначала моторы - на концы лучей, и прикручиваем винтами.', 'Моторы на лучи, 16 винтов M2 снизу.'), K('Регулятор - на стойки, в самый низ.', 'Регулятор на стойки, паяем моторы и питание.'), K('Полётный контроллер - над регулятором.', 'Полётник над регулятором, стрелкой к носу, кабель к регулятору.'),
+  var cap = [K('Сначала моторы - на концы лучей, и прикручиваем винтами.', 'Моторы на лучи, 16 винтов M2 снизу.'), K('Регулятор - на стойки, в самый низ.', 'Регулятор на стойки, паяем моторы и питание.'), K('Полётный контроллер - над регулятором.', 'Полётник над регулятором, стрелкой вперёд, кабель к регулятору.'),
     K('Видеопередатчик.', 'Видеопередатчик на стек, разъём к полётнику.'), K('Камера спереди.', 'Камера на два винта, разъём к полётнику.'), K('Верхняя пластина закрывает стек.', 'Верхняя пластина на 4 винта.'), K('Приёмник и антенна сверху.', 'Приёмник и антенна, разъёмы.'), K('Пропеллеры.', 'Проверка, потом пропеллеры.'), K('И аккумулятор. Готово!', 'Аккумулятор на пластину, разъём XT30. Готово!')];
   var clones = [], k = 0, stop = false;
   function home(id) { return id[0] === 'm' && id.length === 2 ? X.home[id] : id[0] === 'p' && id.length === 2 ? X.home[id] : X.home[id]; }
@@ -577,7 +583,7 @@ function demo() { stage = 'demo'; H = {}; lessonGlow([]); go(VIEW.pileB, 1.2); h
     seq[k].forEach(function (id, n) { var pk = byId(id); showTmp(pk); var c = cloneBare(pk.o); c.visible = true; pk.o.parent.add(c); pk.o.visible = false; clones.push([pk, c]); var h = home(id); wait(n * .15, function () { if (!stop) fly(c, h.p.clone(), h.r, .7); }); });
     k++; wait(2.4, stepD); }
   function finish() { if (stop) return; stop = true; say(K('Вот так! <b>Теперь собери сам.</b>', 'Вот и вся сборка. <b>Теперь собери сам</b> - с винтами, пайкой и разъёмами.'));
-    tween(.5, function (e) { clones.forEach(function (q) { q[1].scale.setScalar(Math.max(.01, 1 - e)); }); }, function () { clones.forEach(function (q) { q[1].parent.remove(q[1]); q[0].o.visible = true; }); clones = []; hideTmp(); wait(1.2, assembleA); }); }
+    tween(.5, function (e) { clones.forEach(function (q) { q[1].scale.setScalar(Math.max(.01, 1 - e)); }); }, function () { clones.forEach(function (q) { q[1].parent.remove(q[1]); q[0].o.visible = true; }); clones = []; hideTmp(); P.camMount.visible = false; wait(1.2, assembleA); }); }
   $('#skip').onclick = function () { if (stop) return; if (window.GOLOS) GOLOS.stop(); finish(); }; wait(1.2, stepD); }
 function assembleA() { stage = 'A'; phase = 'A'; A.G.visible = false; view0 = VIEW.pileA; go(VIEW.pileA, 1.4);
   head('СБОРКА · ВИД СВЕРХУ', 'Рама и моторы', '<div class="hint" id="hint">Тяни деталь со стола на раму</div>'); setStep(ST.mot);
@@ -585,7 +591,7 @@ function assembleA() { stage = 'A'; phase = 'A'; A.G.visible = false; view0 = VI
   onAllIn = function () { return nMot() === 4; }; next = function () { onAllIn = null; screwStage(); }; }
 function autoWires() { P.wires.forEach(function (w) { w.visible = true; }); P.batt.visible = true; sparkle(W(V(0, 1.3, 0)), 24);
   say('Провода моторов и питания паяет мастер: у старших это отдельный этап с паяльником. У мотора <b>три провода</b>: от того, как их припаять, зависит, в какую сторону он крутится.'); setTimeout(stackStage, 3600); }
-function stackStage() { stage = 'B'; phase = 'B'; view0 = VIEW.pileB; go(VIEW.pileB, 1.4);
+function stackStage() { stage = 'B'; phase = 'B'; P.camMount.visible = true; view0 = VIEW.pileB; go(VIEW.pileB, 1.4);
   head('СБОРКА · СТЕК И РАЗЪЁМЫ', 'Электроника и камера', '<div class="hint" id="hint">Тяни деталь со стола на дрон</div>'); setStep(ST.stack);
   say(K('Моторы подключены. <b>Что ставим на стойки над регулятором?</b>', 'Регулятор подключён. Дальше электроника: каждую деталь ставим и <b>подключаем разъёмом</b>. <b>Что идёт на стойки над регулятором?</b>')); marks(); pileMode();
   onAllIn = function () { return inst.fc && inst.vtx && inst.cam && inst.top && inst.rx && inst.ant; };
@@ -616,7 +622,7 @@ VIEW.lipo = function () { return fit(W(V(-4, 1.8, 2.5)), V(.1, 1, .7), 9.5, 8.5,
 function lipoStage() { stage = 'Z'; phase = 'Z'; view0 = VIEW.lipo; go(VIEW.lipo, 1.3);
   head('ПОСЛЕДНИЙ ШАГ', 'Аккумулятор', '<div class="hint" id="hint">Тяни аккумулятор на верхнюю пластину</div>'); setStep(ST.lipo);
   var pk = byId('lipo'); toPile(pk); var y = pk.o.position.y; pk.o.position.y = y + 8; pk.state = 'fly'; tween(.6, function (e) { pk.o.position.y = y + 8 * (1 - e); }, function () { pk.state = 'pile'; });
-  say(K('Остался <b>аккумулятор</b> - это батарейка дрона. Положи его сверху на дрон.', 'Последний шаг - <b>аккумулятор</b>. Его ставят на верхнюю пластину и крепят ремешком. Пропеллеры уже стоят: дальше всё делаем аккуратно.')); marks(); pileMode();
+  say(K('Остался <b>аккумулятор</b> - это батарейка дрона. Положи его сверху на дрон.', 'Последний шаг - <b>аккумулятор</b>. Его ставят на верхнюю пластину и держат ремешком. Пропеллеры уже стоят: дальше всё делаем аккуратно.')); marks(); pileMode();
   onAllIn = function () { return !!inst.lipo; }; next = function () { onAllIn = null; done(); }; }
 /* ремешок, вопрос о порядке включения, разъём XT30 */
 var XT = { a: V(.9, 3.6, 1.0), b: V(2.1, 3.0, 2.2), rest: V(2.5, 1.0, 6.2), to: V(0, .5, 8.55), male: V(0, .5, 7.3) };
