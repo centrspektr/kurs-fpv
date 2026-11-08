@@ -124,7 +124,7 @@ function drone() { var D = new THREE.Group(), P = {};
   P.rx = rx(); P.rx.position.set(0, 3.25, 1.9); D.add(P.rx);
   P.batt = battLead(); D.add(P.batt);
   P.wires = MP.map(function (q) { var g = new THREE.Group(), sx = Math.sign(q[0]), sz = Math.sign(q[1]); [0, 1, 2].forEach(function (k) {
-      tube([V(q[0] - sx * .55, .55, q[1] - sz * .55 + (k - 1) * .12 * sz), V(sx * 3.0, .85, sz * (2.6 - k * .25)), V(sx * 2.0, 1.3, sz * (1.33 - k * .38)), V(sx * 1.38, 1.24, sz * (1.3 - k * .38))], .055, M.wireK, g); }); D.add(g); return g; });
+      tube([V(q[0] - sx * .55, .55, q[1] - sz * .55 + (1 - k) * .12 * sz), V(sx * 3.0, .85, sz * (2.6 - k * .25)), V(sx * 2.0, 1.3, sz * (1.33 - k * .38)), V(sx * 1.38, 1.24, sz * (1.3 - k * .38))], .055, M.wireK, g); }); D.add(g); return g; });
   P.props = MP.map(function (q, i) { var p = prop(i % 2 ? '#ff4fd8' : '#3ee6ff'); p.position.set(q[0], 2.4, q[1]); D.add(p); return p; });
   D.userData.P = P; return D; }
 
