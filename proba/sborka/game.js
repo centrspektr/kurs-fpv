@@ -48,7 +48,7 @@ function scr(w) { var p = w.clone().project(cam); return { x: (p.x + 1) / 2 * in
 function dist(a, x, y) { return Math.hypot(a.x - x, a.y - y); }
 
 /* ---------- интерфейс ---------- */
-var TOTAL = LV === 1 ? 7 : 9, step = 0, err = 0, stage = '';
+var TOTAL = 9, step = 0, err = 0, stage = '';
 function top(s, t) { return '<div class="top"><a class="ic" href="javascript:history.back()">←</a><div class="ttl"><small>' + s + '</small><b>' + t + '</b></div><button class="ic" id="snd" title="Голос проводника">' + (sndOn() ? '🔊' : '🔇') + '</button><input type="range" id="vol" min="0" max="100" step="5" value="' + volPct() + '" title="Громкость" aria-label="Громкость"><div class="ic" id="err" title="ошибки">' + err + '</div></div>'; }
 /* голос проводника: тот же голос, что в курсе (golos.js, выбор голоса и "выкл" общие с курсом) */
 function volPct() { return Math.round((window.GOLOS && GOLOS.vol != null ? GOLOS.vol : 1) * 100); }
@@ -228,7 +228,7 @@ function K(kid, adult) { return LV === 1 ? kid : adult; }
 function DW(p) { D.updateMatrixWorld(true); return D.localToWorld(p.clone()); }
 function DWdir(p, d) { return DW(p.clone().add(d)).sub(DW(p)).normalize(); }
 function setStep(n) { step = n; var b = document.querySelectorAll('.bars i'); for (var i = 0; i < b.length; i++) b[i].className = i < n ? 'd' : i === n ? 'h' : ''; }
-var ST = LV > 1 ? { mot: 0, scr: 1, esc: 2, sold: 3, pow: 4, stack: 5, check: 6, props: 7, lipo: 8 } : { mot: 0, scr: 1, esc: 2, stack: 3, check: 4, props: 5, lipo: 6 };
+var ST = { mot: 0, scr: 1, esc: 2, sold: 3, pow: 4, stack: 5, check: 6, props: 7, lipo: 8 }; /* пайка теперь и у младших (08.11) */
 var DONE_MSG = {
   esc: K('Регулятор на месте! Он раздаёт ток моторам.', 'Верно! <b>Регулятор 4в1</b> управляет всеми четырьмя моторами. Он надет на стойки через резиновые демпферы: они гасят вибрацию.'),
   fc: K('Полётник на месте! Это "мозг" дрона.', '<b>Полётный контроллер</b> - "мозг": гироскоп чувствует наклоны, а процессор тысячи раз в секунду решает, как крутить моторы.'),
@@ -324,7 +324,7 @@ function flipBack() { say(K('Переворачиваем раму обратн�
 function escStage() { setStep(ST.esc); stage = 'E'; phase = 'E'; view0 = VIEW.pileA; go(VIEW.pileA, 1.2);
   head('СБОРКА · ВИД СВЕРХУ', 'Регулятор', '<div class="hint" id="hint">Тяни деталь со стола на раму</div>'); setStep(ST.esc);
   say(K('Моторы держатся крепко. <b>Что ставим в центр рамы, в самый низ?</b>', 'Моторы прикручены. <b>Какая плата ставится на стойки первой</b>, в самый низ стека?')); marks(); pileMode();
-  onAllIn = function () { return !!inst.esc; }; next = function () { onAllIn = null; if (LV > 1) solderStage(); else autoWires(); }; }
+  onAllIn = function () { return !!inst.esc; }; next = function () { onAllIn = null; solderStage(); }; }
 
 /* ---------- разъёмы ---------- */
 var SOCK = { ESC: { p: V(-1.18, 2.08, 1.3), f: K('регулятора', 'регулятора (питание полётника, сигналы моторов, датчик тока)') }, VTX: { p: V(1.18, 2.08, 1.3), f: 'видеопередатчика' },
@@ -419,9 +419,10 @@ function makeIron() { var g = new T.Group(), M = A.M, grip = new T.MeshStandardM
   A.tube([V(0, 14.4, 0), V(0, 17, 0), V(1.5, 19, 2), V(5, 20, 6)], .28, M.wireK, g);
   var h1 = A.glow('#ff7a2a', 1.3, 0), h2 = A.glow('#ffd166', .55, 0); g.add(h1, h2); g.userData.hot = [h1, h2]; return g; }
 var IRON = null, SOLD = null, SMOKE = [], DRIPS = [], GR = [], gi = -1, cur = null, heat = { on: false, h: 0 }, feed = 0, said3 = false;
-var G1 = .5, G2 = .86; /* зелёная зона нагрева */
+var G1 = LV === 1 ? .42 : .5, G2 = LV === 1 ? .9 : .86; /* зелёная зона нагрева (у младших шире, как в mladshie.html .hr) */
 function solderStage() { setStep(ST.sold); stage = 'temp'; H = {}; A.G.visible = false; go(VIEW.station, 1.4);
   head('ПАЯЛЬНАЯ СТАНЦИЯ', 'Подготовка к пайке', '<div class="hint" id="hint">Выбери ответ в карточке сверху</div>'); setStep(ST.sold);
+  if (LV === 1) { hint(''); say('Регулятор стоит. Пора <b>паять</b> к нему провода моторов! Паяльник уже нагрет до 330 градусов. Он очень горячий: жало руками не трогаем.'); setTimeout(startGroups, 3200); return; }
   say('Регулятор стоит. Пора паять к нему провода моторов. <b>Какую температуру ставим на паяльнике?</b>');
   ask([['250°', '250° - мало: припой плавится долго, плата успеет перегреться, а пайка выйдет холодной.'], ['330°'], ['450°', '450° - слишком горячо: флюс сгорает сразу, площадки на плате могут отслоиться. Для таких плат хватает 330-350°.']], 1, function () {
     say('Верно, <b>330°</b>. Станция уже нагрета. Летим к регулятору!'); setTimeout(startGroups, 1100); }); }
@@ -446,9 +447,9 @@ function nextGroup() { gi++; if (gi >= GR.length) return solderDone(); cur = GR[
   IRON.visible = true; IRON.quaternion.setFromUnitVectors(V(0, 1, 0), g.dir); var park = W(g.pads[0].p).add(g.dir.clone().multiplyScalar(1.5)).add(V(0, .5, 0));
   if (gi === 0) IRON.position.copy(park); else { var p0 = IRON.position.clone(); tween(1.2, function (e) { IRON.position.lerpVectors(p0, park, e); }); }
   makeSolderWire(g);
-  if (power) say('Теперь питание. Толстые провода от аккумулятора: <b>красный - плюс</b>, чёрный - минус. Здесь полярность важна. Сначала <b>флюс</b> на площадки.');
-  else if (g.j === 0) say('У мотора <b>три провода - три обмотки</b>. Плюса и минуса тут нет: регулятор по очереди подаёт ток на обмотки, и магниты колокола бегут за ним по кругу. <b>От порядка проводов зависит, куда крутится мотор.</b> Начнём с <b>флюса</b>.');
-  else if (g.manual) say('Мотор 2. Повтори сам: <b>флюс</b>, провода на площадки, пайка каждого контакта, проверка вращения.');
+  if (power) say(K('Теперь провода аккумулятора: <b>красный - плюс</b>, чёрный - минус. Их путать нельзя! Сначала <b>флюс</b>.', 'Теперь питание. Толстые провода от аккумулятора: <b>красный - плюс</b>, чёрный - минус. Здесь полярность важна. Сначала <b>флюс</b> на площадки.'));
+  else if (g.j === 0) say(LV === 1 ? 'У мотора <b>три провода</b>. Припаяем их к регулятору. Сначала капнем <b>флюс</b> - нажми кнопку с каплей.' : 'У мотора <b>три провода - три обмотки</b>. Плюса и минуса тут нет: регулятор по очереди подаёт ток на обмотки, и магниты колокола бегут за ним по кругу. <b>От порядка проводов зависит, куда крутится мотор.</b> Начнём с <b>флюса</b>.');
+  else if (g.manual) say(LV === 1 ? 'Мотор 2. Теперь сам: <b>флюс</b>, провода, пайка, проверка.' : 'Мотор 2. Повтори сам: <b>флюс</b>, провода на площадки, пайка каждого контакта, проверка вращения.');
   else say('Мотор ' + (g.j + 1) + '. Провода положу я, а ты <b>припаяй каждый контакт</b>. Начни с флюса.');
   hint(power ? 'Флюс, потом провода и пайка' : 'Флюс → провода → пайка → проверка');
   $('#flux').onclick = fluxTap; var hb = $('#hold'); hb.addEventListener('pointerdown', function (e) { e.preventDefault(); heatDown(); }); hb.addEventListener('pointerup', heatUp); hb.addEventListener('pointerleave', heatUp);
@@ -462,7 +463,7 @@ function makePen() { var g = new T.Group(), body = new T.MeshPhysicalMaterial({ 
   A.mesh(new T.CylinderGeometry(.32, .32, 3.2, 20), body, 0, 2.6, 0, g); A.mesh(new T.CylinderGeometry(.34, .34, .3, 20), A.M.white, 0, 4.3, 0, g);
   A.mesh(new T.CylinderGeometry(.33, .33, 1.2, 20, 1, true), new T.MeshStandardMaterial({ color: lin(0xff4f6a), roughness: .5 }), 0, 2.6, 0, g); return g; }
 function fluxTap() { var g = cur; if (g.st !== 'flux') { if (g.st !== 'busy') say('Флюс уже есть. ' + (g.st === 'wire' ? 'Теперь положи провод на площадку.' : 'Прижми жало и держи.')); return; } g.st = 'busy'; $('#flux').classList.remove('go');
-  say('Шприц с флюсом: капаем <b>по капле на каждую площадку</b>. Флюс снимает окисел, и припой растечётся ровно.');
+  say(K('Капаем <b>флюс</b> на каждую площадку - с ним припой хорошо растекается.', 'Шприц с флюсом: капаем <b>по капле на каждую площадку</b>. Флюс снимает окисел, и припой растечётся ровно.'));
   var d = camDir(), pd = g.left.clone().multiplyScalar(.45).add(V(0, 1, 0)).add(d.f.clone().multiplyScalar(-.15)).normalize(), pen = makePen(); pen.quaternion.setFromUnitVectors(V(0, 1, 0), pd); IF.add(pen);
   var start = W(g.pads[0].p).add(pd.clone().multiplyScalar(4)), T0 = 0; pen.position.copy(start);
   function mv(to, dur, at) { wait(at, function () { var f = pen.position.clone(); tween(dur, function (e) { pen.position.lerpVectors(f, to, e); }); }); }
@@ -476,7 +477,7 @@ function fluxTap() { var g = cur; if (g.st !== 'flux') { if (g.st !== 'busy') sa
     T0 += (i ? .38 : .3); });
   mv(W(g.pads[g.pads.length - 1].p).add(pd.clone().multiplyScalar(.9)), .25, T0); T0 += .3;
   mv(start, .5, T0); wait(T0 + .55, function () { IF.remove(pen); toast('✓ Флюс на площадках');
-    if (g.manual) { g.st = 'wire'; say(g.power ? 'Флюс есть. Тяни <b>красный провод</b> на площадку плюса, чёрный - на минус.' : 'Флюс есть. Тяни <b>кончики проводов</b> на площадки. Провода помечены цветом: жёлтый, белый, синий. Положи <b>по порядку</b>, потом проверим, куда крутится мотор.'); }
+    if (g.manual) { g.st = 'wire'; say(g.power ? 'Флюс есть. Тяни <b>красный провод</b> на площадку плюса, чёрный - на минус.' : K('Флюс есть. Тяни <b>кончики проводов</b> на золотые площадки: жёлтый, белый, синий.', 'Флюс есть. Тяни <b>кончики проводов</b> на площадки. Провода помечены цветом: жёлтый, белый, синий. Положи <b>по порядку</b>, потом проверим, куда крутится мотор.')); }
     else autoLay(); }); }
 function autoLay() { var g = cur; g.wires.forEach(function (w, k) { var p = g.pads[k], t0 = w.tip.clone(), t1 = p.p.clone().add(V(0, .03, 0)); wait(k * .3, function () { tween(.4, function (e) { w.tip.lerpVectors(t0, t1, e); drawWire(w); }); }); w.pad = p; p.wire = w; });
   wait(1.4, function () { activate(g.pads[0]); say('Провода на месте. <b>Держи жало</b> на площадке: припой подойдёт сам. Отпусти, когда стрелка в <b>зелёной</b> зоне.'); }); }
@@ -491,7 +492,7 @@ function wireUp(e) { var g = cur, w = g.dragW; g.dragW = null; var best = null, 
   if (!best) { back(); say('Отпусти кончик провода <b>прямо на золотую площадку</b>.'); return; }
   if (g.power && best.pol !== w.pol) { back(); oops(w.pol === 0 ? '<b>Красный провод - плюс</b> аккумулятора. Его паяют на площадку со знаком <b>+</b>. Перепутаешь - регулятор сгорит при первом включении!' : 'Чёрный провод - <b>минус</b>, ему нужна площадка со знаком <b>−</b>. Плюс и минус путать нельзя!'); return; }
   w.tip.copy(best.p).add(V(0, .03, 0)); drawWire(w); w.pad = best; best.wire = w; activate(best);
-  say(g.power ? 'Провод на площадке. Толстый провод забирает много тепла - <b>греть придётся дольше</b>. Держи жало до зелёной зоны.' : 'Провод лежит на площадке. <b>Держи жало</b> (кнопка или палец на экране): площадка прогреется, подойдёт припой. Отпусти, когда стрелка в <b>зелёной</b> зоне.'); }
+  say(LV === 1 ? '<b>Держи жало</b> - нажми и не отпускай кнопку с огоньком. Отпусти, когда стрелка в <b>зелёной</b> зоне.' : g.power ? 'Провод на площадке. Толстый провод забирает много тепла - <b>греть придётся дольше</b>. Держи жало до зелёной зоны.' : 'Провод лежит на площадке. <b>Держи жало</b> (кнопка или палец на экране): площадка прогреется, подойдёт припой. Отпусти, когда стрелка в <b>зелёной</b> зоне.'); }
 /* пруток припоя: подаётся сверху сбоку к площадке, плавится каплями */
 function makeSolderWire(g) { if (SOLD) IF.remove(SOLD); var ax = g.left.clone().multiplyScalar(.8).add(V(0, .75, 0)).add(camDir().f.multiplyScalar(-.3)).normalize(); g.ax = ax;
   SOLD = A.tube([ax.clone().multiplyScalar(7).add(V(0, .8, 0)), ax.clone().multiplyScalar(3.5).add(V(0, .2, 0)), V(0, 0, 0)], .05, A.M.steel, IF); SOLD.visible = false; }
@@ -515,18 +516,18 @@ function ironLift(p, dur, delay, done) { wait(delay || 0, function () { var from
 function good(p) { var g = cur; p.done = 1; var bm = p.blob.material; if (p.flux) { var fm = p.flux; p.flux = null; tween(.6, function (e) { fm.material.opacity = .8 * (1 - e); fm.scale.y = .38 * (1 - e * .7); }, function () { SF.remove(fm); }); }
   p.blob.scale.set(1, .5, 1); retract(p, .6); ironLift(p, 1.3, .45); /* сначала убираем припой, потом жало */
   tween(2, function (e) { bm.emissiveIntensity = 1.4 * (1 - e); }, function () { toast(g.power ? '✓ ' + (p.pol ? 'Минус' : 'Плюс') + ' припаян' : '✓ Контакт припаян'); sparkle(W(p.p), 6); after(); });
-  say(['Отлично! Сначала убираем <b>припой</b>, потом <b>жало</b>. Пайка блестит конусом. Не шевели провод, пока припой застывает.', 'Ровная блестящая пайка - так и надо!', 'Есть! Припой застывает - провод не трогаем.'][g.pads.filter(function (q) { return q.done; }).length % 3]);
+  say([K('Отлично! Пайка блестит - так и надо.', 'Отлично! Сначала убираем <b>припой</b>, потом <b>жало</b>. Пайка блестит конусом. Не шевели провод, пока припой застывает.'), 'Ровная блестящая пайка - так и надо!', 'Есть! Припой застывает - провод не трогаем.'][g.pads.filter(function (q) { return q.done; }).length % 3]);
   function after() { var left = g.pads.filter(function (q) { return !q.done; });
     if (!left.length) { $('#hr').style.display = 'none'; if (g.power) { g.labels.forEach(function (l) { l.visible = false; }); toast('✓ Питание подключено'); setTimeout(nextGroup, 700); } else testReady(g); return; }
     if (g.wires.some(function (w) { return !w.pad; })) { g.st = 'wire'; $('#hr').style.display = 'none'; say(g.power ? 'Теперь второй провод.' : 'Следующий провод: тяни его кончик на свободную площадку.'); }
     else { activate(left[0]); say('Следующий контакт. <b>Держи жало</b> до зелёной зоны.'); } } }
 function cold(p) { var bm = p.blob.material; bm.color = lin(0x7c818b); bm.roughness = .85; bm.metalness = .4; bm.emissiveIntensity = 0; p.blob.scale.set(.6, .5, .6); retract(p, .5); ironLift(p, .9, .35);
-  oops('<b>Холодная пайка</b>: припой не успел растечься, получился серый матовый шарик. От вибрации провод отвалится в полёте. Держи жало дольше - до зелёной зоны.');
+  oops(K('<b>Холодная пайка</b>: мало погрели, шарик получился серый. Такой провод отвалится. Держи жало дольше - до зелёной зоны.', '<b>Холодная пайка</b>: припой не успел растечься, получился серый матовый шарик. От вибрации провод отвалится в полёте. Держи жало дольше - до зелёной зоны.'));
   wait(2, function () { bm.color = lin(0xd8dde6); bm.roughness = .16; bm.metalness = 1; p.blob.scale.set(.01, .01, .01); p.base = 0; cur.st = 'heat'; }); }
 function bridge(p) { var g = cur, bm = p.blob.material; p.blob.scale.set(1.5, .8, 1.5); retract(p, .5); ironLift(p, .9, .35);
   var nb = g.pads.filter(function (q) { return q !== p; }).sort(function (a, b) { return a.p.distanceTo(p.p) - b.p.distanceTo(p.p); })[0], br = null;
   if (nb) { var len = nb.p.distanceTo(p.p); br = new T.Mesh(new T.CylinderGeometry(.09, .09, len, 10), bm); br.position.lerpVectors(p.p, nb.p, .5).add(V(0, .04, 0)); br.quaternion.setFromUnitVectors(V(0, 1, 0), nb.p.clone().sub(p.p).normalize()); SF.add(br); }
-  oops('Перегрев и <b>лишний припой</b>: капля растеклась и перемкнула соседний контакт! Это замыкание - регулятор сгорит. Лишнее убирают оплёткой. Отпускай раньше, в зелёной зоне.');
+  oops(K('Перегрели! Капля припоя растеклась и <b>соединила два контакта</b> - так нельзя. Отпускай раньше, в зелёной зоне.', 'Перегрев и <b>лишний припой</b>: капля растеклась и перемкнула соседний контакт! Это замыкание - регулятор сгорит. Лишнее убирают оплёткой. Отпускай раньше, в зелёной зоне.'));
   tween(2.2, function (e) { bm.emissiveIntensity = 1.4 * (1 - e); }, function () { p.blob.scale.set(.01, .01, .01); p.base = 0; if (br) SF.remove(br); cur.st = 'heat'; }); }
 
 /* проверка вращения и перепайка двух проводов */
@@ -541,14 +542,14 @@ function needDir(j) { return j % 2 ? -1 : 1; } /* +1 - против часово
 function actualDir(g) { return needDir(g.j) * (g.j === 0 ? -1 : 1) * (parity(g) ? -1 : 1); } /* у первого мотора обмотки идут наоборот - так бывает */
 function testReady(g) { g.st = 'test'; $('#flux').style.display = $('#hold').style.display = 'none'; $('#test').style.display = 'flex';
   hint('Нажми "Проверить мотор"');
-  say(g.tested ? 'Провода перепаяны. <b>Проверим ещё раз.</b>' : 'Все три провода припаяны. <b>Проверим, куда крутится мотор</b>: подключаем аккумулятор через смоук-стоппер и коротко включаем мотор.'); }
+  say(g.tested ? 'Провода перепаяны. <b>Проверим ещё раз.</b>' : K('Все три провода припаяны. <b>Проверим, куда крутится мотор!</b>', 'Все три провода припаяны. <b>Проверим, куда крутится мотор</b>: подключаем аккумулятор через смоук-стоппер и коротко включаем мотор.')); }
 function testMotor(g) { if (g.st !== 'test') return; g.st = 'busy'; g.tested = 1; setTimeout(function () { SFX.motor(2.4); }, 1000); $('#test').style.display = 'none'; go(tView(g), 1);
   var nd = needDir(g.j), ad = actualDir(g), ar = arrowFor(g.j, g.j % 2 ? 0xff4fd8 : 0x3ee6ff); TA.add(ar);
   say('Стрелка показывает, куда <b>должен</b> крутиться этот мотор. Смотри на колокол...');
   var b = motorAt[g.j].userData.bell, sp = 0; var f = function (dt) { sp = Math.min(30, sp + dt * 40); b.rotation.y += dt * sp * ad; }; ticks.push(f);
   wait(2.6, function () { ticks.splice(ticks.indexOf(f), 1);
     if (ad === nd) { toast('✓ Крутится правильно'); say(g.j === 0 || g.fixed ? '<b>Теперь правильно!</b> Мотор крутится по стрелке.' : 'Мотор крутится <b>по стрелке</b> - правильно.'); setTimeout(function () { clr(TA); nextGroup(); }, 1500); return; }
-    say('<b>Мотор крутится против стрелки!</b> Так бывает часто. Исправляют просто: <b>меняют местами любые два провода</b> из трёх. Сними два провода: нажми на пайку и держи жало, пока припой не расплавится.');
+    say(K('<b>Мотор крутится не туда!</b> Это легко исправить: <b>поменяем местами два провода</b>. Нажми на пайку и держи жало, пока она не расплавится.', '<b>Мотор крутится против стрелки!</b> Так бывает часто. Исправляют просто: <b>меняют местами любые два провода</b> из трёх. Сними два провода: нажми на пайку и держи жало, пока припой не расплавится.'));
     hint('Нажми на пайку, которую расплавить'); g.fixed = 1; g.st = 'desolder'; g.freed = 0; go(gView(g), 1); $('#hold').style.display = 'flex'; setTimeout(function () { clr(TA); }, 800); }); }
 function pickDesolder(e) { var g = cur, best = null, bd = 60; g.pads.forEach(function (p) { if (!p.wire) return; var d = dist(scr(W(p.p)), e.clientX, e.clientY); if (d < bd) { bd = d; best = p; } });
   if (!best) { say('Нажми прямо на <b>пайку</b> одного из проводов.'); return; } g.act = best; g.st = 'melt'; $('#hr').style.display = 'block'; heatDown(); }
@@ -575,7 +576,7 @@ function solderDone() { cur = null; if (ticks.indexOf(solderTick) >= 0) ticks.sp
   /* конденсатор берём со стола и ставим ножками на провода питания */
   var cp = P.batt.userData.cap, home = cp.position.clone(), r0 = cp.rotation.clone(); D.updateMatrixWorld(true); var from = P.batt.worldToLocal(V(-7, .5, 9));
   cp.position.copy(from); cp.rotation.set(0, 1.2, 0); head('КРУПНО · ПИТАНИЕ', 'Конденсатор', ''); go(function () { return fit(W(V(0, 1.0, 3.3)), V(.35, 1, 1.1), 2.4, 2.2, 40, 1); }, 1);
-  say('Последний штрих питания: <b>конденсатор</b>. Его ножки припаивают к плюсу и минусу у разъёма: он гасит скачки напряжения, без него в видео будут помехи.');
+  say(K('И последнее - <b>конденсатор</b>. Он защищает дрон от скачков тока, и картинка в очках будет чистой.', 'Последний штрих питания: <b>конденсатор</b>. Его ножки припаивают к плюсу и минусу у разъёма: он гасит скачки напряжения, без него в видео будут помехи.'));
   wait(1.1, function () { tween(.9, function (e) { cp.position.lerpVectors(from, home, e); cp.position.y += Math.sin(e * Math.PI) * 2.5; cp.rotation.set(r0.x, 1.2 * (1 - e), r0.z); }, function () { sparkle(W(V(0, .9, 2.7)), 10); SFX.click(); toast('✓ Конденсатор на месте'); setTimeout(stackStage, 2400); }); }); }
 
 /* ---------- этапы ---------- */
@@ -594,7 +595,7 @@ var LESSON = [
   [['rx'], K('<b>Приёмник</b> ловит команды с пульта.', '<b>Приёмник (RX)</b> ловит команды пульта и по проводам TX/RX передаёт их полётнику. Ставится сверху, на верхнюю пластину.')],
   [['p0', 'p1', 'p2', 'p3'], K('<b>Пропеллеры</b> ставят в самом конце. Пропеллер ставят на мотор со стрелкой <b>того же цвета</b>.', '<b>Пропеллеры 3 дюйма</b> - последний шаг, только без аккумулятора. Лопасти изогнуты в разные стороны: пропеллер ставят на мотор с тем же направлением вращения и затягивают гайкой.')],
   [['lipo'], K('<b>Аккумулятор</b> - батарейка дрона. Его ставят в самом конце, перед полётом, и держат ремешком.', '<b>Аккумулятор LiPo 4S</b>: 4 банки, 14,8 вольта, 650 миллиампер-часов. Ставится на верхнюю пластину под ремешок, подключается разъёмом <b>XT30</b> - только перед полётом.')],
-  [['frame'], K('Порядок такой: моторы и винты, регулятор, электроника с разъёмами, проверка, пропеллеры и аккумулятор.', 'Порядок сборки: моторы и винты, регулятор, <b>пайка</b> моторов и питания с проверкой вращения, стек и <b>разъёмы</b>, проверка через смоук-стоппер, пропеллеры и в самом конце <b>аккумулятор</b>. Сначала проверим, что ты запомнил.')] ];
+  [['frame'], K('Порядок такой: моторы и винты, регулятор, <b>пайка</b> проводов, электроника с разъёмами, проверка, пропеллеры и аккумулятор.', 'Порядок сборки: моторы и винты, регулятор, <b>пайка</b> моторов и питания с проверкой вращения, стек и <b>разъёмы</b>, проверка через смоук-стоппер, пропеллеры и в самом конце <b>аккумулятор</b>. Сначала проверим, что ты запомнил.')] ];
 var QUIZ = LV > 1 ? [
   ['Сколько проводов у мотора и где у него плюс?', [['3 провода, плюса и минуса нет'], ['2 провода: плюс и минус', 'У бесколлекторного мотора <b>три</b> провода - три обмотки. Плюса и минуса у него нет.'], ['4 провода, плюс красный', 'У мотора <b>три</b> провода, и полярности у них нет: регулятор сам по очереди подаёт ток на обмотки.']]],
   ['Мотор крутится не в ту сторону. Что делаем?', [['Меняем местами два провода'], ['Меняем мотор', 'Мотор исправен! Достаточно <b>поменять местами любые два провода</b> - он закрутится наоборот.'], ['Ставим пропеллер наоборот', 'Пропеллер вверх ногами будет толкать дрон вниз. Направление меняют проводами: <b>любые два местами</b>.']]],
@@ -618,7 +619,7 @@ function quiz() { stage = 'quiz'; var i = 0; lessonGlow(['frame']); head('ТЕС
 /* показ: копии деталей сами встают на места, потом исчезают - собирать будешь сам */
 function demo() { stage = 'demo'; P.camMount.visible = true; H = {}; lessonGlow([]); go(VIEW.pileB, 1.2); head('ПОКАЗ СБОРКИ', 'Смотри, как собирают', '<div class="tools"><button class="tb" id="skip">Пропустить показ</button></div>');
   var seq = [['m0', 'm1', 'm2', 'm3'], ['esc'], ['fc'], ['vtx'], ['cam'], ['top'], ['rx', 'ant'], ['p0', 'p1', 'p2', 'p3'], ['lipo']];
-  var cap = [K('Сначала моторы - на концы лучей, и прикручиваем винтами.', 'Моторы на лучи, 16 винтов M2 снизу.'), K('Регулятор - на стойки, в самый низ.', 'Регулятор на стойки, паяем моторы и питание.'), K('Полётный контроллер - над регулятором.', 'Полётник над регулятором, стрелкой вперёд, кабель к регулятору.'),
+  var cap = [K('Сначала моторы - на концы лучей, и прикручиваем винтами.', 'Моторы на лучи, 16 винтов M2 снизу.'), K('Регулятор - на стойки, в самый низ, и паяем к нему провода.', 'Регулятор на стойки, паяем моторы и питание.'), K('Полётный контроллер - над регулятором.', 'Полётник над регулятором, стрелкой вперёд, кабель к регулятору.'),
     K('Видеопередатчик.', 'Видеопередатчик на стек, разъём к полётнику.'), K('Камера спереди.', 'Камера на два винта, разъём к полётнику.'), K('Верхняя пластина закрывает стек.', 'Верхняя пластина на 4 винта.'), K('Приёмник и антенна сверху.', 'Приёмник и антенна, разъёмы.'), K('Пропеллеры.', 'Проверка, потом пропеллеры.'), K('И аккумулятор. Готово!', 'Аккумулятор на пластину, разъём XT30. Готово!')];
   var clones = [], k = 0, stop = false;
   function home(id) { return id[0] === 'm' && id.length === 2 ? X.home[id] : id[0] === 'p' && id.length === 2 ? X.home[id] : X.home[id]; }
@@ -632,8 +633,6 @@ function assembleA() { stage = 'A'; phase = 'A'; A.G.visible = false; view0 = VI
   head('СБОРКА · ВИД СВЕРХУ', 'Рама и моторы', '<div class="hint" id="hint">Тяни деталь со стола на раму</div>'); setStep(ST.mot);
   say('На раме уже стоят стойки. <b>Найди моторы</b> и поставь их на концы лучей - на светящиеся круги.'); marks(); pileMode();
   onAllIn = function () { return nMot() === 4; }; next = function () { onAllIn = null; screwStage(); }; }
-function autoWires() { P.wires.forEach(function (w) { w.visible = true; }); P.batt.visible = true; sparkle(W(V(0, 1.3, 0)), 24);
-  say('Провода моторов и питания паяет мастер: у старших это отдельный этап с паяльником. У мотора <b>три провода</b>: от того, как их припаять, зависит, в какую сторону он крутится.'); setTimeout(stackStage, 3600); }
 function stackStage() { stage = 'B'; phase = 'B'; P.camMount.visible = true; view0 = VIEW.pileB; go(VIEW.pileB, 1.4);
   head('СБОРКА · СТЕК И РАЗЪЁМЫ', 'Электроника и камера', '<div class="hint" id="hint">Тяни деталь со стола на дрон</div>'); setStep(ST.stack);
   say(K('Моторы подключены. <b>Что ставим на стойки над регулятором?</b>', 'Регулятор подключён. Дальше электроника: каждую деталь ставим и <b>подключаем разъёмом</b>. <b>Что идёт на стойки над регулятором?</b>')); marks(); pileMode();
