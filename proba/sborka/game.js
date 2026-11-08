@@ -67,9 +67,28 @@ var SPK = [
   [/330-350°/g, 'от трёхсот тридцати до трёхсот пятидесяти градусов'], [/20-30°/g, 'двадцать - тридцать градусов'], [/(\d+)°/g, '$1 градусов'],
   [/\(ESC\)|\(VTX\)|\(RX\)/g, ''], [/TX\/RX/g, 'Ти-Икс и Эр-Икс'], [/\bTX\b/g, 'Ти-Икс'], [/\bRX\b/g, 'Эр-Икс'], [/\bVTX\b/g, 'Ви-Ти-Икс'], [/\bESC\b/g, 'И-Эс-Си'], [/\bCAM\b/g, 'кам'],
   [/u\.FL/g, 'ю-эф-эл'], [/\bXT30\b/g, 'икс-тэ тридцать'], [/LiPo 4S/g, 'липо четыре эс'], [/\b4S\b/g, 'четыре эс'], [/\bAIO\b/g, 'эй-ай-оу'], [/Tinywhoop/g, 'тайни-вупа'], [/из TPU/g, 'из мягкого пластика'],
-  [/\b5 В(?![а-яё])/g, 'пять вольт'], [/знаком \+/g, 'знаком плюс'], [/знаком −/g, 'знаком минус'], [/Вопрос (\d) из (\d)/g, function (m, a, b) { return 'Вопрос ' + ['', 'один', 'два', 'три', 'четыре', 'пять'][a] + ' из ' + ['', '', 'двух', 'трёх', 'четырёх', 'пяти'][b]; }], [/на носу/g, 'спереди'], [/\s+-\s+/g, ' - '], [/\s{2,}/g, ' ']];
+  [/\b5 В(?![а-яё])/g, 'пять вольт'], [/знаком \+/g, 'знаком плюс'], [/знаком −/g, 'знаком минус'], [/Вопрос (\d) из (\d)/g, function (m, a, b) { return 'Вопрос ' + ['', 'один', 'два', 'три', 'четыре', 'пять'][a] + ' из ' + ['', '', 'двух', 'трёх', 'четырёх', 'пяти'][b]; }], [/на носу/g, 'спереди'], [/(^|[^а-яё])([Вв])инты(?![а-яё])/g, '$1$2инты́'], [/\s+-\s+/g, ' - '], [/\s{2,}/g, ' ']];
 function spoken(t) { SPK.forEach(function (r) { t = t.replace(r[0], r[1]); }); return t.trim(); }
 function sayNow(t) { spk.on = true; spk.t = Date.now(); spk.next = null; var ok = GOLOS.say(t, { onend: function () { spk.on = false; if (spk.next) { var n = spk.next; spk.next = null; sayNow(n); } } }); if (!ok) spk.on = false; }
+/* звуки мастерской: тихие, синтез WebAudio (без файлов); выключаются той же кнопкой 🔊 */
+var AC = null;
+function ac() { if (!sndOn()) return null; try { if (!AC) AC = new (window.AudioContext || window.webkitAudioContext)(); if (AC.state === 'suspended') AC.resume(); } catch (e) { AC = null; } return AC; }
+function noiseBuf(c) { if (c._nb) return c._nb; var b = c.createBuffer(1, c.sampleRate, c.sampleRate), d = b.getChannelData(0); for (var i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1; return (c._nb = b); }
+function burst(c, t, dur, f, q, vol) { var s = c.createBufferSource(), bp = c.createBiquadFilter(), g = c.createGain(); s.buffer = noiseBuf(c); bp.type = 'bandpass'; bp.frequency.value = f; bp.Q.value = q;
+  g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(.0001, t + dur); s.connect(bp); bp.connect(g); g.connect(c.destination); s.start(t, Math.random() * .5); s.stop(t + dur + .02); }
+function tone(c, t, dur, f1, f2, vol, type) { var o = c.createOscillator(), g = c.createGain(), lp = c.createBiquadFilter(); o.type = type || 'sine'; o.frequency.setValueAtTime(f1, t); o.frequency.exponentialRampToValueAtTime(f2, t + dur);
+  lp.type = 'lowpass'; lp.frequency.value = 1800; g.gain.setValueAtTime(.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + .03); g.gain.setValueAtTime(vol, t + dur - .08); g.gain.exponentialRampToValueAtTime(.0001, t + dur);
+  o.connect(lp); lp.connect(g); g.connect(c.destination); o.start(t); o.stop(t + dur + .02); }
+var SFX = {
+  screw: function (d) { var c = ac(); if (!c) return; var t = c.currentTime, n = Math.round((d || .6) / .07); for (var i = 0; i < n; i++) burst(c, t + i * .07, .03, 3200 + Math.random() * 600, 6, .05); }, /* трещотка отвёртки */
+  click: function () { var c = ac(); if (!c) return; var t = c.currentTime; burst(c, t, .04, 2500, 3, .12); burst(c, t + .05, .03, 4200, 4, .08); }, /* щёлк разъёма */
+  drop: function () { var c = ac(); if (!c) return; burst(c, c.currentTime, .05, 1800, 2, .05); },
+  motor: function (d) { var c = ac(); if (!c) return; var t = c.currentTime; d = d || 2.4; tone(c, t, d, 180, 620, .035, 'sawtooth'); tone(c, t, d, 360, 1240, .012, 'square'); },
+  beeps: function () { var c = ac(); if (!c) return; var t = c.currentTime; [[523, 0], [659, .16], [784, .32], [1047, .7], [1047, 1.0]].forEach(function (q) { tone(c, t + q[1], .13, q[0], q[0], .05, 'square'); }); }, /* мелодия регуляторов */
+  hiss: null,
+  sizzle: function (on) { var c = ac(); if (!on) { if (SFX.hiss) { try { SFX.hiss.g.gain.setTargetAtTime(.0001, c ? c.currentTime : 0, .08); SFX.hiss.s.stop((c ? c.currentTime : 0) + .4); } catch (e) {} SFX.hiss = null; } return; }
+    if (!c || SFX.hiss) return; var s = c.createBufferSource(), hp = c.createBiquadFilter(), g = c.createGain(); s.buffer = noiseBuf(c); s.loop = true; hp.type = 'highpass'; hp.frequency.value = 2600;
+    g.gain.setValueAtTime(.0001, c.currentTime); g.gain.exponentialRampToValueAtTime(.025, c.currentTime + .3); s.connect(hp); hp.connect(g); g.connect(c.destination); s.start(); SFX.hiss = { s: s, g: g }; } }; /* шипение флюса */
 document.addEventListener('click', function (e) { var b = e.target.closest && e.target.closest('#snd'); if (!b || !window.GOLOS) return; GOLOS.setOn(!GOLOS.on); b.textContent = GOLOS.on ? '🔊' : '🔇'; if (GOLOS.on) { var t = $('#sayT'); speak(t ? t.innerHTML : 'Голос включён', true); } });
 function bars() { var o = '<div class="bars">'; for (var i = 0; i < TOTAL; i++) o += '<i class="' + (i < step ? 'd' : i === step ? 'h' : '') + '"></i>'; return o + '</div>'; }
 function head(s, t, extra) { ui.innerHTML = top(s, t) + bars() + '<div class="bub glass" id="say"><div id="sayT"></div><div class="qs" id="qs"></div></div><div class="tag" id="tag"></div>' + (extra || ''); }
@@ -182,10 +201,12 @@ function pick(e) { setRay(e); var roots = PK.filter(function (p) { return p.stat
   var best = null, bd = 40; roots.forEach(function (o) { var d = dist(scr(o.getWorldPosition(V(0, 0, 0))), e.clientX, e.clientY); if (d < bd) { bd = d; best = o.userData.pk; } }); return best; }
 function droneHit(x, y) { var c = scr(W(V(0, 1, 0))), r = Math.max(80, dist(scr(W(V(8.5, 1, 0))), c.x, c.y)); if (dist(c, x, y) < r) return true;
   return openSlots().some(function (s) { return dist(scr(W(s.c)), x, y) < 70; }); }
+/* деталь несём выше места установки: аккумулятор, приёмник и антенна не проваливаются под верхнюю пластину */
+function dragY(pk) { var s = openSlots().filter(function (q) { return q.k === pk.kind; })[0]; return Math.max(2.6, s ? s.c.y + .9 : 2.6); }
 function pileMode() {
   H.down = function (e) { var pk = pick(e); if (!pk) return; hintOff(); drag = { pk: pk }; pk.state = 'drag'; H.move(e); };
   H.move = function (e) { if (!drag) { if (e.pointerType === 'mouse') { var pk = pick(e); cv.style.cursor = pk ? 'grab' : 'default'; tag(pk ? pk.name : null, e); } return; }
-    cv.style.cursor = 'grabbing'; var h = planeHit(e, 3.2); if (h) drag.pk.o.position.set(h.x, 2.6, h.z - 2); drag.pk.o.rotation.x = 0; tag(drag.pk.name, e); };
+    cv.style.cursor = 'grabbing'; var dy = dragY(drag.pk), h = planeHit(e, dy + .6); if (h) drag.pk.o.position.set(h.x, dy, h.z - 2); drag.pk.o.rotation.x = 0; tag(drag.pk.name, e); };
   H.up = function (e) { if (!drag) return; var pk = drag.pk; drag = null; tag(null); cv.style.cursor = 'default'; drop(pk, e); }; }
 function drop(pk, e) {
   if (!droneHit(e.clientX, e.clientY)) { /* положили обратно на стол */ var s = pk.pile, h = planeHit(e, .1); pk.state = 'pile';
@@ -242,9 +263,19 @@ function screwMesh(nut) { var g = new T.Group();
   return g; }
 /* o: holes - точки в координатах дрона, out - куда смотрит головка, group - винтов в одной детали (после первой детали - одним нажатием) */
 var SCRL = null, SCRN = 0, CONN = null; /* для проверки */
-function screwStep(o, done) { H = {}; SCRN++; var list = SCRL = o.holes.map(function (h, i) { var out = o.outs ? o.outs[i] : o.out, m = screwMesh(o.nut);
-    m.quaternion.setFromUnitVectors(V(0, 1, 0), out); m.position.copy(h).add(out.clone().multiplyScalar(.75)); m.scale.setScalar(.01); SCR.add(m); var gl = A.glow('#ffd166', o.nut ? 2 : 1.4, .9); gl.position.y = .15; m.add(gl); m.userData.gl = gl;
-    tween(.3, function (e) { m.scale.setScalar(Math.max(.01, e)); }); return { h: h, out: out, m: m, done: 0, g: Math.floor(i / (o.group || 1)) }; });
+/* коробочка с винтами на столе: винты вылетают из неё все разом и встают над своими отверстиями */
+var BOX = null;
+function screwBox() { if (BOX) return BOX; var g = new T.Group(), cm = new T.MeshStandardMaterial({ color: lin(0xd9c49a), roughness: .8 }), rm = new T.MeshStandardMaterial({ color: lin(0xc0392b), roughness: .7 }); cm.envMapIntensity = rm.envMapIntensity = .18;
+  A.mesh(new T.BoxGeometry(3.2, .12, 2.1), cm, 0, .06, 0, g); [[0, .4, 1.0, 3.2, .7, .1], [0, .4, -1.0, 3.2, .7, .1], [1.55, .4, 0, .1, .7, 2.1], [-1.55, .4, 0, .1, .7, 2.1]].forEach(function (b) { A.mesh(new T.BoxGeometry(b[3], b[4], b[5]), cm, b[0], b[1], b[2], g); });
+  var sl = A.mesh(new T.BoxGeometry(3.3, .8, 2.2), rm, 3.0, .4, 0, g); /* выдвинутый коробок */
+  for (var i = 0; i < 14; i++) { var sm = screwMesh(false); sm.position.set(-1.2 + Math.random() * 2.4, .2, -.7 + Math.random() * 1.4); sm.rotation.set(Math.PI / 2, Math.random() * 6, 0); g.add(sm); }
+  g.position.set(6.2, .05, 5.2); g.rotation.y = -.3; S.add(g); return (BOX = g); }
+function screwStep(o, done) { H = {}; SCRN++; var bw = screwBox().localToWorld(V(0, .6, 0)); D.updateMatrixWorld(true); var bl = D.worldToLocal(bw.clone()), fly = 0;
+  var list = SCRL = o.holes.map(function (h, i) { var out = o.outs ? o.outs[i] : o.out, m = screwMesh(o.nut);
+    m.quaternion.setFromUnitVectors(V(0, 1, 0), out); var tgt = h.clone().add(out.clone().multiplyScalar(.75)); m.position.copy(bl); SCR.add(m); var gl = A.glow('#ffd166', o.nut ? 2 : 1.4, .9); gl.position.y = .15; m.add(gl); m.userData.gl = gl;
+    var st = { h: h, out: out, m: m, done: 0, g: Math.floor(i / (o.group || 1)), q: 1 }, dl = i * .04; fly = Math.max(fly, dl + .7);
+    wait(dl, function () { var p0 = m.position.clone(), up = V(0, 0, 0).subVectors(tgt, p0).length() * .25 + 1; tween(.7, function (e) { m.position.lerpVectors(p0, tgt, e); m.position.y += Math.sin(e * Math.PI) * up * (D.rotation.z > 1 ? -1 : 1); }, function () { st.q = 0; SFX.drop(); }); });
+    return st; });
   if (o.view) go(o.view, 1.1); if (o.say) say(o.say); hint(o.hint || K('Нажми на винт - отвёртка закрутит его', 'Нажимай на винты: отвёртка закручивает'));
   var drv = getDriver(o.nut); var busy = false, first = !(o.group > 1) || !o.firstManual, nDone = 0;
   if (o.cross) { var gt = function () { if (SCRL !== list) { ticks.splice(ticks.indexOf(gt), 1); return; } var nx = first ? null : list.filter(function (s) { return s.g === 0 && !s.done && !s.q; })[0];
@@ -257,7 +288,7 @@ function screwStep(o, done) { H = {}; SCRN++; var list = SCRL = o.holes.map(func
   function run() { var s = queue.shift(); if (!s) { busy = false; check(); return; } turn(s, run); } /* нажатия во время работы отвёртки ставятся в очередь */
   function turn(s, cb) { var wout = DWdir(s.h, s.out), head = DW(s.m.position), from = drv.position.clone(), qf = drv.quaternion.clone(), q0 = new T.Quaternion().setFromUnitVectors(V(0, 1, 0), wout), qs = s.m.quaternion.clone(), qr = new T.Quaternion(), far = from.distanceTo(head) > 4;
     tween(far ? .5 : .28, function (e) { drv.position.lerpVectors(from, head, e); if (far) drv.position.y += Math.sin(e * Math.PI) * 1.5; drv.quaternion.copy(qf).slerp(q0, Math.min(1, e * 1.6)); }, function () { var p0 = s.m.position.clone(), p1 = s.h.clone().add(s.out.clone().multiplyScalar(o.nut ? 0 : .01));
-      tween(o.fast ? .45 : .75, function (e, l) { s.m.position.lerpVectors(p0, p1, l); qr.setFromAxisAngle(V(0, 1, 0), -l * 14); s.m.quaternion.copy(qs).multiply(qr); drv.position.copy(DW(s.m.position)); drv.quaternion.copy(q0).multiply(qr); },
+      SFX.screw(o.fast ? .45 : .75); tween(o.fast ? .45 : .75, function (e, l) { s.m.position.lerpVectors(p0, p1, l); qr.setFromAxisAngle(V(0, 1, 0), -l * 14); s.m.quaternion.copy(qs).multiply(qr); drv.position.copy(DW(s.m.position)); drv.quaternion.copy(q0).multiply(qr); },
         function () { s.done = 1; nDone++; if (s.m.userData.gl) { s.m.remove(s.m.userData.gl); s.m.userData.gl = null; } sparkle(DW(s.h), 4); var back = drv.position.clone(), away = back.clone().add(wout.clone().multiplyScalar(2.5));
           if (o.group > 1 && list.filter(function (q) { return q.g === s.g && !q.done; }).length === 0) { if (!first && o.afterFirst) say(o.afterFirst); first = true; }
           tween(.22, function (e) { drv.position.lerpVectors(back, away, e); }, cb); }); }); }
@@ -317,7 +348,9 @@ function xr(o, m) { o.material = m || xrM; o.renderOrder = 4; o.castShadow = fal
 /* крышка (верхняя пластина) на время подключения становится прозрачной */
 var GHM = {};
 function ghost(o, on) { o.traverse(function (n) { if (!n.isMesh) return;
-  if (on) { if (n.userData.m0) return; var m = n.material, k = m.uuid; n.userData.m0 = m; if (!GHM[k]) { GHM[k] = m.clone(); GHM[k].transparent = true; GHM[k].opacity = .2; GHM[k].depthWrite = false; } n.material = GHM[k]; }
+  if (on) { if (n.userData.m0) return; var m = n.material; n.userData.m0 = m;
+    var gm = function (q) { var k = q.uuid; if (!GHM[k]) { GHM[k] = q.clone(); GHM[k].transparent = true; GHM[k].opacity = .2; GHM[k].depthWrite = false; } return GHM[k]; };
+    n.material = Array.isArray(m) ? m.map(gm) : gm(m); }
   else if (n.userData.m0) { n.material = n.userData.m0; delete n.userData.m0; } }); }
 function lid(on) { if (!inst.top) return; ghost(P.top, on); if (inst.rx) ghost(P.rx, on); if (inst.ant) ghost(P.ant, on); }
 function connectStep(kind, done) { var c = CAB[kind], tip = c.rest.clone(), cab = null, cabX = null, plug = new T.Group(), dr = false, sk = SOCK[c.s]; CONN = { tip: tip, s: c.s };
@@ -340,7 +373,7 @@ function connectStep(kind, done) { var c = CAB[kind], tip = c.rest.clone(), cab 
     if (best !== c.s) { back(); oops('Это разъём <b>' + best + '</b> - для ' + SOCK[best].f + '. ' + K('Ищи надпись <b>' + c.s + '</b>.', 'Этому кабелю нужен разъём <b>' + c.s + '</b>: перепутаешь - устройство не заработает, а по питанию можно и сжечь.')); return; }
     H = {}; var t0 = tip.clone(), t1 = sk.p.clone().add(V(0, sk.small ? .05 : .1, 0)); tween(.35, function (e2) { tip.lerpVectors(t0, t1, e2); draw(); }, function () {
       ticks.splice(ticks.indexOf(pulse), 1); plug.remove(pgl); SOCKG.remove(hole);
-      sparkle(W(sk.p), 8); toast('✓ Щёлк! ' + c.s); say(c.ok); setTimeout(function () { SOCKG.visible = false; SF.remove(cabX); plug.children.slice(1).forEach(function (o) { plug.remove(o); }); lid(false); done(); }, 1500); }); };
+      sparkle(W(sk.p), 8); SFX.click(); toast('✓ Щёлк! ' + c.s); say(c.ok); setTimeout(function () { SOCKG.visible = false; SF.remove(cabX); plug.children.slice(1).forEach(function (o) { plug.remove(o); }); lid(false); done(); }, 1500); }); };
   function back() { var t0 = tip.clone(); tween(.35, function (e) { tip.lerpVectors(t0, c.rest, e); draw(); }); } }
 
 /* что делаем после установки детали */
@@ -410,7 +443,7 @@ function nextGroup() { gi++; if (gi >= GR.length) return solderDone(); cur = GR[
   if (power) say('Теперь питание. Толстые провода от аккумулятора: <b>красный - плюс</b>, чёрный - минус. Здесь полярность важна. Сначала <b>флюс</b> на площадки.');
   else if (g.j === 0) say('У мотора <b>три провода - три обмотки</b>. Плюса и минуса тут нет: регулятор по очереди подаёт ток на обмотки, и магниты колокола бегут за ним по кругу. <b>От порядка проводов зависит, куда крутится мотор.</b> Начнём с <b>флюса</b>.');
   else if (g.manual) say('Мотор 2. Повтори сам: <b>флюс</b>, провода на площадки, пайка каждого контакта, проверка вращения.');
-  else say('Мотор ' + (g.j + 1) + '. Провода положу я, а ты <b>пропаяй каждый контакт</b>. Начни с флюса.');
+  else say('Мотор ' + (g.j + 1) + '. Провода положу я, а ты <b>припаяй каждый контакт</b>. Начни с флюса.');
   hint(power ? 'Флюс, потом провода и пайка' : 'Флюс → провода → пайка → проверка');
   $('#flux').onclick = fluxTap; var hb = $('#hold'); hb.addEventListener('pointerdown', function (e) { e.preventDefault(); heatDown(); }); hb.addEventListener('pointerup', heatUp); hb.addEventListener('pointerleave', heatUp);
   $('#test').onclick = function () { testMotor(cur); };
@@ -457,17 +490,17 @@ function wireUp(e) { var g = cur, w = g.dragW; g.dragW = null; var best = null, 
 function makeSolderWire(g) { if (SOLD) IF.remove(SOLD); var ax = g.left.clone().multiplyScalar(.8).add(V(0, .75, 0)).add(camDir().f.multiplyScalar(-.3)).normalize(); g.ax = ax;
   SOLD = A.tube([ax.clone().multiplyScalar(7).add(V(0, .8, 0)), ax.clone().multiplyScalar(3.5).add(V(0, .2, 0)), V(0, 0, 0)], .05, A.M.steel, IF); SOLD.visible = false; }
 function solderTip(p, f) { return W(p.p).add(cur.left.clone().multiplyScalar(.16)).add(V(0, .12, 0)).add(cur.ax.clone().multiplyScalar((1 - f) * 1.8)); }
-function placeSolder(p, f) { feed = f; SOLD.visible = f > .02; SOLD.position.copy(solderTip(p, f)); }
+function placeSolder(p, f) { feed = f; SOLD.visible = SOLD.visible || f > .02; /* показали - больше не прячем: пруток просто отводится */ SOLD.position.copy(solderTip(p, f)); }
 function retract(p, dur) { var f0 = feed; tween(dur || .6, function (e) { placeSolder(p, f0 * (1 - e)); }); }
 function heatDown() { var g = cur; if (!g || heat.on) return;
   if (g.st === 'flux') { oops('Сначала <b>флюс</b>: без него припой скатывается шариком и не держится на площадке.'); return; }
   if (g.st === 'wire') { say('Сначала положи <b>провод</b> на площадку: тяни его серебристый кончик.'); return; }
   if (g.st === 'desolder') { say('Сначала нажми на <b>пайку</b>, которую хочешь расплавить.'); return; }
-  if (g.st !== 'heat' && g.st !== 'melt') return; var p = g.act; heat.on = true; heat.h = 0; var sb = $('#say'); if (sb && sb.classList.contains('bad')) say(g.st === 'melt' ? 'Плавим пайку... держи жало.' : 'Ещё раз: греем и отпускаем в <b>зелёной зоне</b>.'); var t0 = IRON.position.clone();
+  if (g.st !== 'heat' && g.st !== 'melt') return; var p = g.act; heat.on = true; SFX.sizzle(true); heat.h = 0; var sb = $('#say'); if (sb && sb.classList.contains('bad')) say(g.st === 'melt' ? 'Плавим пайку... держи жало.' : 'Ещё раз: греем и отпускаем в <b>зелёной зоне</b>.'); var t0 = IRON.position.clone();
   var to = W(p.p).add(V(0, .04, 0)); tween(.3, function (e) { if (heat.on) IRON.position.lerpVectors(t0, to, e); });
   if (!p.blob) { var bm = new T.MeshStandardMaterial({ color: lin(0xd8dde6), metalness: 1, roughness: .16, emissive: new T.Color(0xff5a00), emissiveIntensity: 0 }); bm.envMapIntensity = .55;
     p.blob = new T.Mesh(new T.SphereGeometry(p.r, 20, 12), bm); p.blob.position.copy(p.p).add(V(0, .02, 0)); p.blob.scale.set(.01, .01, .01); SF.add(p.blob); p.base = 0; } }
-function heatUp() { if (!heat.on) return; heat.on = false; var g = cur, p = g.act, h = heat.h;
+function heatUp() { if (!heat.on) return; heat.on = false; SFX.sizzle(false); var g = cur, p = g.act, h = heat.h;
   if (g.st === 'melt') return meltDone(p, h); g.st = 'busy';
   if (h < G1) return cold(p); if (h > G2) return bridge(p); good(p); }
 function ironLift(p, dur, delay, done) { wait(delay || 0, function () { var from = IRON.position.clone(), park = W(p.p).add(cur.dir.clone().multiplyScalar(1.5)).add(V(0, .5, 0));
@@ -503,13 +536,13 @@ function actualDir(g) { return needDir(g.j) * (g.j === 0 ? -1 : 1) * (parity(g) 
 function testReady(g) { g.st = 'test'; $('#flux').style.display = $('#hold').style.display = 'none'; $('#test').style.display = 'flex';
   hint('Нажми "Проверить мотор"');
   say(g.tested ? 'Провода перепаяны. <b>Проверим ещё раз.</b>' : 'Все три провода припаяны. <b>Проверим, куда крутится мотор</b>: подключаем аккумулятор через смоук-стоппер и коротко включаем мотор.'); }
-function testMotor(g) { if (g.st !== 'test') return; g.st = 'busy'; g.tested = 1; $('#test').style.display = 'none'; go(tView(g), 1);
+function testMotor(g) { if (g.st !== 'test') return; g.st = 'busy'; g.tested = 1; setTimeout(function () { SFX.motor(2.4); }, 1000); $('#test').style.display = 'none'; go(tView(g), 1);
   var nd = needDir(g.j), ad = actualDir(g), ar = arrowFor(g.j, g.j % 2 ? 0xff4fd8 : 0x3ee6ff); TA.add(ar);
   say('Стрелка показывает, куда <b>должен</b> крутиться этот мотор. Смотри на колокол...');
   var b = motorAt[g.j].userData.bell, sp = 0; var f = function (dt) { sp = Math.min(30, sp + dt * 40); b.rotation.y += dt * sp * ad; }; ticks.push(f);
   wait(2.6, function () { ticks.splice(ticks.indexOf(f), 1);
     if (ad === nd) { toast('✓ Крутится правильно'); say(g.j === 0 || g.fixed ? '<b>Теперь правильно!</b> Мотор крутится по стрелке.' : 'Мотор крутится <b>по стрелке</b> - правильно.'); setTimeout(function () { clr(TA); nextGroup(); }, 1500); return; }
-    say('<b>Мотор крутится против стрелки!</b> Так бывает часто. Исправляют просто: <b>меняют местами любые два провода</b> из трёх. Выпаяй два провода: нажми на пайку и держи жало, пока припой не расплавится.');
+    say('<b>Мотор крутится против стрелки!</b> Так бывает часто. Исправляют просто: <b>меняют местами любые два провода</b> из трёх. Сними два провода: нажми на пайку и держи жало, пока припой не расплавится.');
     hint('Нажми на пайку, которую расплавить'); g.fixed = 1; g.st = 'desolder'; g.freed = 0; go(gView(g), 1); $('#hold').style.display = 'flex'; setTimeout(function () { clr(TA); }, 800); }); }
 function pickDesolder(e) { var g = cur, best = null, bd = 60; g.pads.forEach(function (p) { if (!p.wire) return; var d = dist(scr(W(p.p)), e.clientX, e.clientY); if (d < bd) { bd = d; best = p; } });
   if (!best) { say('Нажми прямо на <b>пайку</b> одного из проводов.'); return; } g.act = best; g.st = 'melt'; $('#hr').style.display = 'block'; heatDown(); }
@@ -518,7 +551,7 @@ function meltDone(p, h) { var g = cur;
   var w = p.wire, t0 = w.tip.clone(); p.wire = null; w.pad = null; p.done = 0; p.base = .55; p.blob.scale.set(.55, .28, .55); retract(p, .3); ironLift(p, .8, .1);
   tween(.45, function (e) { w.tip.lerpVectors(t0, w.rest, e); drawWire(w); }); g.freed++; $('#hr').style.display = 'none';
   if (g.freed < 2) { g.st = 'desolder'; say('Провод снят! Теперь <b>второй провод</b>: расплавь его пайку.'); }
-  else { g.st = 'wire'; $('#hold').style.display = 'flex'; say('Оба провода сняты. Теперь <b>поменяй их местами</b>: положи каждый на площадку, где был другой, и пропаяй.'); hint('Положи провода наоборот и пропаяй'); } }
+  else { g.st = 'wire'; $('#hold').style.display = 'flex'; say('Оба провода сняты. Теперь <b>поменяй их местами</b>: положи каждый на площадку, где был другой, и припаяй.'); hint('Положи провода наоборот и припаяй'); } }
 function solderTick(dt, t) { var g = cur; if (!g || !IRON) return; var hot = IRON.userData.hot, hr = $('#hr');
   if (heat.on) { heat.h += dt / (g.st === 'melt' ? 1.6 : g.rate); var p = g.act, h = heat.h;
     if (g.st !== 'melt') { var f = clamp(h / .25, 0, 1), s = Math.max(p.base || 0, clamp((h - .22) / .36, 0, 1.25)); placeSolder(p, f);
@@ -531,9 +564,13 @@ function solderTick(dt, t) { var g = cur; if (!g || !IRON) return; var hot = IRO
   var on = heat.on ? 1 : (g.st === 'busy' ? .4 : 0); hot[0].material.opacity += (on * .95 - hot[0].material.opacity) * .2; hot[1].material.opacity = hot[0].material.opacity;
   SMOKE.forEach(function (sm) { var u = sm.userData; if (u.life <= 0) { sm.material.opacity = 0; return; } u.life -= dt * .7; sm.position.y += dt * 1.3; sm.position.x += Math.sin(t * 3 + sm.id) * dt * .3; sm.scale.setScalar(.3 + (1 - u.life) * 1.6); sm.material.opacity = .32 * u.life; });
   if (hr && g.act && hr.style.display === 'block') { var spp = scr(W(g.act.p)); hr.style.left = spp.x + 'px'; hr.style.top = spp.y + 'px'; hr.style.setProperty('--h', heat.on ? Math.min(1, heat.h) : 0); hr.classList.toggle('on', heat.on); hr.classList.toggle('melt', g.st === 'melt' || g.st === 'desolder'); } }
-function solderDone() { cur = null; ticks.splice(ticks.indexOf(solderTick), 1); H = {}; clr(IF); IRON = null;
+function solderDone() { cur = null; if (ticks.indexOf(solderTick) >= 0) ticks.splice(ticks.indexOf(solderTick), 1); H = {}; clr(IF); IRON = null;
   P.batt.visible = true; P.batt.children[0].visible = P.batt.children[1].visible = false;
-  say('Питание подключено. Чёрный бочонок у разъёма - <b>конденсатор</b>: он гасит скачки напряжения, без него в видео будут помехи.'); setTimeout(stackStage, 2600); }
+  /* конденсатор берём со стола и ставим ножками на провода питания */
+  var cp = P.batt.userData.cap, home = cp.position.clone(), r0 = cp.rotation.clone(); D.updateMatrixWorld(true); var from = P.batt.worldToLocal(V(-7, .5, 9));
+  cp.position.copy(from); cp.rotation.set(0, 1.2, 0); head('КРУПНО · ПИТАНИЕ', 'Конденсатор', ''); go(function () { return fit(W(V(0, 1.0, 3.3)), V(.35, 1, 1.1), 2.4, 2.2, 40, 1); }, 1);
+  say('Последний штрих питания: <b>конденсатор</b>. Его ножки припаивают к плюсу и минусу у разъёма: он гасит скачки напряжения, без него в видео будут помехи.');
+  wait(1.1, function () { tween(.9, function (e) { cp.position.lerpVectors(from, home, e); cp.position.y += Math.sin(e * Math.PI) * 2.5; cp.rotation.set(r0.x, 1.2 * (1 - e), r0.z); }, function () { sparkle(W(V(0, .9, 2.7)), 10); SFX.click(); toast('✓ Конденсатор на месте'); setTimeout(stackStage, 2400); }); }); }
 
 /* ---------- этапы ---------- */
 function intro() { stage = 'intro'; getDriver(false); getDriver(true); A.G.position.set(9, 13, -2); go(VIEW.wide, 0);
@@ -610,7 +647,7 @@ function checkStage() { stage = 'check'; H = {}; go(VIEW.check, 1.2);
   box.querySelectorAll('button').forEach(function (b) { b.onclick = function () { var i = +b.dataset.i; if (b.disabled) return;
     if (i !== k) { oops(WHY[k]); return; } b.disabled = true; b.classList.add('ok'); b.querySelector('.num').textContent = k + 1; k++;
     if (i === 0) say('Пропеллеров нет - можно включать. Дальше?');
-    if (i === 1) { spinOn = true; say('Смоук-стоппер не загорелся - замыкания нет. Моторы пищат и готовы. Дальше?'); }
+    if (i === 1) { spinOn = true; SFX.beeps(); setTimeout(function () { SFX.motor(2.2); }, 1300); say('Смоук-стоппер не загорелся - замыкания нет. Моторы пищат и готовы. Дальше?'); }
     if (i === 2) { arrows(); say('Все моторы крутятся по стрелкам: <b>голубые и розовые</b> - в разные стороны. Так дрон не закручивается вокруг себя.'); setTimeout(propsStage, 2600); } }; }); }
 function propsStage() { stage = 'P'; phase = 'P'; spinOn = false; view0 = VIEW.props; go(VIEW.props, 1.3);
   head('СБОРКА · ПРОПЕЛЛЕРЫ', 'Пропеллеры', '<div class="hint" id="hint">Тяни пропеллер на мотор со стрелкой того же цвета</div>'); setStep(ST.props);
@@ -651,7 +688,7 @@ function lipoStep(cb) { var st = LIPO.userData.strap; go(function () { return fi
       if (dist(scr(W(XT.male)), e.clientX, e.clientY) > 80) { var t0 = tip.clone(); tween(.35, function (e2) { tip.lerpVectors(t0, XT.rest, e2); draw(); }); say(K('Отпусти разъём прямо у <b>зелёного кружка</b>.', 'Отпусти разъём прямо у разъёма <b>XT30</b> сзади дрона.')); return; }
       H = {}; var t0 = tip.clone(); tween(.45, function (e2) { tip.lerpVectors(t0, XT.to, e2); draw(); }, function () {
         ticks.splice(ticks.indexOf(pulse), 1); plug.remove(pgl); SF.remove(hole); SF.remove(lb); cabX.forEach(function (m) { SF.remove(m); }); plug.remove(plug.children[1]);
-        sparkle(W(XT.male), 14); toast('♪ Пик-пик-пик! Аккумулятор подключён');
+        sparkle(W(XT.male), 14); SFX.click(); setTimeout(SFX.beeps, 300); toast('♪ Пик-пик-пик! Аккумулятор подключён');
         var led = A.glow('#5effc4', 1.2, .95); led.position.copy(W(V(.9, 2.15, -1.2))); FX.add(led);
         say(K('Дрон пискнул - он <b>проснулся</b> и готов к полёту! Отходим подальше от пропеллеров.', 'Регуляторы пропищали мелодию, на полётнике загорелся огонёк - <b>всё работает</b>. Дрон на землю, сами отходим подальше от пропеллеров.'));
         setTimeout(function () { FX.remove(led); cb(); }, 2800); }); }; } }
@@ -678,6 +715,7 @@ window.SBG = { iron: function () { return IRON; }, A: A, PK: PK, byId: byId, scr
     clr(MK); if (n === 'screw') { screwStage(); return; }
     inst.esc = true; var e = byId('esc'); e.state = 'inst'; e.o.position.copy(X.home.esc.p); e.o.rotation.copy(X.home.esc.r);
     if (n === 'solder') { phase = ''; solderStage(); return; }
+    if (n === 'cap') { phase = ''; solderDone(); return; }
     P.wires.forEach(function (w) { w.visible = true; }); P.batt.visible = true;
     if (n === 'R') ['fc', 'vtx', 'cam', 'top'].forEach(function (k) { var pk = byId(k); pk.state = 'inst'; inst[k] = true; pk.o.position.copy(X.home[k].p); pk.o.rotation.copy(X.home[k].r); });
     if (n === 'B' || n === 'R') { stackStage(); return; }

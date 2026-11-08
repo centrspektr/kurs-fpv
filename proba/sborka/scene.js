@@ -61,13 +61,23 @@ function tube(pts, r, m, par) { var c = new THREE.CatmullRomCurve3(pts); var o =
 var ARM = 4.6; /* мотор на (±ARM, ±ARM): диагональ 13 см, рама 3 дюйма */
 var MP = [[ARM, -ARM], [-ARM, -ARM], [-ARM, ARM], [ARM, ARM]]; /* 0 перед-право ... (нос к -z) */
 
+var edgeM = new THREE.MeshStandardMaterial({ color: 0x3a3d45, roughness: .8, metalness: .1 }); /* срез карбона - матовый серый */
+var holeM = new THREE.MeshBasicMaterial({ color: 0x050507 });
+function cplate(w, h, r, t) { var p = plate(w, h, r, t, [M.carbon, edgeM]); p.castShadow = p.receiveShadow = true; return p; }
 function frame() { var g = new THREE.Group();
-  [45, -45].forEach(function (a) { var p = plate(2.0, 2 * ARM * 1.414 + 2.2, 1, .4, M.carbon); p.rotation.y = a * Math.PI / 180; p.castShadow = p.receiveShadow = true; g.add(p); });
-  var c = plate(4.2, 7.4, .8, .4, M.carbon); c.castShadow = c.receiveShadow = true; g.add(c);
-  MP.forEach(function (q) { for (var k = 0; k < 4; k++) { var a = k * Math.PI / 2 + Math.PI / 4; mesh(new THREE.CylinderGeometry(.12, .12, .06, 10), M.steel, q[0] + Math.cos(a) * .55, .46, q[1] + Math.sin(a) * .55, g); } });
+  [45, -45].forEach(function (a) { var p = cplate(2.0, 2 * ARM * 1.414 + 2.2, 1, .4); p.rotation.y = a * Math.PI / 180; g.add(p);
+    [-1, 1].forEach(function (s) { var sl = mesh(new THREE.CylinderGeometry(.17, .17, .5, 14), holeM, 0, .2, 0, g); sl.scale.set(1, 1, 4.2); var d = s * 3.1; sl.position.set(Math.sin(a * Math.PI / 180) * d, .2, Math.cos(a * Math.PI / 180) * d); sl.rotation.y = a * Math.PI / 180; }); }); /* облегчающие прорези в лучах */
+  var c = cplate(4.2, 7.4, .8, .4); g.add(c);
+  MP.forEach(function (q) { for (var k = 0; k < 4; k++) { var a = k * Math.PI / 2 + Math.PI / 4; mesh(new THREE.CylinderGeometry(.11, .11, .5, 12), holeM, q[0] + Math.cos(a) * .55, .2, q[1] + Math.sin(a) * .55, g); } /* отверстия под винты мотора - видны сверху и снизу */
+    mesh(new THREE.CylinderGeometry(.3, .3, .5, 20), holeM, q[0], .2, q[1], g); });
+  [[1.5, -2.6], [-1.5, -2.6], [1.5, 2.6], [-1.5, 2.6]].forEach(function (q) { mesh(new THREE.CylinderGeometry(.17, .17, .5, 12), holeM, q[0], .2, q[1], g); });
   return g; }
-function topPlate() { var p = plate(3.6, 6.6, .7, .2, M.carbon); p.castShadow = true; return p; }
-function standoffs() { var g = new THREE.Group(); [[1.5, -2.6], [-1.5, -2.6], [1.5, 2.6], [-1.5, 2.6]].forEach(function (q) { mesh(new THREE.CylinderGeometry(.22, .22, 2.6, 6), M.alu, q[0], 1.7, q[1], g); }); return g; }
+function topPlate() { var p = plate(3.6, 6.6, .7, .2, [M.carbon, edgeM]); p.castShadow = true; return p; }
+function standoffs() { var g = new THREE.Group(), am = new THREE.MeshStandardMaterial({ color: 0x9b6bff, metalness: .85, roughness: .32 });
+  [[1.5, -2.6], [-1.5, -2.6], [1.5, 2.6], [-1.5, 2.6]].forEach(function (q) { /* стойка M3: шестигранник с фасками и резьбой внутри */
+    var h = mesh(new THREE.CylinderGeometry(.17, .17, 2.44, 6), am, q[0], 1.7, q[1], g); h.rotation.y = Math.PI / 6;
+    [.48, 2.92].forEach(function (y) { var f = mesh(new THREE.CylinderGeometry(.15, .17, .08, 6), am, q[0], y, q[1], g); f.rotation.y = Math.PI / 6; if (y > 1) f.rotation.x = Math.PI; });
+    mesh(new THREE.CylinderGeometry(.075, .075, .01, 10), holeM, q[0], 2.965, q[1], g); }); return g; }
 function motor() { var g = new THREE.Group();
   /* основание с отверстиями под винты M2 */
   mesh(new THREE.CylinderGeometry(.95, 1.0, .18, 32), M.dark, 0, .09, 0, g);
@@ -98,7 +108,7 @@ function esc() { var g = new THREE.Group(); var p = plate(3.4, 3.4, .25, .12, M.
   for (i = 0; i < 6; i++) mesh(new THREE.BoxGeometry(.1, .08, .16), new THREE.MeshStandardMaterial({ color: 0x8a6a3a, roughness: .6 }), -.75 + i * .3, .2, 1.0, g); /* конденсаторы */
   MP.forEach(function (q) { var sx = Math.sign(q[0]), sz = Math.sign(q[1]); for (var k = 0; k < 3; k++) mesh(new THREE.BoxGeometry(.3, .05, .26), M.gold, sx * 1.38, .19, sz * (1.3 - k * .38), g); });
   mesh(new THREE.BoxGeometry(.55, .06, .44), M.gold, -.5, .19, 1.42, g); mesh(new THREE.BoxGeometry(.55, .06, .44), M.gold, .5, .19, 1.42, g);
-  [[1.32, 1.32], [-1.32, 1.32], [1.32, -1.32], [-1.32, -1.32]].forEach(function (q) { mesh(new THREE.TorusGeometry(.13, .06, 8, 16), new THREE.MeshStandardMaterial({ color: 0x5a2a8a, roughness: .8 }), q[0], .2, q[1], g).rotation.x = Math.PI / 2; }); /* резиновые демпферы */
+  [[1.05, -1.48], [-1.05, -1.48]].forEach(function (q) { mesh(new THREE.CylinderGeometry(.12, .12, .02, 12), M.chip, q[0], .175, q[1], g); }); /* отверстия крепления */
   return g; }
 function fc() { var g = new THREE.Group(); var p = plate(3.4, 3.4, .25, .12, M.pcbG); g.add(p);
   var sk = new THREE.Mesh(new THREE.PlaneGeometry(3.3, 3.3), new THREE.MeshStandardMaterial({ map: silk('F4 FC  ↑ FRONT', [['ESC', 120, 420], ['VTX', 400, 420], ['CAM', 256, 70], ['RX', 440, 260]], '#0f4a33'), roughness: .45 })); sk.rotation.x = -Math.PI / 2; sk.rotation.z = Math.PI; sk.position.y = .165; g.add(sk);
@@ -135,7 +145,14 @@ function rx() { var g = new THREE.Group(); var p = plate(1.0, 1.2, .15, .08, M.p
   [-1, 1].forEach(function (s) { tube([V(0, .12, .5), V(s * .9, .35, 1.2), V(s * 1.9, .4, 2.3)], .045, M.wireK, g); var tp = mesh(new THREE.CylinderGeometry(.07, .07, .7, 10), M.white, s * 2.15, .42, 2.62, g); tp.rotation.x = Math.PI / 2; tp.rotation.z = s * .55; });
   chipOn(g, .4, .4, -.1, -.1, .1); return g; }
 function battLead() { var g = new THREE.Group(); tube([V(-.5, 1.25, 1.42), V(-.55, .9, 2.6), V(-.45, .5, 4.6), V(-.2, .5, 6.6)], .13, M.wireR, g); tube([V(.5, 1.25, 1.42), V(.55, .9, 2.6), V(.5, .5, 4.6), V(.25, .5, 6.6)], .13, M.wireK, g);
-  var cap = mesh(new THREE.CylinderGeometry(.42, .42, 1.6, 20), M.chip, 1.2, .5, 3.4, g); cap.rotation.x = Math.PI / 2; mesh(new THREE.CylinderGeometry(.43, .43, .1, 20), M.steel, 1.2, .5, 2.6, g).rotation.x = Math.PI / 2;
+  /* конденсатор 35 В 470 мкФ: синяя гильза с полосой минуса, алюминиевый торец с насечкой, ножки к проводам питания */
+  var cap = new THREE.Group(); cap.position.set(0, 1.3, 3.7); g.add(cap); g.userData.cap = cap;
+  var sl = mesh(new THREE.CylinderGeometry(.4, .4, 1.5, 28), new THREE.MeshStandardMaterial({ color: 0x1d2f6a, roughness: .35, metalness: .1 }), 0, 0, 0, cap); sl.rotation.x = Math.PI / 2;
+  var stp = mesh(new THREE.CylinderGeometry(.405, .405, 1.3, 28, 1, true, -.5, 1), new THREE.MeshStandardMaterial({ color: 0xc8d0dc, roughness: .5 }), 0, 0, 0, cap); stp.rotation.x = Math.PI / 2;
+  var tp = mesh(new THREE.CylinderGeometry(.36, .36, .04, 28), M.steel, 0, 0, .76, cap); tp.rotation.x = Math.PI / 2;
+  [0, Math.PI / 2].forEach(function (r) { var l = mesh(new THREE.BoxGeometry(.5, .02, .03), M.dark, 0, 0, .785, cap); l.rotation.z = r; });
+  mesh(new THREE.TorusGeometry(.39, .03, 8, 28), M.dark, 0, 0, -.55, cap);
+  tube([V(-.15, 0, -.76), V(-.2, -.1, -1.0), V(-.5, -.42, -1.0)], .035, M.steel, cap); tube([V(.15, 0, -.76), V(.2, -.1, -1.0), V(.5, -.42, -1.0)], .035, M.steel, cap);
   mesh(new THREE.BoxGeometry(1.1, .65, 1.3), M.yellow, 0, .5, 7.3, g); return g; }
 function prop(col) { var g = new THREE.Group(), m = M.prop.clone(); m.color = new THREE.Color(col);
   for (var k = 0; k < 3; k++) { var s = new THREE.Shape(); s.moveTo(0, -.18); s.bezierCurveTo(1.2, -.55, 2.6, -.5, 3.8, -.18); s.bezierCurveTo(3.9, .05, 3.7, .3, 3.4, .32); s.bezierCurveTo(2.2, .5, 1, .4, 0, .2); s.lineTo(0, -.18);
