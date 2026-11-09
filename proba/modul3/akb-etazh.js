@@ -262,12 +262,23 @@ function drawPlan() { var c = planTex.userData.x, w = 1024, h = 640, kx = (w - 8
   var p = R.camera.position; c.fillStyle = '#ff5d6c'; c.beginPath(); c.arc(ox + p.x * kx, oz + p.z * kz, 10, 0, 7); c.fill();
   planTex.needsUpdate = true; }
 var planAcc = 0; R.frame(function (dt) { planAcc += dt; if (planAcc > .5 && (curReg === 'L')) { planAcc = 0; drawPlan(); } });
-/* выход в город */
-var door = grp(LX / 2, 0, D - .13, Math.PI);
-box(1.9, 2.5, .08, std('#3a4256', .4, .6), 0, 1.25, 0, door); box(.06, 2.5, .1, neon(A), -.95, 1.25, -.02, door); box(.06, 2.5, .1, neon(A), .95, 1.25, -.02, door); box(1.96, .06, .1, neon(A), 0, 2.52, -.02, door);
-var doorSign = R.tex(512, 128, function (c, w, h) { c.fillStyle = '#0b0d1e'; c.fillRect(0, 0, w, h); U.txt(c, 'ВЫХОД В ГОРОД', w / 2, h / 2, 44, A); });
-var ds = new T.Mesh(new T.PlaneGeometry(1.6, .4), new T.MeshBasicMaterial({ map: doorSign, toneMapped: false })); ds.position.set(0, 2.85, .06); door.add(ds);
-var exitIt = R.item({ obj: door, name: 'Выход в город', sub: 'Вернуться на карту курса.', at: [LX / 2, D - 1.2], look: [LX / 2, 1.5, D], tagY: 3.0, act: exitRoom }); exitIt.reg = 'L';
+/* выход в город: металлическая рама Kenney-стиля, сдвижная створка, за ней - улица села (фото) */
+var door = grp(LX / 2, 0, D - .13, Math.PI), EDW = 1.6, EDH = 2.35, frM = std('#4a5160', .35, .75);
+var outT = TL.load('foto-selo/03-arka.jpg', function () { R.frame(function () {}); }); outT.encoding = T.sRGBEncoding;
+var outM = new T.Mesh(new T.PlaneGeometry(EDW, EDH), new T.MeshBasicMaterial({ map: outT, toneMapped: false })); outM.position.set(0, EDH / 2, -.01); door.add(outM);
+box(.22, EDH + .22, .24, frM, -EDW / 2 - .11, (EDH + .22) / 2, .06, door); box(.22, EDH + .22, .24, frM, EDW / 2 + .11, (EDH + .22) / 2, .06, door);
+box(EDW + .44, .22, .24, frM, 0, EDH + .11, .06, door);
+box(.04, EDH, .05, neon(GR, 1.6), -EDW / 2 - .01, EDH / 2, .19, door); box(.04, EDH, .05, neon(GR, 1.6), EDW / 2 + .01, EDH / 2, .19, door); box(EDW + .06, .04, .05, neon(GR, 1.6), 0, EDH + .01, .19, door);
+var exPanel = new T.Group(); exPanel.position.set(0, 0, .04); door.add(exPanel);
+put('kenney/door-single', 0, 0, 0, 0, [EDW / .4 * .97, EDH / .7 * .99, .5], exPanel);
+var doorSign = R.tex(640, 160, function (c, w, h) { c.fillStyle = '#0b2a16'; c.fillRect(0, 0, w, h); c.fillStyle = GR; c.fillRect(0, 0, 150, h);
+  U.txt(c, '🏙', 75, h / 2 + 4, 84, '#0b2a16', 'center'); U.txt(c, 'ВЫХОД В ГОРОД', 175, 62, 50, '#fff', 'left', 900); U.txt(c, 'на карту курса  ➜', 175, 120, 34, GR, 'left', 800); });
+var ds = new T.Mesh(new T.PlaneGeometry(2.0, .5), new T.MeshBasicMaterial({ map: doorSign, toneMapped: false })); ds.position.set(0, EDH + .58, .1); door.add(ds);
+var mat = new T.Mesh(new T.PlaneGeometry(2.0, 1.0), new T.MeshBasicMaterial({ map: R.tex(256, 128, function (c, w, h) { c.fillStyle = '#1d2a22'; c.fillRect(0, 0, w, h); c.strokeStyle = GR; c.lineWidth = 6; c.strokeRect(6, 6, w - 12, h - 12); U.txt(c, '▲ ▲ ▲', w / 2, h / 2 + 2, 44, GR); }), toneMapped: false }));
+mat.rotation.x = -Math.PI / 2; mat.position.set(0, .012, .7); door.add(mat);
+var exK = 0; R.frame(function (dt) { var p = R.camera.position, near = curReg === 'L' && Math.abs(p.x - LX / 2) < 1.8 && p.z > D - 3.2;
+  exK += ((near ? 1 : 0) - exK) * Math.min(1, dt * 5); exPanel.position.x = exK * EDW * .96; exPanel.visible = exK < .98; });
+var exitIt = R.item({ obj: door, name: 'Выход в город', sub: 'Вернуться на карту курса.', at: [LX / 2, D - 1.2], look: [LX / 2, 1.5, D], tagY: 3.0, act: exitRoom }); exitIt.reg = 'L'; exitIt.noTag = true;   /* над дверью своя табличка */
 /* скамья и шкафчик в холле */
 box(2.2, .08, .5, std('#8a6a48', .6), 1.0, .45, 12.5).rotation.y = Math.PI / 2; box(.5, .42, .1, std('#3a3f4c', .5, .6), .6, .21, 11.6); box(.5, .42, .1, std('#3a3f4c', .5, .6), .6, .21, 13.4);
 R.block(.3, 11.3, 1.3, 13.7);
@@ -297,6 +308,17 @@ foto('04-izylbash', 'Парк "История станицы Изылбаш"', P
 foto('06-zakat-fonari', 'Фонари на закате', FW, FH, 32, FY, cS, Math.PI);
 /* торец коридора: фотообои - село с высоты */
 foto('01-selo-sverhu', 'Село Иртыш с высоты', 2.7, 2.02, W - .005, 1.72, CZM, -Math.PI / 2);
+
+/* ---------- голос: приветствие этажа и название комнаты при входе ---------- */
+var HELLO = 'Модуль третий. Аккумуляторная. Это этаж с восемью комнатами. В холле - большой экран с теорией и план этажа. Задания можно делать в любом порядке: заходи в любую комнату.';
+var heard = {}, helloDone = false;
+function sayOk() { return window.GOLOS && GOLOS.on && GOLOS.can && GOLOS.can() && !lect.on; }
+function hello() { if (helloDone || !sayOk()) return; helloDone = true; GOLOS.say(HELLO); setTimeout(function () { if (!window.speechSynthesis || !speechSynthesis.speaking) helloDone = false; }, 900); }
+/* браузер разрешает голос только после нажатия: пробуем сразу, а если молчит - при первом касании или клавише */
+setTimeout(hello, 1200);
+['pointerdown', 'keydown', 'touchstart'].forEach(function (ev) { addEventListener(ev, function () { if (!helloDone) hello(); }, { passive: true }); });
+R.frame(function () { var r = roomById(curReg); if (!r || heard[r.id] || !sayOk()) return; heard[r.id] = true; helloDone = true;
+  GOLOS.say('Комната ' + r.no + '. ' + r.n + '. ' + (r.tasks.length > 1 ? r.tasks.length + ' задания.' : 'Одно задание.')); });
 
 /* ---------- терминал задания (стойка с экраном) ---------- */
 var stands = [];
