@@ -143,7 +143,25 @@ function create(o) {
   var hov = null;
   function hover(x, y) { var h = pick(x, y), it = h && h.item; if (it === hov) return;
     if (hov) hov.tag.classList.remove('hv'); hov = it; if (it) it.tag.classList.add('hv'); cv.style.cursor = it ? 'pointer' : (h && h.floor ? 'crosshair' : 'grab'); }
-  addEventListener('keydown', function (e) { keys[e.code] = 1; if (e.code === 'Escape' && R.mode === 'focus' && R.onEsc) R.onEsc(); });
+  /* тачпад и колесо: поворот камеры; Ctrl + колесо (щипок) - шаг вперёд-назад */
+  cv.addEventListener('wheel', function (e) { if (R.mode !== 'walk') return; e.preventDefault(); var k = e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? 400 : 1, dx = e.deltaX * k, dy = e.deltaY * k;
+    function cl(v) { return Math.max(-.12, Math.min(.12, v)); }
+    if (e.ctrlKey) { moveBy(-Math.sin(yaw) * (dy < 0 ? .5 : -.5), -Math.cos(yaw) * (dy < 0 ? .5 : -.5)); return; }
+    yaw -= cl(dx * .0025); pitch = Math.max(-1.2, Math.min(1.0, pitch - cl(dy * .0025))); turn = null; }, { passive: false });
+  /* E или Enter: подойти к тому, на что смотришь (или ближнему впереди), у предмета - открыть */
+  function interact() {
+    if (near && near.act) { var it0 = near; showCard(null); it0.act(it0); return; }
+    var h = pick(innerWidth / 2, innerHeight / 2); if (h && h.item) { R.walkTo(h.item.at[0], h.item.at[1], h.item); return; }
+    var best = null, bs = 1e9, fx = -Math.sin(yaw), fz = -Math.cos(yaw);
+    R.items.forEach(function (it) { if (!it.at || it.hidden) return; var c = it.look || [it.at[0], 0, it.at[1]], dx = c[0] - cam.position.x, dz = c[2] - cam.position.z, L = Math.hypot(dx, dz); if (L < .01 || L > 9) return;
+      var cos = (dx * fx + dz * fz) / L; if (cos < .8) return; var sc = L * (2 - cos); if (sc < bs) { bs = sc; best = it; } });
+    if (best) R.walkTo(best.at[0], best.at[1], best); }
+  R.interact = interact;
+  var jy = 0, jv = 0;
+  addEventListener('keydown', function (e) { if (e.target && /INPUT|TEXTAREA|SELECT/.test(e.target.tagName) && e.code !== 'Escape') return; keys[e.code] = 1; if (e.code === 'Escape' && R.mode === 'focus' && R.onEsc) R.onEsc();
+    if (R.mode !== 'walk' || (R.busy && R.busy())) return;
+    if (e.code === 'Space') { e.preventDefault(); if (jy <= 0) jv = 3.6; }
+    if ((e.code === 'Enter' || e.code === 'NumpadEnter' || e.code === 'KeyE') && !e.repeat) { e.preventDefault(); interact(); } });
   addEventListener('keyup', function (e) { keys[e.code] = 0; });
   addEventListener('blur', function () { keys = {}; });
 
@@ -155,7 +173,7 @@ function create(o) {
     if (R.mode === 'walk') {
       var f = (keys.KeyW || keys.ArrowUp ? 1 : 0) - (keys.KeyS || keys.ArrowDown ? 1 : 0), s = (keys.KeyD ? 1 : 0) - (keys.KeyA ? 1 : 0);
       if (keys.ArrowLeft) yaw += dt * 1.8; if (keys.ArrowRight) yaw -= dt * 1.8;
-      if (f || s) { walk = null; hideMarker(); showCard(null); var sp = 2.6 * dt;
+      if (f || s) { walk = null; hideMarker(); showCard(null); var sp = (keys.ShiftLeft || keys.ShiftRight ? 5.2 : 2.6) * dt;
         moveBy((-Math.sin(yaw) * f + Math.cos(yaw) * s) * sp, (-Math.cos(yaw) * f - Math.sin(yaw) * s) * sp); }
       if (walk) { var dx = walk.x - cam.position.x, dz = walk.z - cam.position.z, dist = Math.hypot(dx, dz), sp2 = Math.min(dist, 2.8 * dt);
         if (dist < 0.05) arrive(); else {
@@ -163,7 +181,8 @@ function create(o) {
           if (dist > 0.8) { yaw += dyaw * Math.min(1, dt * 3.2); pitch += (-0.06 - pitch) * Math.min(1, dt * 2); }
           if (!moveBy(dx / dist * sp2, dz / dist * sp2)) arrive(); } }
       if (turn) { turn.t = Math.min(1, turn.t + dt * 2.2); var k = 1 - Math.pow(1 - turn.t, 3); yaw = turn.y0 + (turn.y1 - turn.y0) * k; pitch = turn.p0 + (turn.p1 - turn.p0) * k; if (turn.t >= 1) turn = null; }
-      cam.position.y = EYE + (walk ? Math.sin(t * 9) * 0.018 : 0);
+      if (jy > 0 || jv > 0) { jv -= 11 * dt; jy += jv * dt; if (jy <= 0) { jy = 0; jv = 0; } }
+      cam.position.y = EYE + jy + (walk && !jy ? Math.sin(t * 9) * 0.018 : 0);
       cam.rotation.set(pitch, yaw, 0, 'YXZ');
       if (near && Math.hypot(cam.position.x - near.at[0], cam.position.z - near.at[1]) > 1.6) showCard(null);
     }

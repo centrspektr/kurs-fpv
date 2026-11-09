@@ -2,7 +2,7 @@
    Курс описывает комнату данными (модуль 2 - masterskaya.js) и кладёт её в window.KURS_KOMNATY[id_модуля] = KOMNATA.make({...}).
    Город (kosmos-kurs.js) при входе в здание такого модуля вызывает room.open(api), при закрытии окна задания - room.back(tid, свежее),
    выход в город - api.exit(). Задания открываются тем же окном, что и в городе: api.task(tid).
-   Что умеет: ходьба по нажатию на пол (и WASD), осмотр перетаскиванием, нажатие на стенд/стол/предмет - подойти и карточка внизу,
+   Что умеет: ходьба по нажатию на пол (и WASD, Shift - бег, пробел - прыжок, E/Enter - действие, тачпад/колесо - поворот камеры), осмотр перетаскиванием, нажатие на стенд/стол/предмет - подойти и карточка внизу,
    стенды заданий с настоящим прогрессом и номером, большой монитор с теорией (голос читает слайды), стол с мини-игрой
    ("провал" в сборку через trenazhery.js), дрон-проводник и светящийся путь к следующему заданию, вход через ворота, препятствия.
    Нужен THREE r128 (общий с городом). Свои файлы курса: kartinki.js (рисунки для слайдов и плакатов). */
@@ -25,6 +25,7 @@ css.textContent = [
 'body.kmn-win #kmn canvas{filter:blur(3px) brightness(.62)}body.kmn-win .wbg{opacity:0!important}body.kmn-win #c{visibility:hidden}',
 '#kmn .k-top{position:absolute;left:0;right:0;top:0;padding:calc(12px + env(safe-area-inset-top,0px)) max(14px,env(safe-area-inset-right,0px)) 26px max(14px,env(safe-area-inset-left,0px));display:flex;align-items:center;gap:10px;background:linear-gradient(#05060fd0,#05060f00);pointer-events:none}',
 '#kmn .k-top>*{pointer-events:auto}',
+'#kmn .k-vol{flex:none;width:84px;height:24px;accent-color:var(--kc);cursor:pointer}@media (max-width:420px){#kmn .k-vol{width:60px}}',
 '#kmn .k-ic{flex:none;width:44px;height:44px;border-radius:50%;border:1px solid rgba(255,255,255,.18);background:rgba(10,14,32,.6);color:#fff;font-size:19px;display:grid;place-items:center;cursor:pointer;backdrop-filter:blur(10px)}',
 '#kmn .k-ttl{flex:1;min-width:0}#kmn .k-ttl small{display:block;font:800 10.5px ' + FONT + ';letter-spacing:.18em;color:var(--kc)}#kmn .k-ttl b{display:block;font:700 16px ' + DISP + ';color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
 '#kmn .k-st{flex:none;padding:7px 13px;border-radius:99px;border:1px solid rgba(255,211,110,.45);background:rgba(10,14,32,.6);color:#ffd36e;font:800 14px ' + FONT + ';backdrop-filter:blur(10px)}',
@@ -347,17 +348,19 @@ function make(cfg) {
   /* ---------- оверлей ---------- */
   function buildUI() {
     root = document.createElement('div'); root.id = 'kmn'; root.style.setProperty('--kc', MC); root.style.setProperty('--kr', MCr);
-    root.innerHTML = '<div class="k-top"><button class="k-ic" data-k="exit" title="В город" aria-label="В город">←</button><div class="k-ttl"><small></small><b></b></div><div class="k-st"></div><button class="k-ic" data-k="snd" title="Голос"></button></div>' +
+    root.innerHTML = '<div class="k-top"><button class="k-ic" data-k="exit" title="В город" aria-label="В город">←</button><div class="k-ttl"><small></small><b></b></div><div class="k-st"></div><button class="k-ic" data-k="snd" title="Голос"></button><input class="k-vol" type="range" min="0" max="100" step="5" title="Громкость" aria-label="Громкость"></div>' +
       '<div class="k-hello"><small></small><b></b><span></span></div><div class="k-hint"></div><div class="k-card"><small></small><h3></h3><p></p><div class="k-acts"></div></div><div class="k-toast"></div><div class="k-fade"></div>';
     document.body.appendChild(root);
     ['top', 'hello', 'hint', 'card', 'toast', 'fade', 'st'].forEach(function (k) { ui[k] = root.querySelector('.k-' + k); });
-    ui.ttlS = root.querySelector('.k-ttl small'); ui.ttlB = root.querySelector('.k-ttl b'); ui.snd = root.querySelector('[data-k="snd"]');
+    ui.ttlS = root.querySelector('.k-ttl small'); ui.ttlB = root.querySelector('.k-ttl b'); ui.snd = root.querySelector('[data-k="snd"]'); ui.vol = root.querySelector('.k-vol');
+    ui.vol.addEventListener('pointerdown', function (e) { e.stopPropagation(); });
+    ui.vol.addEventListener('input', function () { var G = window.GOLOS; if (!G || !G.setVol) return; G.setVol(ui.vol.value / 100); if (G.vol > 0 && !G.on) { G.setOn(true); sndUI(); } });
     root.querySelector('[data-k="exit"]').onclick = function () { if (anim) return; leave(); };
     ui.snd.onclick = function () { var G = window.GOLOS; if (!G) return; G.setOn(!G.on); sndUI(); if (!G.on && MON) { MON.talk = false; } else if (MON) MON.said = -1; };
     ui.card.addEventListener('pointerdown', function (e) { e.stopPropagation(); });
     ui.card.addEventListener('click', function (e) { var b = e.target.closest('[data-a]'); if (b) doAct(b.dataset.a); });
   }
-  function sndUI() { var G = window.GOLOS; ui.snd.textContent = G && G.on ? '🔊' : '🔇'; ui.snd.hidden = !G; }
+  function sndUI() { var G = window.GOLOS; ui.snd.textContent = G && G.on ? '🔊' : '🔇'; ui.snd.hidden = !G; ui.vol.hidden = !G || !G.setVol; if (G && G.vol != null) ui.vol.value = Math.round(G.vol * 100); }
   function hud() { var d = 0; mod.tasks.forEach(function (t) { if (api && api.state(t) === 'done') d++; }); ui.st.textContent = '★ ' + d + ' / ' + mod.tasks.length; }
   var hintT = 0;
   function hint(s, ms) { ui.hint.textContent = s; ui.hint.style.opacity = 1; clearTimeout(hintT); hintT = setTimeout(function () { ui.hint.style.opacity = 0; }, ms || 6000); }
@@ -450,9 +453,24 @@ function make(cfg) {
     cv.addEventListener('pointerdown', function (e) { if (anim) return; drag = { id: e.pointerId, x: e.clientX, y: e.clientY, yaw: yaw, pitch: pitch, moved: false }; });
     addEventListener('pointermove', function (e) { if (!on) return; if (!drag || drag.id !== e.pointerId) { hover(e); return; } var dx = e.clientX - drag.x, dy = e.clientY - drag.y; if (Math.abs(dx) + Math.abs(dy) > 8) drag.moved = true; if (drag.moved) { yaw = drag.yaw + dx * .0055; pitch = Math.max(-1.1, Math.min(.85, drag.pitch + dy * .0045)); lookAt = null; } });
     addEventListener('pointerup', function (e) { if (!on || !drag || drag.id !== e.pointerId) return; var d = drag; drag = null; if (!d.moved && !anim && !paused) tap(e.clientX, e.clientY); });
-    cv.addEventListener('wheel', function (e) { if (anim || paused) return; var f = new T.Vector3(-Math.sin(yaw), 0, -Math.cos(yaw)); target = pos.clone().addScaledVector(f, e.deltaY < 0 ? 1.6 : -1.6); clampP(target); sel = null; card(null); }, { passive: true });
-    addEventListener('keydown', function (e) { if (!on || paused) return; keys[e.code] = 1; if (e.code === 'Escape' && sel) { sel = null; card(null); } });
+    /* тачпад и колесо мыши: два пальца по тачпаду (или колесо) - поворот камеры вверх-вниз и влево-вправо; щипок (Ctrl + колесо) - шаг вперёд-назад */
+    cv.addEventListener('wheel', function (e) { if (anim || paused) return; e.preventDefault(); var k = e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? 400 : 1, dx = e.deltaX * k, dy = e.deltaY * k;
+      if (e.ctrlKey) { var f = new T.Vector3(-Math.sin(yaw), 0, -Math.cos(yaw)); target = pos.clone().addScaledVector(f, dy < 0 ? .8 : -.8); clampP(target); sel = null; card(null); return; }
+      function cl(v) { return Math.max(-.12, Math.min(.12, v)); } yaw -= cl(dx * .0025); pitch = Math.max(-1.1, Math.min(.85, pitch - cl(dy * .0025))); lookAt = null; }, { passive: false });
+    addEventListener('keydown', function (e) { if (!on || paused) return; if (e.target && /INPUT|TEXTAREA|SELECT/.test(e.target.tagName) && e.code !== 'Escape') return; keys[e.code] = 1; if (e.code === 'Escape' && sel) { sel = null; card(null); }
+      /* пробел - прыжок, Enter или E - действие */
+      if (e.code === 'Space') { e.preventDefault(); if (!anim && jy <= 0) jv = 3.6; }
+      if ((e.code === 'Enter' || e.code === 'NumpadEnter' || e.code === 'KeyE') && !e.repeat && !anim) { e.preventDefault(); interact(); } });
     addEventListener('keyup', function (e) { keys[e.code] = 0; });
+  }
+  /* Enter / E: если уже подошли - главное действие карточки (начать задание, собрать дрон, слушать); если нет - подойти к тому, что в центре взгляда или ближе всего впереди */
+  var jy = 0, jv = 0;
+  function interact() {
+    if (sel && arrived) { var b = ui.card.querySelector('.k-b.pri') || ui.card.querySelector('.k-b[data-a]'); if (b) doAct(b.dataset.a); else if (sel.kind === 'info') { sel = null; card(null); } return; }
+    var h = pick(innerWidth / 2, innerHeight / 2); if (h && h.c && h.d < 9) { go(h.c); return; }
+    var best = null, bs = 1e9, f = new T.Vector3(-Math.sin(yaw), 0, -Math.cos(yaw));
+    CLICK.forEach(function (c) { var d = new T.Vector3(c.look[0] - pos.x, 0, c.look[2] - pos.z), L = d.length(); if (L < .01 || L > 9) return; var cos = d.dot(f) / L; if (cos < .8) return; var sc = L * (2 - cos); if (sc < bs) { bs = sc; best = c; } });
+    if (best) go(best); else hint('Подойди ближе и посмотри на стенд, стол или предмет - потом E или Enter.', 3500);
   }
   var hovO = null;
   function pick(cx, cy) { mp.set(cx / innerWidth * 2 - 1, -cy / innerHeight * 2 + 1); ray.setFromCamera(mp, CAM);
@@ -482,16 +500,19 @@ function make(cfg) {
       /* WASD / стрелки */
       var kx = (keys.KeyD || 0) - (keys.KeyA || 0), kz = (keys.KeyW || keys.ArrowUp || 0) - (keys.KeyS || keys.ArrowDown || 0);
       if (keys.ArrowLeft) yaw += dt * 1.8; if (keys.ArrowRight) yaw -= dt * 1.8;
-      if (kx || kz) { var f = new T.Vector3(-Math.sin(yaw), 0, -Math.cos(yaw)), r = new T.Vector3(-f.z, 0, f.x); target = pos.clone().addScaledVector(f, kz * .6).addScaledVector(r, kx * .6); clampP(target); target.y = EYE; lookAt = null; if (sel) { sel = null; card(null); } }
+      var run = keys.ShiftLeft || keys.ShiftRight, st = run ? 1.5 : .6;
+      if (kx || kz) { var f = new T.Vector3(-Math.sin(yaw), 0, -Math.cos(yaw)), r = new T.Vector3(-f.z, 0, f.x); target = pos.clone().addScaledVector(f, kz * st).addScaledVector(r, kx * st); clampP(target); target.y = EYE; lookAt = null; if (sel) { sel = null; card(null); } }
       /* ходьба к цели: плавный разгон и торможение, обход препятствий скольжением */
       if (target) { var d = target.clone().sub(pos); d.y = 0; var L = d.length();
         if (L < .04) { target = null; vel.set(0, 0, 0); if (sel) arrived = true; }
-        else { var want = d.normalize().multiplyScalar(Math.min(3.0, L * 2.2 + .25)); vel.lerp(want, Math.min(1, dt * 5)); var nx = pos.x + vel.x * dt, nz = pos.z + vel.z * dt;
+        else { var want = d.normalize().multiplyScalar(Math.min(run ? 6.0 : 3.0, L * (run ? 3.6 : 2.2) + .25)); vel.lerp(want, Math.min(1, dt * 5)); var nx = pos.x + vel.x * dt, nz = pos.z + vel.z * dt;
           if (!blocked(nx, nz)) { pos.x = nx; pos.z = nz; } else if (!blocked(nx, pos.z)) pos.x = nx; else if (!blocked(pos.x, nz)) pos.z = nz; else { target = null; vel.set(0, 0, 0); if (sel) arrived = true; }
           bob += vel.length() * dt * 2.4; } }
+      /* прыжок */
+      if (jy > 0 || jv > 0) { jv -= 11 * dt; jy += jv * dt; if (jy <= 0) { jy = 0; jv = 0; } }
       if (lookAt) { var dd = lookAt.clone().sub(pos), ty = Math.atan2(-dd.x, -dd.z), tp = Math.atan2(dd.y, Math.hypot(dd.x, dd.z)); yaw += angD(yaw, ty) * Math.min(1, dt * 3.2); pitch += (tp - pitch) * Math.min(1, dt * 3.2); if (!target && Math.abs(angD(yaw, ty)) < .01) lookAt = null; }
     }
-    CAM.position.set(pos.x, (anim ? pos.y : EYE) + (anim ? 0 : Math.sin(bob * 2) * .022), pos.z); CAM.rotation.order = 'YXZ'; CAM.rotation.set(pitch, yaw, 0);
+    CAM.position.set(pos.x, (anim ? pos.y : EYE + jy) + (anim || jy > 0 ? 0 : Math.sin(bob * 2) * .022), pos.z); CAM.rotation.order = 'YXZ'; CAM.rotation.set(pitch, yaw, 0);
     R.render(S, CAM);
   }
 
@@ -516,7 +537,7 @@ function make(cfg) {
         var w = ease(Math.max(0, (u - .25) / .75)); pos.lerpVectors(from, to, w); bob = w * 8; },
       end: function () { var first = !lsG('kmn_hi_' + cfg.mid); lsS('kmn_hi_' + cfg.mid, '1');
         doorAnim(0);
-        hint(MOB ? 'Нажми на пол - иди. Нажми на стенд или стол - подойди. Тяни пальцем - осмотрись.' : 'Нажми на пол - иди (или W A S D). Нажми на стенд или стол - подойди. Тяни мышью - осмотрись.', 7000);
+        hint(MOB ? 'Нажми на пол - иди. Нажми на стенд или стол - подойди. Тяни пальцем - осмотрись.' : 'W A S D - идти, Shift - бегом, пробел - прыжок. Мышь или два пальца по тачпаду - осмотреться. E или Enter - подойти и открыть.', 7000);
         var G = window.GOLOS; if (first && cfg.hello && G && G.on && G.can && G.can()) { SPEAK = true; G.say(cfg.hello, { onend: function () { SPEAK = false; } }); } } };
     clock.getDelta(); frame();
     /* окно задания поверх: комната размыта и стоит */
