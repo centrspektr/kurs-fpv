@@ -26,7 +26,7 @@ function silk(title, labels, bg) { return cTex(512, 512, function (x, w) { x.fil
   x.fillStyle = '#f2f2f2'; x.font = '700 30px monospace'; x.textAlign = 'center'; x.fillText(title, w / 2, w / 2 + 120);
   x.font = '700 24px monospace'; labels.forEach(function (l) { x.fillText(l[0], l[1], l[2]); });
   [[40, 40], [472, 40], [40, 472], [472, 472]].forEach(function (p) { x.strokeStyle = '#d9d9d9'; x.lineWidth = 4; x.beginPath(); x.arc(p[0], p[1], 22, 0, 7); x.stroke(); }); }); }
-function stationTex() { return cTex(256, 128, function (x, w, h) { x.fillStyle = '#05140c'; x.fillRect(0, 0, w, h); x.fillStyle = '#ff5a2a'; x.shadowColor = '#ff5a2a'; x.shadowBlur = 16; x.font = '700 78px monospace'; x.fillText('330°', 18, 92); }); }
+var STN = {}; /* паяльная станция: детали для game.js */
 
 /* ---------- материалы ---------- */
 var M = {
@@ -218,21 +218,55 @@ function workshop(S) { var R = new THREE.Group(); S.add(R);
   /* монитор */
   var mon = new THREE.Group(); mesh(new THREE.BoxGeometry(34, 21, 1.4), M.benchEdge, 0, 0, 0, mon); var sc = new THREE.Mesh(new THREE.PlaneGeometry(32, 19), new THREE.MeshBasicMaterial({ map: screenTex() })); sc.position.z = .75; mon.add(sc);
   mesh(new THREE.BoxGeometry(2, 10, 2), M.benchEdge, 0, -14, -1, mon); mesh(new THREE.BoxGeometry(12, .8, 8), M.benchEdge, 0, -19, 0, mon); mon.position.set(17, 13, -30); mon.rotation.y = -.3; mon.scale.setScalar(.6); R.add(mon); var mg = glow('#ffbb00', 40, .12); mg.position.set(17, 13, -27); R.add(mg);
-  /* паяльная станция: корпус с наклонной панелью, дисплей, ручка регулировки, выключатель, гнездо паяльника */
-  var st = new THREE.Group(), stM = new THREE.MeshStandardMaterial({ color: 0x23202f, metalness: .5, roughness: .4 }), panM = new THREE.MeshStandardMaterial({ color: 0x15131d, metalness: .2, roughness: .6 });
-  mesh(new THREE.BoxGeometry(13, 7, 11), stM, 0, 3.5, 0, st); var pan = mesh(new THREE.BoxGeometry(12.4, 6.2, .5), panM, 0, 4.0, 5.6, st); pan.rotation.x = -.18;
-  for (var i = 0; i < 9; i++) mesh(new THREE.BoxGeometry(.25, 4, 9), panM, -5.2 + i * 1.3, 7.05, -.5, st); /* вентиляция сверху */
-  [[-6, -5], [6, -5], [-6, 5], [6, 5]].forEach(function (q) { mesh(new THREE.CylinderGeometry(.6, .6, .3, 12), M.chip, q[0], .15, q[1], st); });
-  var disp = new THREE.Mesh(new THREE.PlaneGeometry(6, 3), new THREE.MeshBasicMaterial({ map: stationTex() })); disp.position.set(-1.6, 5.1, 6.06); disp.rotation.x = -.18; st.add(disp);
-  mesh(new THREE.BoxGeometry(6.4, 3.4, .1), M.chip, -1.6, 5.1, 5.93, st).rotation.x = -.18;
-  var kn = new THREE.Group(); kn.position.set(3.6, 4.3, 6.1); kn.rotation.x = Math.PI / 2 - .18; st.add(kn); /* ручка: юбка, рифлёный цилиндр, крышка с риской */
-  mesh(new THREE.CylinderGeometry(1.45, 1.5, .25, 32), M.steel, 0, .1, 0, kn); var kb = mesh(new THREE.CylinderGeometry(1.1, 1.2, 1.1, 32), M.chip, 0, .7, 0, kn);
-  for (i = 0; i < 18; i++) { var rb = mesh(new THREE.BoxGeometry(.12, 1.0, .14), M.dark, 0, .7, 0, kn); var a = i / 18 * Math.PI * 2; rb.position.x = Math.cos(a) * 1.15; rb.position.z = Math.sin(a) * 1.15; rb.rotation.y = -a; }
-  mesh(new THREE.CylinderGeometry(.95, 1.05, .12, 32), M.steel, 0, 1.3, 0, kn); mesh(new THREE.BoxGeometry(.14, .06, .8), neon(0xff5a2a), 0, 1.37, -.45, kn);
-  for (i = 0; i < 11; i++) { var tk = mesh(new THREE.BoxGeometry(.06, .3, .02), neon(0xbfc6d8), 0, 0, 0, st); var ang = -2.4 + i * .48; tk.position.set(3.6 + Math.sin(ang) * 1.85, 4.3 + Math.cos(ang) * 1.85 * .98, 6.05); tk.rotation.z = -ang; tk.rotation.x = -.18; } /* шкала */
-  var swt = mesh(new THREE.BoxGeometry(.9, 1.4, .5), new THREE.MeshStandardMaterial({ color: 0xd8262f, roughness: .4 }), -4.9, 2.0, 6.1, st); swt.rotation.x = -.18; /* выключатель */
-  var sock = mesh(new THREE.CylinderGeometry(.75, .75, .6, 20), M.steel, 3.6, 1.4, 6.0, st); sock.rotation.x = Math.PI / 2; mesh(new THREE.CylinderGeometry(.5, .5, .62, 20), M.chip, 3.6, 1.4, 6.02, st).rotation.x = Math.PI / 2; /* гнездо */
-  var sg = glow('#ff5a2a', 5, .45); sg.position.set(-1.6, 5.1, 6.3); st.add(sg);
+  /* паяльная станция по фото владельца (09.11): чёрный корпус, ручка сверху, красный дисплей, выключатель POWER, ручка SET TEMP, гнездо паяльника */
+  var st = new THREE.Group(), stM = new THREE.MeshStandardMaterial({ color: 0x17171b, metalness: .35, roughness: .45 }), bzM = new THREE.MeshStandardMaterial({ color: 0x050506, roughness: .3 });
+  mesh(new THREE.BoxGeometry(14, 9, 12), stM, 0, 4.5, 0, st);
+  [[-6.6, -5.6], [6.6, -5.6], [-6.6, 5.6], [6.6, 5.6]].forEach(function (q) { mesh(new THREE.CylinderGeometry(.6, .7, .35, 12), M.chip, q[0], -.1, q[1], st); }); /* ножки */
+  for (var i = 0; i < 7; i++) mesh(new THREE.BoxGeometry(9, .06, .5), bzM, 0, 9.01, -4.5 + i * 1.2, st); /* вентиляция сверху */
+  tube([V(-4, 9, -3.5), V(-4, 11.2, -3.6), V(-3.2, 12, -3.6), V(3.2, 12, -3.6), V(4, 11.2, -3.6), V(4, 9, -3.5)], .32, M.dark, st); /* ручка для переноски */
+  [-4, 4].forEach(function (x) { mesh(new THREE.CylinderGeometry(.55, .55, .3, 14), M.chip, x, 9.1, -3.5, st); });
+  /* передняя панель - текстура: рамки, надписи, шкала */
+  var KID = window.SB_LV === 1 || /[?&]lv=1/.test(location.search);
+  function px(X) { return (X + 7) / 14 * 1024; } function py(Y) { return (9 - Y) / 9 * 658; }
+  var panT = cTex(1024, 658, function (x, w, h) { x.fillStyle = '#121216'; x.fillRect(0, 0, w, h);
+    x.strokeStyle = '#c9a24a'; x.lineWidth = 3; function rr(a, b, c, d) { x.strokeRect(px(a), py(d), px(c) - px(a), py(b) - py(d)); }
+    rr(-6.5, 5.0, 1.9, 7.9); rr(2.4, 5.0, 6.5, 7.9); rr(-6.5, .5, 6.5, 4.6);
+    x.fillStyle = '#e8c35c'; x.font = 'italic 900 40px Arial'; x.fillText('СПЕКТР', px(-6.3), py(8.25)); x.font = '700 24px Arial'; x.fillStyle = '#d8d8de'; x.fillText('SOLDER STATION 936', px(-6.2), py(.75) - 8);
+    x.textAlign = 'center'; x.font = '700 22px Arial'; x.fillText('POWER', px(4.45), py(7.45)); x.font = '700 18px Arial'; x.fillText('ON', px(5.9), py(6.75)); x.fillText('OFF', px(5.9), py(5.45));
+    x.fillText('°C', px(1.25), py(6.0)); x.fillStyle = '#ff6a5a'; x.fillText('HEAT', px(1.25), py(7.3));
+    x.fillStyle = '#d8d8de'; x.font = '700 22px Arial'; x.fillText('SET TEMP', px(-4.7), py(3.0)); x.fillText('°C', px(-4.7), py(2.4)); x.fillText('IRON', px(4.6), py(4.2));
+    var cx = px(-1.2), cy = py(2.35), R1 = 112;
+    if (KID) { x.strokeStyle = '#2fbf71'; x.lineWidth = 14; var a0 = -Math.PI / 2 + (-2.4 + (318 - 200) / 250 * 4.8), a1 = -Math.PI / 2 + (-2.4 + (342 - 200) / 250 * 4.8), am = (a0 + a1) / 2; x.beginPath(); x.arc(cx, cy, R1 + 8, a0, a1); x.stroke();
+      x.fillStyle = '#3ddc84'; x.font = '900 24px Arial'; x.textAlign = 'center'; x.fillText('330', cx + Math.cos(am) * (R1 + 50), cy + Math.sin(am) * (R1 + 50) + 8); }
+    x.strokeStyle = '#d8d8de'; x.fillStyle = '#d8d8de'; x.font = '700 17px Arial';
+    for (var v = 200; v <= 450; v += 25) { var a = -Math.PI / 2 + (-2.4 + (v - 200) / 250 * 4.8), big = v % 50 === 0; x.lineWidth = big ? 4 : 2; x.beginPath(); x.moveTo(cx + Math.cos(a) * (R1 - 14), cy + Math.sin(a) * (R1 - 14)); x.lineTo(cx + Math.cos(a) * (R1 + (big ? 6 : 0)), cy + Math.sin(a) * (R1 + (big ? 6 : 0))); x.stroke();
+      if (big) x.fillText(v, cx + Math.cos(a) * (R1 + 26), cy + Math.sin(a) * (R1 + 26) + 6); } });
+  var pan = new THREE.Mesh(new THREE.PlaneGeometry(14, 9), new THREE.MeshStandardMaterial({ map: panT, roughness: .55, metalness: .2 })); pan.position.set(0, 4.5, 6.01); st.add(pan);
+  /* дисплей: тёмное окно, цифры рисуем в game.js через STN.disp(...) */
+  mesh(new THREE.BoxGeometry(5.6, 2.3, .3), bzM, -2.6, 6.45, 6.1, st);
+  var dc = document.createElement('canvas'); dc.width = 256; dc.height = 100; var dT = new THREE.CanvasTexture(dc); dT.encoding = THREE.sRGBEncoding;
+  var dsp = new THREE.Mesh(new THREE.PlaneGeometry(5.2, 2.0), new THREE.MeshBasicMaterial({ map: dT, toneMapped: false })); dsp.position.set(-2.6, 6.45, 6.27); st.add(dsp);
+  var sg = glow('#ff3a2a', 7, 0); sg.position.set(-2.6, 6.45, 6.6); st.add(sg);
+  function disp(txt, on, col) { var x = dc.getContext('2d'); x.fillStyle = '#0b0303'; x.fillRect(0, 0, 256, 100); x.font = '700 76px monospace'; x.textAlign = 'right';
+    x.fillStyle = '#2a0b08'; x.fillText('888', 236, 82); if (on) { x.fillStyle = col || '#ff3a2a'; x.shadowColor = x.fillStyle; x.shadowBlur = 14; x.fillText(txt, 236, 82); x.shadowBlur = 0; } dT.needsUpdate = true; sg.material.opacity = on ? .35 : 0; }
+  disp('', false);
+  var led = mesh(new THREE.CylinderGeometry(.32, .32, .2, 16), new THREE.MeshBasicMaterial({ color: 0x3a0d0d }), 1.25, 6.55, 6.1, st); led.rotation.x = Math.PI / 2; /* огонёк нагрева */
+  /* выключатель-клавиша POWER */
+  mesh(new THREE.BoxGeometry(1.9, 2.3, .3), bzM, 4.45, 6.1, 6.1, st);
+  var rk = new THREE.Group(); rk.position.set(4.45, 6.1, 6.25); st.add(rk);
+  var rkM = new THREE.MeshStandardMaterial({ color: 0xd8262f, roughness: .35 }); mesh(new THREE.BoxGeometry(1.4, 1.9, .5), rkM, 0, 0, 0, rk);
+  mesh(new THREE.BoxGeometry(.8, .12, .02), new THREE.MeshBasicMaterial({ color: 0xffffff }), 0, .55, .26, rk); /* риска I */
+  var rkO = mesh(new THREE.TorusGeometry(.25, .05, 6, 16), new THREE.MeshBasicMaterial({ color: 0xffffff }), 0, -.5, .26, rk); /* O */
+  rk.rotation.x = .22; /* выключено: нажата нижняя половина */
+  /* ручка SET TEMP */
+  var kn = new THREE.Group(); kn.position.set(-1.2, 2.35, 6.05); st.add(kn); var kin = new THREE.Group(); kin.rotation.x = Math.PI / 2; kn.add(kin);
+  mesh(new THREE.CylinderGeometry(1.35, 1.4, .25, 32), M.steel, 0, .1, 0, kin); mesh(new THREE.CylinderGeometry(1.0, 1.15, 1.1, 32), M.chip, 0, .7, 0, kin);
+  for (i = 0; i < 20; i++) { var rb = mesh(new THREE.BoxGeometry(.11, 1.0, .14), M.dark, 0, .7, 0, kin); var a = i / 20 * Math.PI * 2; rb.position.x = Math.cos(a) * 1.08; rb.position.z = Math.sin(a) * 1.08; rb.rotation.y = -a; }
+  mesh(new THREE.CylinderGeometry(.85, .95, .12, 32), M.steel, 0, 1.3, 0, kin); mesh(new THREE.BoxGeometry(.14, .06, .8), new THREE.MeshBasicMaterial({ color: 0xff5a2a }), 0, 1.37, -.45, kin);
+  function knob(v) { kn.rotation.z = -(-2.4 + (v - 200) / 250 * 4.8); } knob(200);
+  /* гнездо паяльника */
+  var sock = mesh(new THREE.CylinderGeometry(.85, .85, .5, 20), M.steel, 4.6, 2.35, 6.1, st); sock.rotation.x = Math.PI / 2; mesh(new THREE.CylinderGeometry(.6, .6, .52, 20), M.chip, 4.6, 2.35, 6.12, st).rotation.x = Math.PI / 2;
+  STN.st = st; STN.rk = rk; STN.kn = kn; STN.knob = knob; STN.disp = disp; STN.led = led; STN.KID = KID;
   /* подставка со спиралью, губка и латунная стружка */
   var pts = []; for (i = 0; i < 120; i++) { var a2 = i / 120 * Math.PI * 14; pts.push(V(Math.cos(a2) * 1.4, i / 120 * 7, Math.sin(a2) * 1.4)); }
   var sp = new THREE.Group(); mesh(new THREE.CylinderGeometry(4, 4.5, 1.2, 24), M.benchEdge, 0, .6, 0, sp); tube(pts, .12, M.steel, sp).position.y = 1.2;
@@ -245,7 +279,7 @@ function workshop(S) { var R = new THREE.Group(); S.add(R);
   ir.position.set(0, 2.4, 0); ir.rotation.set(-.55, 0, 0); sp.add(ir); ir.scale.setScalar(.75);
   sp.position.set(18, 0, -2); st.add(sp);
   sp.updateMatrixWorld(true); var cEnd = V(0, 14.6, 0).applyMatrix4(new THREE.Matrix4().compose(V(0, 2.4, 0), new THREE.Quaternion().setFromEuler(new THREE.Euler(-.55, 0, 0)), V(.75, .75, .75))).add(V(18, 0, -2));
-  tube([V(3.6, 1.4, 6.4), V(6, .5, 9), V(11, .4, 8), V(16, 2, 6), cEnd.clone().add(V(0, 1.5, 2.5)), cEnd], .28, M.wireK, st);
+  tube([V(4.6, 2.35, 6.4), V(6.5, .5, 9), V(11, .4, 8), V(16, 2, 6), cEnd.clone().add(V(0, 1.5, 2.5)), cEnd], .28, M.wireK, st);
   st.position.set(24, 0, -14); st.rotation.y = -.6; R.add(st);
   /* мультиметр и пинцет на столе */
   var mm = new THREE.Group(); mesh(new THREE.BoxGeometry(7, 1.6, 12), new THREE.MeshStandardMaterial({ color: 0xffb020, roughness: .6 }), 0, .8, 0, mm); mesh(new THREE.BoxGeometry(5.6, .2, 3), new THREE.MeshStandardMaterial({ color: 0x9fd8a8, roughness: .3 }), 0, 1.65, -3.3, mm);
@@ -290,7 +324,7 @@ W.SB = function (canvas, w, h) {
   W.SBlin = function (root) { var seen = new Set(); root.traverse(function (o) { var m = o.material; if (!m || seen.has(m)) return; seen.add(m); if (m.color && !m.map) m.color.convertSRGBToLinear(); if (m.isMeshStandardMaterial) m.envMapIntensity = m.metalness > .5 ? .55 : .18; }); };
   W.SBlin(S);
   var cam = new THREE.PerspectiveCamera(38, w / h, .3, 800);
-  return { r: r, S: S, D: D, P: D.userData.P, G: G, cam: cam, key: key, glow: glow, mesh: mesh, tube: tube, M: M, V: V, cTex: cTex, motor: motor, prop: prop, xt30: xt30, fc: fc, neon: neon, MP: MP,
+  return { r: r, S: S, D: D, P: D.userData.P, G: G, cam: cam, key: key, glow: glow, mesh: mesh, tube: tube, M: M, V: V, cTex: cTex, motor: motor, prop: prop, xt30: xt30, fc: fc, neon: neon, MP: MP, STN: STN,
     render: function () { r.render(S, cam); } };
 };
 })();
