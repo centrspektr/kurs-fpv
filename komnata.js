@@ -53,7 +53,7 @@ function make(cfg) {
   var MC = cfg.color || '#ff7ce0', MCr = hexRgb(MC);
   var pos = new T.Vector3(), vel = new T.Vector3(), yaw = 0, pitch = -.05, target = null, lookAt = null, sel = null, arrived = false, path = null, bob = 0;
   var anim = null; /* сценарий камеры (вход, провал в стол) */
-  var paused = false, winObs = null, K = window.VZ_KURS, I = window.VZ_KURS_INFO;
+  var paused = false, winP = false, winObs = null, K = window.VZ_KURS, I = window.VZ_KURS_INFO;
   var mod = K && K.mods.find(function (m) { return m.id === cfg.mid; });
 
   function hexRgb(h) { var c = new T.Color(h); return Math.round(c.r * 255) + ',' + Math.round(c.g * 255) + ',' + Math.round(c.b * 255); }
@@ -71,7 +71,7 @@ function make(cfg) {
   function block(x, z, hw, hd, ry) { var s = Math.abs(Math.sin(ry || 0)) > .7; BOX.push([x, z, s ? hd : hw, s ? hw : hd]); }
   function fwd(ry, d, x, z) { return [x + Math.sin(ry) * d, z + Math.cos(ry) * d]; }
   function label(txt, sub, col, x, y, z, s) {
-    var t = tex(1024, 256, function (c, w, h) { c.font = '900 92px ' + DISP; c.textAlign = 'center'; c.textBaseline = 'middle'; c.shadowColor = col; c.shadowBlur = 40; c.fillStyle = col; c.fillText(txt, w / 2, sub ? 96 : h / 2); c.shadowBlur = 10; c.fillStyle = '#fff'; c.fillText(txt, w / 2, sub ? 96 : h / 2);
+    var t = tex(1024, 256, function (c, w, h) { var fs = 92; c.font = '900 92px ' + DISP; while (fs > 40 && c.measureText(txt).width > w - 80) { fs -= 4; c.font = '900 ' + fs + 'px ' + DISP; }   /* длинная надпись не обрезается по краям */ c.textAlign = 'center'; c.textBaseline = 'middle'; c.shadowColor = col; c.shadowBlur = 40; c.fillStyle = col; c.fillText(txt, w / 2, sub ? 96 : h / 2); c.shadowBlur = 10; c.fillStyle = '#fff'; c.fillText(txt, w / 2, sub ? 96 : h / 2);
       if (sub) { c.shadowBlur = 0; c.font = '700 44px ' + FONT; c.fillStyle = '#dbe3ff'; c.fillText(sub, w / 2, 200); } });
     var sp = new T.Sprite(new T.SpriteMaterial({ map: t, transparent: true, depthWrite: false, toneMapped: false })); sp.scale.set(4 * (s || 1), 1 * (s || 1), 1); sp.position.set(x, y, z); S.add(sp); return sp;
   }
@@ -486,7 +486,10 @@ function make(cfg) {
   function go(c) { sel = c; arrived = false; target = new T.Vector3(c.at[0], EYE, c.at[1]); clampP(target); lookAt = new T.Vector3(c.look[0], c.look[1], c.look[2]); card(c); stopTalkIfNotMon(c); }
   function stopTalkIfNotMon(c) { if (c.kind !== 'mon' && MON && MON.talk) { /* голос монитора не обрываем, он тихо дочитает */ } }
   function clampP(p) { p.x = Math.max(-W / 2 + .7, Math.min(W / 2 - .7, p.x)); p.z = Math.max(-D / 2 + .7, Math.min(D / 2 - .7, p.z)); }
-  function blocked(x, z) { for (var i = 0; i < BOX.length; i++) { var b = BOX[i]; if (Math.abs(x - b[0]) < b[2] + .35 && Math.abs(z - b[1]) < b[3] + .35) return true; } return false; }
+  function blocked(x, z, fx, fz) { if (fx != null && inBox(fx, fz)) return inBox(x, z) && depth(x, z) > depth(fx, fz) + 1e-4; return inBox(x, z); }
+  function inBox(x, z) { return depth(x, z) > 0; }
+  /* насколько точка залезла в препятствие (0 - свободна); если игрок уже внутри, выпускаем его наружу */
+  function depth(x, z) { var m = 0; for (var i = 0; i < BOX.length; i++) { var b = BOX[i], dx = b[2] + .35 - Math.abs(x - b[0]), dz = b[3] + .35 - Math.abs(z - b[1]); if (dx > 0 && dz > 0) m = Math.max(m, Math.min(dx, dz)); } return m; }
 
   /* ---------- кадр ---------- */
   var last = 0, raf = 0;
@@ -506,7 +509,7 @@ function make(cfg) {
       if (target) { var d = target.clone().sub(pos); d.y = 0; var L = d.length();
         if (L < .04) { target = null; vel.set(0, 0, 0); if (sel) arrived = true; }
         else { var want = d.normalize().multiplyScalar(Math.min(run ? 6.0 : 3.0, L * (run ? 3.6 : 2.2) + .25)); vel.lerp(want, Math.min(1, dt * 5)); var nx = pos.x + vel.x * dt, nz = pos.z + vel.z * dt;
-          if (!blocked(nx, nz)) { pos.x = nx; pos.z = nz; } else if (!blocked(nx, pos.z)) pos.x = nx; else if (!blocked(pos.x, nz)) pos.z = nz; else { target = null; vel.set(0, 0, 0); if (sel) arrived = true; }
+          if (!blocked(nx, nz, pos.x, pos.z)) { pos.x = nx; pos.z = nz; } else if (!blocked(nx, pos.z, pos.x, pos.z)) pos.x = nx; else if (!blocked(pos.x, nz, pos.x, pos.z)) pos.z = nz; else { target = null; vel.set(0, 0, 0); if (sel) arrived = true; }
           bob += vel.length() * dt * 2.4; } }
       /* прыжок */
       if (jy > 0 || jv > 0) { jv -= 11 * dt; jy += jv * dt; if (jy <= 0) { jy = 0; jv = 0; } }
@@ -541,7 +544,8 @@ function make(cfg) {
         var G = window.GOLOS; if (first && cfg.hello && G && G.on && G.can && G.can()) { SPEAK = true; G.say(cfg.hello, { onend: function () { SPEAK = false; } }); } } };
     clock.getDelta(); frame();
     /* окно задания поверх: комната размыта и стоит */
-    winObs = new MutationObserver(function () { var w = document.getElementById('win'), o = w && w.classList.contains('on'); document.body.classList.toggle('kmn-win', !!o); if (o) { stopTalk(); paused = true; card(null); } });
+    winObs = new MutationObserver(function () { var w = document.getElementById('win'), o = w && w.classList.contains('on'); document.body.classList.toggle('kmn-win', !!o); if (o) { stopTalk(); paused = true; winP = true; card(null); }
+      else if (winP) { winP = false; if (!anim) { paused = false; clock.getDelta(); } } });   /* окно закрыли любым способом - комната снова живая (раньше без back() всё замирало) */
     var w = document.getElementById('win'); if (w) winObs.observe(w, { attributes: true, attributeFilter: ['class'] });
   }
   /* ворота: закрыть после входа (0) или открыть (1) за секунду */
