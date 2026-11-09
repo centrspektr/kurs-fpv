@@ -383,6 +383,7 @@ var simG = (function () { var p = P(r3, 5.6, 3.6), g = grp(p[0], 0, p[1], RY(r3,
 var simIt = R.item({ obj: simG, name: 'Кресло-симулятор', kicker: 'Полёты модуля', sub: 'Полёты в симуляторе: следим за временем и вольтами, учимся плавному газу.',
   at: (function () { var p = P(r3, 4.2, 3.0); return p; })(), look: (function () { var p = P(r3, 5.6, 3.6); return [p[0], .9, p[1]]; })(), tagY: 1.9, actLabel: 'Сесть',
   act: function () { openTask(taskState('fly_sim1') === 'done' ? 'fly_sim2' : 'fly_sim1'); } }); simIt.reg = 'N1'; simIt.at3 = (function () { var p = P(r3, 5.6, 3.6); return [p[0], 0, p[1]]; })();
+foto('09-klass-spektr', 'Наш класс в "Спектре"', 2.4, 1.8, r3.ox + TH / 2 + .005, 1.7, CZ0 - 4.3, Math.PI / 2);
 terminal(r3, 'fly_sim1', 1.4, 2.4, .5); terminal(r3, 'fly_sim2', 3.3, 5.0, .2);
 putR(r3, 'desk', 7.45, 2.6, 0, -Math.PI / 2, 1); putR(r3, 'lamp', 7.7, 2.1, .79, -Math.PI / 2, 1);
 (function () { var a = P(r3, 7.0, 1.6), b = P(r3, 8, 3.6); R.block(Math.min(a[0], b[0]), Math.min(a[1], b[1]), Math.max(a[0], b[0]), Math.max(a[1], b[1])); })();
