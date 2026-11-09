@@ -31,7 +31,7 @@ const save = () => { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch
 const T = id => (S.t[id] = S.t[id] || { s: {} });
 const stepSt = (id, i) => { const t = T(id); return (t.s[i] = t.s[i] || {}); };
 const taskDone = id => !!(S.t[id] && S.t[id].done);
-function taskOpen(m, k) { const p = S.t[m.tasks[k - 1]]; return isCoach() || k === 0 || taskDone(m.tasks[k - 1]) || !!(p && (p.was || p.skip)); }
+function taskOpen(m, k) { const p = S.t[m.tasks[k - 1]]; return isCoach() || CFG.free || k === 0 || taskDone(m.tasks[k - 1]) || !!(p && (p.was || p.skip)); }
 function modOpen(m) { return !!m.tasks && (isCoach() || PREVIEW_OPEN.includes(m.id) || (S.open || []).includes(m.id)); }
 function modProg(m) { if (!m.tasks) return 0; return m.tasks.filter(taskDone).length / m.tasks.length; }
 /* очки задания = pts x средний лучший результат проверок задания (доп. задания очков не дают) */
