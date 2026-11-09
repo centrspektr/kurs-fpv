@@ -10,6 +10,7 @@
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <script src="config.js"></script>
 <script src="perenos.js"></script>
+<script src="rejting.js"></script>   <!-- проба 09.11: рейтинг курса по площадкам, очки th/sb на сервер -->
 <style>
   :root{
     --bg:#0d1117; --panel:#161b22; --panel2:#1c2330;
@@ -84,7 +85,8 @@ const MODE = (() => { try { return sessionStorage.getItem('kursy_role') === 'coa
     $('who').innerHTML = '<b>Режим педагога</b>';
     $('roleBtn').textContent = 'Выйти из режима педагога';
   } else if (me && me.code) {
-    $('who').innerHTML = 'Ученик: <b>' + esc(me.first) + '</b>' + (me.cls ? ', ' + esc(me.cls) : '');
+    const sl = window.KURS_REJT && KURS_REJT.mySelo();   /* площадка ученика (проба 09.11) */
+    $('who').innerHTML = 'Ученик: <b>' + esc(me.first) + '</b>' + (me.cls ? ', ' + esc(me.cls) : '') + (sl ? ' · 🏠 ' + esc(sl.name) : '');
     $('roleBtn').insertAdjacentHTML('beforebegin', '<button class="btn" id="outBtn">Выйти</button>');
     $('outBtn').onclick = () => { ls.del(C.meKey); location.reload(); };
   } else if (!guest) {
@@ -103,13 +105,14 @@ const MODE = (() => { try { return sessionStorage.getItem('kursy_role') === 'coa
     const b = this; b.disabled = true; b.textContent = 'Проверяю...'; $('err').textContent = '';
     fetch(C.api, { method: 'POST', body: JSON.stringify({ op: 'sjoin', code: code, club: C.club }) }).then(r => r.json()).then(j => {
       if (!j.ok) throw new Error(j.error || 'Код не подошёл');
-      ls.set(C.meKey, JSON.stringify({ status: 'принят', code: j.code, first: j.first, cls: j.cls }));
+      ls.set(C.meKey, JSON.stringify({ status: 'принят', code: j.code, first: j.first, cls: j.cls, selo: j.selo || '', seloName: j.seloName || '' }));
       location.reload();
     }).catch(e => { b.disabled = false; b.textContent = 'Войти'; $('err').textContent = /fetch|network/i.test(e.message) ? 'Нет связи с сервером, попробуй позже' : e.message; });
   };
 })();
 </script>
 <script src="zadaniya.js" defer></script>
+<script src="kartinki.js" defer></script>
 <script src="moduli.js" defer></script>
 <script src="trener-panel.js" defer></script>
 <script>if('serviceWorker' in navigator && location.protocol==='https:') navigator.serviceWorker.register('sw.js').catch(()=>{});</script>

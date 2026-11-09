@@ -274,6 +274,30 @@ R.block(.3, 11.3, 1.3, 13.7);
 put('clock', 1.3, 2.75, .02 + .13 / 2, 0, 1.2);
 poster(.9, 1.2, function (c, w, h) { warn(c, w, h, ['АКБ - не игрушка.', 'Заряжаем только', 'со взрослым.', 'Вздулась - в песок!'], 'ПРАВИЛА'); }, .02 + TH / 2 - .1, 1.6, 14.6, Math.PI / 2);
 
+/* ---------- фото села Иртыш на стенах (снимки Alexandr, без людей) ---------- */
+var frameM = std('#5a3d26', .55), matM = std('#efe9dc', .9);
+function foto(file, title, w, h, x, y, z, ry, reg) { var g = grp(x, 0, z, ry);
+  box(w + .16, h + .16, .05, frameM, 0, y, .025, g);                       /* рама */
+  box(w + .04, h + .04, .01, matM, 0, y, .055, g);                          /* паспарту */
+  var t = TL.load('foto-selo/' + file + '.jpg', function () { R.frame(function () {}); }); t.encoding = T.sRGBEncoding; t.anisotropy = 4;
+  var m = new T.Mesh(new T.PlaneGeometry(w, h), new T.MeshBasicMaterial({ map: t, color: new T.Color(.93, .93, .93), toneMapped: false })); m.position.set(0, y, .062); g.add(m);
+  var lt = R.tex(512, 72, function (c, cw, ch) { c.fillStyle = '#d9c9a3'; c.fillRect(0, 0, cw, ch); c.fillStyle = '#5a3d26'; c.fillRect(0, 0, cw, 4); c.fillRect(0, ch - 4, cw, 4);
+    U.txt(c, title, cw / 2, ch / 2 + 2, title.length > 26 ? 26 : 32, '#2a1d12', 'center', 800); });
+  var lw = Math.min(1.3, w), lb = new T.Mesh(new T.PlaneGeometry(lw, lw * 72 / 512), new T.MeshBasicMaterial({ map: lt, toneMapped: false })); lb.position.set(0, y - h / 2 - .2, .03); g.add(lb);
+  return g; }
+var FW = 1.6, FH = 1.2, PW = .9, PH = 1.2, FY = 1.65, cN = CZ0 + TH / 2 + .005, cS = CZ1 - TH / 2 - .005;
+/* холл: большое фото у западной стены */
+foto('02-spektr', 'Центр "Спектр", село Иртыш', 2.3, 2.24, TH / 2 - .1 + .005, 1.75, 5.6, Math.PI / 2);
+/* коридор: между дверями комнат */
+foto('03-arka', 'Арка в сквере', PW, PH, 16, FY, cN, 0);
+foto('05-zakat', 'Закат над площадью', FW, FH, 24, FY, cN, 0);
+foto('07-hram', 'Храм в селе Иртыш', PW, PH, 32, FY, cN, 0);
+foto('08-gorodok', 'Детский городок', FW, FH, 16, FY, cS, Math.PI);
+foto('04-izylbash', 'Парк "История станицы Изылбаш"', PW * .87, PH * 1.1, 24, FY, cS, Math.PI);
+foto('06-zakat-fonari', 'Фонари на закате', FW, FH, 32, FY, cS, Math.PI);
+/* торец коридора: фотообои - село с высоты */
+foto('01-selo-sverhu', 'Село Иртыш с высоты', 2.7, 2.02, W - .005, 1.72, CZM, -Math.PI / 2);
+
 /* ---------- терминал задания (стойка с экраном) ---------- */
 var stands = [];
 var legM = std('#3a3f4c', .35, .8), bodyM = std('#2a3038', .45, .6);
@@ -359,6 +383,7 @@ var simG = (function () { var p = P(r3, 5.6, 3.6), g = grp(p[0], 0, p[1], RY(r3,
 var simIt = R.item({ obj: simG, name: 'Кресло-симулятор', kicker: 'Полёты модуля', sub: 'Полёты в симуляторе: следим за временем и вольтами, учимся плавному газу.',
   at: (function () { var p = P(r3, 4.2, 3.0); return p; })(), look: (function () { var p = P(r3, 5.6, 3.6); return [p[0], .9, p[1]]; })(), tagY: 1.9, actLabel: 'Сесть',
   act: function () { openTask(taskState('fly_sim1') === 'done' ? 'fly_sim2' : 'fly_sim1'); } }); simIt.reg = 'N1'; simIt.at3 = (function () { var p = P(r3, 5.6, 3.6); return [p[0], 0, p[1]]; })();
+foto('09-klass-spektr', 'Наш класс в "Спектре"', 2.4, 1.8, r3.ox + TH / 2 + .005, 1.7, CZ0 - 4.3, Math.PI / 2);
 terminal(r3, 'fly_sim1', 1.4, 2.4, .5); terminal(r3, 'fly_sim2', 3.3, 5.0, .2);
 putR(r3, 'desk', 7.45, 2.6, 0, -Math.PI / 2, 1); putR(r3, 'lamp', 7.7, 2.1, .79, -Math.PI / 2, 1);
 (function () { var a = P(r3, 7.0, 1.6), b = P(r3, 8, 3.6); R.block(Math.min(a[0], b[0]), Math.min(a[1], b[1]), Math.max(a[0], b[0]), Math.max(a[1], b[1])); })();
