@@ -1,0 +1,50 @@
+<!DOCTYPE html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#070914"><title>Пульт RadioMaster - Взлёт</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}html,body{height:100%}
+body{background:#070914;font-family:"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;color:#f1f3ff;overflow:hidden;position:fixed;inset:0;--a:#7cf3ff;touch-action:none;user-select:none;-webkit-user-select:none}
+canvas{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none}
+#ui{position:absolute;inset:0;pointer-events:none}#ui>*{position:absolute;z-index:3;pointer-events:auto}
+button{font:inherit;color:inherit;border:0;cursor:pointer;background:none}
+.top{left:0;right:0;top:0;padding:12px 14px 22px;display:flex;align-items:center;gap:10px;background:linear-gradient(#03050dcc,#03050d00);pointer-events:none!important;z-index:4!important}
+.top>*{pointer-events:auto}
+.ic{width:36px;height:36px;border-radius:50%;background:#ffffff14;border:1px solid #ffffff2a;display:grid;place-items:center;font-size:16px;backdrop-filter:blur(8px)}
+.ttl{flex:1;pointer-events:none!important}.ttl small{display:block;font-size:10px;letter-spacing:.16em;color:#9fe9ff;font-weight:800}.ttl b{font-size:16px;font-weight:700}
+.bars{top:58px;left:14px;right:14px;display:flex;gap:6px;pointer-events:none!important}
+.bars i{flex:1;font-style:normal;position:relative;height:18px}
+.bars i::before{content:"";position:absolute;left:0;right:0;top:0;height:4px;border-radius:2px;background:#ffffff26}
+.bars i b{position:absolute;left:0;top:0;height:4px;border-radius:2px;background:var(--a);box-shadow:0 0 8px var(--a);transition:width .4s}
+.bars i span{position:absolute;left:0;top:7px;font-size:10px;font-weight:800;letter-spacing:.08em;color:#b9c6e6;text-transform:uppercase}
+.glass{background:#0a1226c8;border:1px solid #ffffff22;border-radius:16px;backdrop-filter:blur(12px);box-shadow:0 8px 24px #0007}
+.bub{top:84px;left:50%;transform:translateX(-50%);width:min(calc(100vw - 24px),440px);padding:10px 13px;font-size:13.5px;line-height:1.42}
+.bub b{color:#bff6ff}.bub[hidden]{display:none}
+.bub.ok{border-color:#5effc4}.bub.bad{border-color:#ff5d6c;background:#2a0f17e6}
+.chip{display:inline-block;font-size:10px;font-weight:800;letter-spacing:.1em;padding:2px 8px;border-radius:20px;margin-right:4px;vertical-align:1px;background:#7cf3ff26;color:#9ff4ff}
+.bub.ok .chip{background:#5effc426;color:#5effc4}.bub.bad .chip{background:#ff5d6c33;color:#ff8a92}
+.acts{left:50%;transform:translateX(-50%);bottom:16px;display:flex;flex-wrap:wrap;justify-content:center;gap:8px;width:min(calc(100vw - 20px),560px)}
+.tb{white-space:nowrap;display:flex;align-items:center;gap:7px;padding:11px 16px;border-radius:30px;background:#0a1226d8;border:1px solid #ffffff2e;font-weight:800;font-size:14px;backdrop-filter:blur(10px)}
+.tb.pri{background:linear-gradient(90deg,#1aa7c9,#7cf3ff);color:#03141c;border-color:#7cf3ff;box-shadow:0 0 22px #7cf3ff66}
+.tb.w{white-space:normal;text-align:left;flex:1 1 100%;font-size:13px;padding:10px 14px;border-radius:14px}
+.tb.ok{border-color:#5effc4;background:#0f2a26;color:#5effc4}.tb.no{border-color:#ff5d6c;background:#3a0f18;animation:sh .35s}
+@keyframes sh{25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
+.pads{left:0;right:0;bottom:14px;display:flex;justify-content:space-between;padding:0 14px;pointer-events:none!important}
+.pads[hidden]{display:none}
+.pad{pointer-events:auto;width:min(36vw,150px);aspect-ratio:1;border-radius:24px;background:radial-gradient(circle,#7cf3ff1c,#0a1226d0 70%);border:1px solid #7cf3ff55;position:relative;touch-action:none;backdrop-filter:blur(8px)}
+.pad::before,.pad::after{content:"";position:absolute;background:#7cf3ff33}.pad::before{left:50%;top:10%;bottom:10%;width:1px}.pad::after{top:50%;left:10%;right:10%;height:1px}
+.pad i{position:absolute;left:50%;top:50%;width:40%;height:40%;margin:-20% 0 0 -20%;border-radius:50%;background:radial-gradient(circle at 35% 30%,#d8fbff,#3fb7d6 60%,#0d5466);box-shadow:0 0 18px #7cf3ff99;z-index:1}
+.pad small{position:absolute;left:0;right:0;bottom:-2px;transform:translateY(100%);text-align:center;font-size:10px;font-weight:800;letter-spacing:.06em;color:#b9c6e6}
+.pads{bottom:30px}
+.bf{left:50%;top:50%;transform:translate(-50%,-55%);width:min(calc(100vw - 24px),420px);padding:12px;font-size:12px}
+.bf[hidden]{display:none}
+.bf-h{font-weight:900;font-size:13px;color:#ffbb33;margin-bottom:8px;letter-spacing:.04em}
+.bf-r{display:grid;grid-template-columns:1fr auto;gap:2px 8px;padding:6px 0;border-top:1px solid #ffffff14}
+.bf-r b{font-size:12px}.bf-r span{color:#b9c6e6;font-weight:700}
+.bf-r i{grid-column:1/3;height:8px;border-radius:4px;background:#ffffff1a;position:relative}
+.bf-r u{position:absolute;top:0;bottom:0;border-radius:4px;background:#ffbb33}
+@media (min-width:760px){.bub{font-size:14.5px;width:480px}.bf{left:auto;right:20px;transform:translateY(-50%)}}
+@media (max-height:520px){.bub{top:70px;font-size:12.5px}.bars span{display:none}}
+</style></head><body><canvas id="c"></canvas><div id="ui">
+<div class="top"><button class="ic" id="back" aria-label="Назад">←</button><div class="ttl"><small>ТРЕНАЖЁР · МОДУЛЬ 4</small><b>Пульт RadioMaster</b></div><button class="ic" id="snd" aria-label="Звук">🔊</button></div>
+</div>
+<script>window.KURSY={store:"kursy_fpv_gorod"};</script><script src="golos.js"></script><script src="three.min.js"></script><script src="RoomEnvironment.js"></script><script src="pult.js"></script>
+</body></html>
