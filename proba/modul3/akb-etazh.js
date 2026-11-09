@@ -262,9 +262,9 @@ function drawPlan() { var c = planTex.userData.x, w = 1024, h = 640, kx = (w - 8
   var p = R.camera.position; c.fillStyle = '#ff5d6c'; c.beginPath(); c.arc(ox + p.x * kx, oz + p.z * kz, 10, 0, 7); c.fill();
   planTex.needsUpdate = true; }
 var planAcc = 0; R.frame(function (dt) { planAcc += dt; if (planAcc > .5 && (curReg === 'L')) { planAcc = 0; drawPlan(); } });
-/* выход в город: металлическая рама Kenney-стиля, сдвижная створка, за ней - улица села (фото) */
+/* выход в город: металлическая рама Kenney-стиля, сдвижная створка, за ней виден летающий город (снимок из курса) */
 var door = grp(LX / 2, 0, D - .13, Math.PI), EDW = 1.6, EDH = 2.35, frM = std('#4a5160', .35, .75);
-var outT = TL.load('foto-selo/03-arka.jpg', function () { R.frame(function () {}); }); outT.encoding = T.sRGBEncoding;
+var outT = TL.load('tekstury/gorod-vid.jpg', function () { R.frame(function () {}); }); outT.encoding = T.sRGBEncoding;
 var outM = new T.Mesh(new T.PlaneGeometry(EDW, EDH), new T.MeshBasicMaterial({ map: outT, toneMapped: false })); outM.position.set(0, EDH / 2, -.01); door.add(outM);
 box(.22, EDH + .22, .24, frM, -EDW / 2 - .11, (EDH + .22) / 2, .06, door); box(.22, EDH + .22, .24, frM, EDW / 2 + .11, (EDH + .22) / 2, .06, door);
 box(EDW + .44, .22, .24, frM, 0, EDH + .11, .06, door);
