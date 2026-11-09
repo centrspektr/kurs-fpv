@@ -292,7 +292,7 @@ function make(cfg) {
       block(o.x, o.z, 1.6, .4, o.ry); return g; },
     droneWall: function (o) { var g = grp(o.x, 0, o.z, o.ry), pb = M({ color: '#141829', roughness: .85 }); box(4.4, 2.4, .05, mSteel, 0, 2.6, -.02, g); box(4.2, 2.2, .06, pb, 0, 2.6, 0, g); box(4.4, .04, .04, glow(MC), 0, 3.8, .04, g, 1);
       ['#ea580c', '#7cf3ff', '#ffd36e'].forEach(function (c, i) { var q = quad([.45, .7, .95][i], c); q.rotation.x = Math.PI / 2; q.position.set(-1.35 + i * 1.35, 2.65, .12); g.add(q); });
-      var t = tex(1024, 96, function (c) { c.fillStyle = '#dbe3ff'; c.font = '800 46px ' + FONT; c.textAlign = 'center'; c.fillText('75 мм          3 дюйма          5 дюймов', 512, 62); });
+      var t = tex(1024, 96, function (c) { c.fillStyle = '#dbe3ff'; c.font = '800 40px ' + FONT; c.textAlign = 'center'; (o.labels || ['75 мм', '3 дюйма', '5 дюймов']).forEach(function (l, i) { c.fillText(l, 512 + (i - 1) * 345, 62); }); });
       var p = new T.Mesh(new T.PlaneGeometry(4, .38), new T.MeshBasicMaterial({ map: t, transparent: true, toneMapped: false })); p.position.set(0, 1.62, .05); g.add(p); return g; },
     cage: function (o) { var g = grp(o.x, 0, o.z), s = o.s || 3.4, h = 2.8;
       var e = new T.LineSegments(new T.EdgesGeometry(new T.BoxGeometry(s, h, s)), new T.LineBasicMaterial({ color: '#9dff7c' })); e.position.y = h / 2; g.add(e);
@@ -309,7 +309,11 @@ function make(cfg) {
       var t = tex(512, 96, function (c) { c.fillStyle = '#facc15'; c.fillRect(0, 0, 512, 96); c.fillStyle = '#1a1300'; c.font = '900 52px ' + FONT; c.textAlign = 'center'; c.fillText('⚡ LiPo', 256, 66); });
       var p = new T.Mesh(new T.PlaneGeometry(1.4, .26), new T.MeshBasicMaterial({ map: t, toneMapped: false })); p.position.set(0, 2.0, .36); g.add(p); block(o.x, o.z, .8, .35, o.ry); return g; },
     poster: function (o) { var w = o.w || 2.2, t = tex(720, 420, function (c, cw, ch) { c.fillStyle = '#0b1028'; c.fillRect(0, 0, cw, ch); });
-      svgImg(o.pic, function (im) { t.userData.x.drawImage(im, 0, 0, 720, 420); t.needsUpdate = true; });
+      if (o.img) { /* фото (своё, из папки курса): справа квадрат, слева подпись o.cap = [заголовок, строка, строка...] */
+        var ph = new Image(); ph.onload = function () { var c = t.userData.x; c.drawImage(ph, 300, 0, 420, 420); var g = c.createLinearGradient(300, 0, 380, 0); g.addColorStop(0, '#0b1028'); g.addColorStop(1, 'rgba(11,16,40,0)'); c.fillStyle = g; c.fillRect(300, 0, 80, 420);
+          var cp = o.cap || []; c.fillStyle = MC; c.fillRect(24, 34, 6, 60); c.fillStyle = '#fff'; c.font = '800 40px ' + DISP; c.textBaseline = 'top'; c.fillText(cp[0] || '', 42, 36); c.font = '600 22px ' + FONT; c.fillStyle = '#cfd7ff';
+          for (var i = 1; i < cp.length; i++) c.fillText(cp[i], 26, 120 + (i - 1) * 34); t.needsUpdate = true; }; ph.src = o.img; }
+      else svgImg(o.pic, function (im) { t.userData.x.drawImage(im, 0, 0, 720, 420); t.needsUpdate = true; });
       var g = grp(o.x, o.y, o.z, o.ry); box(w + .12, w * .58 + .12, .04, mDark, 0, 0, -.03, g); g.add(new T.Mesh(new T.PlaneGeometry(w, w * .58), new T.MeshBasicMaterial({ map: t, toneMapped: false }))); return g; },
     crate: function (o) { var s = o.s || .8, g = grp(o.x, 0, o.z, o.ry || 0); box(s, s * .7, s * .8, M({ color: '#4b5563', roughness: .7 }), 0, s * .35, 0, g); box(s * 1.02, .06, s * .82, M({ color: '#f59e0b' }), 0, s * .5, 0, g); block(o.x, o.z, s * .6, s * .6, 0); return g; },
     sofa: function (o) { var g = grp(o.x, 0, o.z, o.ry || 0), m = M({ color: '#241a44', roughness: .95, metalness: 0 }), cu = M({ color: '#33255e', roughness: 1, metalness: 0 });
