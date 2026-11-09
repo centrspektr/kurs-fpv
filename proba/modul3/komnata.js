@@ -49,6 +49,7 @@ function create(o) {
       if (x > b[0] - PR && x < b[2] + PR && z > b[1] - PR && z < b[3] + PR) return false; }
     return true;
   }
+  R.free = free;
   function moveBy(dx, dz) { var p = cam.position;
     if (free(p.x + dx, p.z + dz)) { p.x += dx; p.z += dz; return true; }
     if (free(p.x + dx, p.z)) { p.x += dx; return true; }      /* скользим вдоль стены */
@@ -86,7 +87,10 @@ function create(o) {
 
   /* ---------- ходьба к точке ---------- */
   var walk = null; /* {x,z,item,face} */
-  R.walkTo = function (x, z, item) { var p = nearFree(x, z); walk = { x: p[0], z: p[1], item: item || null }; showCard(null); marker(p[0], p[1]); };
+  /* R.route(x0,z0,x1,z1) (если задан) - точки пути через двери между комнатами; последняя точка - цель. Вернул null - туда нельзя */
+  R.walkTo = function (x, z, item) { var p = nearFree(x, z), q = R.route ? R.route(cam.position.x, cam.position.z, p[0], p[1], item) : null;
+    if (R.route && !q) return; q = q && q.length ? q.slice() : [p]; var f = q.shift();
+    walk = { x: f[0], z: f[1], item: item || null, q: q }; showCard(null); var last = q.length ? q[q.length - 1] : f; marker(last[0], last[1]); };
   function arrive() { var it = walk.item; walk = null; hideMarker();
     if (it) { if (it.look) turnTo(it.look); showCard(it); } }
   var turn = null;
@@ -175,11 +179,11 @@ function create(o) {
       if (keys.ArrowLeft) yaw += dt * 1.8; if (keys.ArrowRight) yaw -= dt * 1.8;
       if (f || s) { walk = null; hideMarker(); showCard(null); var sp = (keys.ShiftLeft || keys.ShiftRight ? 5.2 : 2.6) * dt;
         moveBy((-Math.sin(yaw) * f + Math.cos(yaw) * s) * sp, (-Math.cos(yaw) * f - Math.sin(yaw) * s) * sp); }
-      if (walk) { var dx = walk.x - cam.position.x, dz = walk.z - cam.position.z, dist = Math.hypot(dx, dz), sp2 = Math.min(dist, 2.8 * dt);
-        if (dist < 0.05) arrive(); else {
+      if (walk) { var dx = walk.x - cam.position.x, dz = walk.z - cam.position.z, dist = Math.hypot(dx, dz), sp2 = Math.min(dist, 3.4 * dt);
+        if (dist < 0.05) { if (walk.q && walk.q.length) { var nx = walk.q.shift(); walk.x = nx[0]; walk.z = nx[1]; } else arrive(); } else {
           var ty = Math.atan2(-dx, -dz); var dyaw = ty - yaw; while (dyaw > Math.PI) dyaw -= Math.PI * 2; while (dyaw < -Math.PI) dyaw += Math.PI * 2;
           if (dist > 0.8) { yaw += dyaw * Math.min(1, dt * 3.2); pitch += (-0.06 - pitch) * Math.min(1, dt * 2); }
-          if (!moveBy(dx / dist * sp2, dz / dist * sp2)) arrive(); } }
+          if (!moveBy(dx / dist * sp2, dz / dist * sp2)) { if (walk.q && walk.q.length) { var nx2 = walk.q.shift(); walk.x = nx2[0]; walk.z = nx2[1]; } else arrive(); } } }
       if (turn) { turn.t = Math.min(1, turn.t + dt * 2.2); var k = 1 - Math.pow(1 - turn.t, 3); yaw = turn.y0 + (turn.y1 - turn.y0) * k; pitch = turn.p0 + (turn.p1 - turn.p0) * k; if (turn.t >= 1) turn = null; }
       if (jy > 0 || jv > 0) { jv -= 11 * dt; jy += jv * dt; if (jy <= 0) { jy = 0; jv = 0; } }
       cam.position.y = EYE + jy + (walk && !jy ? Math.sin(t * 9) * 0.018 : 0);
@@ -194,7 +198,7 @@ function create(o) {
     /* подписи над предметами */
     var show = R.mode === 'walk';
     for (var j = 0; j < R.items.length; j++) { var it = R.items[j], el = it.tag;
-      if (!show || it.noTag) { el.style.display = 'none'; continue; }
+      if (!show || it.noTag || (R.tagOk && !R.tagOk(it))) { el.style.display = 'none'; continue; }
       tmp.set(it.at3 ? it.at3[0] : it.obj.position.x, it.tagY || 2.2, it.at3 ? it.at3[2] : it.obj.position.z);
       var dist2 = tmp.distanceTo(cam.position); tmp.project(cam);
       if (tmp.z > 1 || Math.abs(tmp.x) > 1.1 || Math.abs(tmp.y) > 1.1 || (dist2 > (it.tagFar || 9) && it !== R.next)) { el.style.display = 'none'; continue; }
