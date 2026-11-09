@@ -13,7 +13,10 @@ var K = window.VZ_KURS, CFG = window.KURSY || {};
 var LIST = [
   { id: 'sborka', e: '🛠', t: 'Собери дрон', sub: '3D-мастерская: ставь детали, крути винты, паяй провода, подключай разъёмы и подними дрон в воздух.',
     url: 'trenazhery/sborka/index.html', kid: 'trenazhery/sborka/mladshie.html', best: 'kursy_fpv_sborka' },
-  { id: 'soon', e: '🎮', t: 'Новые тренажёры', sub: 'Скоро здесь появятся ещё тренажёры.', soon: 1 }
+  { id: 'pult', e: '🎮', t: 'Пульт RadioMaster', sub: '3D-пульт: что за что отвечает, стики Mode 2 с голограммой дрона, тумблеры, взвод и назначение кнопок в Betaflight.',
+    url: 'trenazhery/pult/index.html', kid: 'trenazhery/pult/mladshie.html' },
+  { id: 'mobula', e: '🐝', t: 'Mobula 7: дрон первых гонок', sub: '3D-дрон на подиуме: из чего состоит, подготовка к заезду (винт, АКБ, разъём, видеоканал) и круг по трассе в зале.',
+    url: 'trenazhery/mobula/index.html', kid: 'trenazhery/mobula/mladshie.html' }
 ];
 
 function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
@@ -84,6 +87,25 @@ if (K) {
       var c = stg.querySelector('.tr-card div:last-child'); if (c) c.appendChild(p);
     });
   };
+  /* тренажёры пульта (модуль 4) и Mobula 7 (модуль 5): тот же шаг { s: 'game', g: id } последним в задании */
+  function trStep(id, e, h3, p, btn, ok) {
+    K.games[id] = function (stg, st, hint, done) {
+      var fired = false;
+      stg.innerHTML = '<div class="kr-sec">' + esc(st.h || h3) + '</div><div class="tr-card"><div class="tr-e">' + e + '</div><div><h3>' + esc(h3) + '</h3>' +
+        '<p class="mut">' + esc(p) + ' Вернуться в курс - стрелка "←" вверху.</p><div class="tr-acts">' + verBtns(id, btn) + '</div></div></div>';
+      bind(stg, function () {
+        if (fired) return; fired = true; try { done(1); } catch (er) {}
+        var q = document.createElement('p'); q.className = 'mut tr-best'; q.textContent = ok;
+        var c = stg.querySelector('.tr-card div:last-child'); if (c) c.appendChild(q);
+      });
+    };
+  }
+  trStep('pult', '🎮', 'Пульт RadioMaster в 3D', 'Покрути настоящий пульт: что делает каждая кнопка, как стики управляют дроном, какой тумблер взводит и как любую кнопку назначить в Betaflight.', '🎮 Открыть пульт', 'Тренажёр пройден. Повторить можно в "Тренажёрах" на площадке.');
+  trStep('mobula', '🐝', 'Mobula 7: дрон первых гонок', 'Посмотри наш гоночный вуп в 3D, подготовь его к заезду сам и пролети круг по трассе в зале.', '🐝 Открыть Mobula 7', 'Тренажёр пройден. Повторить можно в "Тренажёрах" на площадке.');
+  [['m4_sticks', 'pult', 'Тренажёр: пульт RadioMaster'], ['m5_class', 'mobula', 'Тренажёр: Mobula 7 в 3D']].forEach(function (a) {
+    var L2 = K.lib && K.lib[a[0]];
+    if (L2 && !L2.steps.some(function (x) { return x.g === a[1]; })) L2.steps.push({ s: 'game', g: a[1], h: a[2], name: a[1] === 'pult' ? 'Пульт' : 'Mobula 7' });
+  });
   /* шаг "Мастерская" последним в задании 2.6 (в конце, чтобы у тех, кто уже проходил, не сдвинулись шаги) */
   var L = K.lib && K.lib.m2_build;
   if (L && !L.steps.some(function (x) { return x.g === 'sborka'; }))

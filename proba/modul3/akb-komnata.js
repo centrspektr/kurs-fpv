@@ -193,7 +193,7 @@ var hz = R.tex(512, 64, function (c, w, h) { for (var i = -2; i < 20; i++) { c.f
 var hzm = new T.Mesh(new T.PlaneGeometry(ZB.d + .6, .12), new T.MeshStandardMaterial({ map: hz, roughness: .6 })); hzm.rotation.x = -Math.PI / 2; hzm.rotation.z = Math.PI / 2; hzm.position.set(W - 1.6, .006, ZB.z); sc.add(hzm);
 R.block(W - ZB.w, ZB.z - ZB.d / 2, W, ZB.z + ZB.d / 2);
 window.AKB_BENCH = { g: bench, x: ZB.x, z: ZB.z, y: ZB.h + .03 };
-R.item({ obj: bench, name: 'Зарядная станция', kicker: 'Урок на зарядке', sub: 'Научись заряжать АКБ по шагам: мешок, разъёмы, режим LiPo или LiHV, ток, хранение.',
+R.item({ obj: bench, name: 'Зарядная станция', kicker: 'Урок на зарядке', sub: 'Зарядка ViFly WhoopStor 3: две кнопки, ток, вольты, заряд и хранение АКБ 1S, как у Mobula 7.',
   at: [W - 2.2, ZB.z], look: [W - .5, 1.0, ZB.z], tagY: 2.6, actLabel: 'Заряжать', act: function () { if (window.AKB_ZAR) AKB_ZAR.open(); } });
 
 /* ---------- шкаф хранения, песок, огнетушитель (левая стена, у монитора) ---------- */
