@@ -16,7 +16,9 @@ var LIST = [
   { id: 'pult', e: '🎮', t: 'Пульт RadioMaster', sub: '3D-пульт: что за что отвечает, стики Mode 2 с голограммой дрона, тумблеры, взвод и назначение кнопок в Betaflight.',
     url: 'trenazhery/pult/index.html', kid: 'trenazhery/pult/mladshie.html' },
   { id: 'mobula', e: '🐝', t: 'Mobula 7: дрон первых гонок', sub: '3D-дрон на подиуме: из чего состоит, подготовка к заезду (винт, АКБ, разъём, видеоканал) и круг по трассе в зале.',
-    url: 'trenazhery/mobula/index.html', kid: 'trenazhery/mobula/mladshie.html' }
+    url: 'trenazhery/mobula/index.html', kid: 'trenazhery/mobula/mladshie.html' },
+  { id: 'klassy', e: '🚁', t: 'Классы дронов', sub: 'Три дрона в 3D в настоящем размере: вуп Mobula 7, 3-дюймовый синевуп и 5-дюймовый фристайл. Размер, банки, вес, где летать.',
+    url: 'trenazhery/klassy/index.html', kid: 'trenazhery/klassy/mladshie.html' }
 ];
 
 function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
@@ -102,9 +104,10 @@ if (K) {
   }
   trStep('pult', '🎮', 'Пульт RadioMaster в 3D', 'Покрути настоящий пульт: что делает каждая кнопка, как стики управляют дроном, какой тумблер взводит и как любую кнопку назначить в Betaflight.', '🎮 Открыть пульт', 'Тренажёр пройден. Повторить можно в "Тренажёрах" на площадке.');
   trStep('mobula', '🐝', 'Mobula 7: дрон первых гонок', 'Посмотри наш гоночный вуп в 3D, подготовь его к заезду сам и пролети круг по трассе в зале.', '🐝 Открыть Mobula 7', 'Тренажёр пройден. Повторить можно в "Тренажёрах" на площадке.');
-  [['m4_sticks', 'pult', 'Тренажёр: пульт RadioMaster'], ['m5_class', 'mobula', 'Тренажёр: Mobula 7 в 3D']].forEach(function (a) {
+  trStep('klassy', '🚁', 'Классы дронов в 3D', 'Сравни три дрона в настоящем размере: наш вуп Mobula 7, средний 3-дюймовый и большой 5-дюймовый. Где на каком летают и почему.', '🚁 Открыть классы', 'Тренажёр пройден. Повторить можно в "Тренажёрах" на площадке.');
+  [['m4_sticks', 'pult', 'Тренажёр: пульт RadioMaster'], ['m5_class', 'mobula', 'Тренажёр: Mobula 7 в 3D'], ['m5_class', 'klassy', 'Тренажёр: классы дронов']].forEach(function (a) {
     var L2 = K.lib && K.lib[a[0]];
-    if (L2 && !L2.steps.some(function (x) { return x.g === a[1]; })) L2.steps.push({ s: 'game', g: a[1], h: a[2], name: a[1] === 'pult' ? 'Пульт' : 'Mobula 7' });
+    if (L2 && !L2.steps.some(function (x) { return x.g === a[1]; })) L2.steps.push({ s: 'game', g: a[1], h: a[2], name: a[1] === 'pult' ? 'Пульт' : a[1] === 'klassy' ? 'Классы' : 'Mobula 7' });
   });
   /* шаг "Мастерская" последним в задании 2.6 (в конце, чтобы у тех, кто уже проходил, не сдвинулись шаги) */
   var L = K.lib && K.lib.m2_build;

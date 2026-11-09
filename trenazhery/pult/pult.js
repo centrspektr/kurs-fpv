@@ -44,7 +44,7 @@ for (var wi = 0; wi < 12; wi++) { var post = new T.Mesh(new T.BoxGeometry(.12, 6
 
 /* ---------- пульт RadioMaster Pocket ---------- */
 var P = new T.Group(); P.position.set(0, .32, 0); P.rotation.x = -1.05; sc.add(P);   /* лежит на подставке, наклонён к нам */
-var smoke = std('#2a2d35', .3, .1, { transparent: true, opacity: .9, envMapIntensity: .6 });
+var smoke = std('#4a4e58', .22, .1, { transparent: true, opacity: .8, envMapIntensity: .7 }); /* дымчатый прозрачный, как на фото */
 var black = std('#0d0e12', .55, .1), metal = std('#d6dae2', .25, .95, { envMapIntensity: 1 }), dark = std('#141519', .65, .05);
 /* корпус: скруглённый прямоугольник с "ручками" внизу */
 var sh = new T.Shape(), W = .86, Hh = .58;
@@ -81,7 +81,9 @@ var trims = [];
 [-.24, .24].forEach(function (x) { var g = new T.Group(); g.position.set(x, -.1, FZ + .012); P.add(g);
   g.add(new T.Mesh(new T.CylinderGeometry(.065, .065, .02, 24), black)).rotation.x = Math.PI / 2;
   var b1 = new T.Mesh(new T.BoxGeometry(.1, .025, .025), dark); b1.position.z = .015; g.add(b1); var b2 = new T.Mesh(new T.BoxGeometry(.025, .1, .025), dark); b2.position.z = .015; g.add(b2); trims.push(g); });
-var power = onFace(new T.Mesh(T.CapsuleGeometry ? new T.CapsuleGeometry(.03, .08, 4, 12) : new T.CylinderGeometry(.03, .03, .14, 16), black), 0, -.1, .015); power.rotation.z = Math.PI / 2;
+var power = onFace(new T.Mesh(new T.CylinderGeometry(.045, .045, .03, 24), black), 0, -.1, .015); power.rotation.x = Math.PI / 2;
+/* зелёное кольцо вокруг кнопки питания - горит, когда пульт включён */
+var pwrRing = onFace(new T.Mesh(new T.TorusGeometry(.058, .009, 8, 32), neon('#2a3a2a', 1)), 0, -.1, .02);
 /* кнопки слева: RTN, PAGE>, PAGE<, TELE; круглые SYS и MDL */
 function lblTex(s) { return tex(128, 48, function (c, w, h) { c.fillStyle = '#16171c'; c.fillRect(0, 0, w, h); txt(c, s, w / 2, h / 2 + 1, 26, '#8a8e9c', 'center', 800); }); }
 var btns = {};
@@ -115,7 +117,7 @@ var rmV = new T.Mesh(new T.PlaneGeometry(.5, .07), new T.MeshBasicMaterial({ map
 
 /* экран EdgeTX: рисуем по состоянию */
 var ST = { on: false, armed: false, mode: 'ANGLE', page: 0, msg: '' };
-function drawLCD() { lcdT.redraw(function (c, w, h) { var bg = ST.on ? '#b9d9a8' : '#3c4a3a'; c.fillStyle = bg; c.fillRect(0, 0, w, h); if (!ST.on) return;
+function drawLCD() { pwrRing.material.color.set(ST.on ? '#39ff6a' : '#1a2a1a').multiplyScalar(ST.on ? 1.6 : 1); lcdT.redraw(function (c, w, h) { var bg = ST.on ? '#b9d9a8' : '#3c4a3a'; c.fillStyle = bg; c.fillRect(0, 0, w, h); if (!ST.on) return;
   c.fillStyle = '#1b2a14'; c.font = '800 30px ui-monospace, Menlo, monospace'; c.textAlign = 'left'; c.textBaseline = 'top';
   c.fillText('Mobula7', 16, 12); c.textAlign = 'right'; c.fillText('7.6V', w - 16, 12); c.fillRect(0, 52, w, 3);
   c.textAlign = 'left'; c.font = '900 50px ui-monospace, Menlo, monospace'; c.fillText(ST.armed ? 'ARMED' : 'DISARM', 16, 74);
