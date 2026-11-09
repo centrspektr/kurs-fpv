@@ -1008,6 +1008,7 @@ window.KURS_GOROD={ enter:function(id){ var n=LK&&LK.by[id]; if(n){ refresh(); a
 function roomOut(n){ flashOn(n.c+'dd',function(){ if(ROOM) ROOM.close(); ROOM=null; refresh(); lvlStars(); setLevel(LK); var B=viewOf(n); camP.copy(B.p); camL.copy(B.l); hud.classList.add('on'); backB.classList.add('on'); arrive(n); flashOff(); }); }
 function closeWin(after){ if(!winOn) return; var c=cur?cur.c+'cc':null; clearInterval(bTm); if(GL) GL.stop(); scrBack(cur); flashOn(c,function(){ win.classList.remove('on'); winOn=false; LIVE=false; document.body.classList.remove('livebg'); refresh(); lvlStars();
   if(ROOM){ var rn=cur; flashOff(); if(after) after(); else ROOM.back(rn&&rn.tid,!wasDone&&rn&&rn.st==='done'); return; }
+  if(window.KURS_KOMNATA&&KURS_KOMNATA.on){ var kn=cur; flashOff(); if(after) after(); else KURS_KOMNATA.back(kn&&kn.tid,!wasDone&&kn&&kn.st==='done'); return; }
   hud.classList.add('on'); backB.classList.add('on');
   if(after) after(); else if(cur){ var n=cur, B=viewOf(n); camP.copy(B.p); camL.copy(B.l); arrive(n);
     /* задание только что пройдено - сразу ведём к следующему */
@@ -1016,7 +1017,8 @@ function closeWin(after){ if(!winOn) return; var c=cur?cur.c+'cc':null; clearInt
   flashOff(); }); }
 /* экраны курса внутри окна: следующее задание - узел на карте тоже меняется; "К модулю" и "Все модули" - назад в космос */
 document.addEventListener('kurs-view',function(e){ var d=e.detail||{}; if(!winOn) return; pane.scrollTop=0;
-  if(ROOM&&!d.t&&winMode==='task'){ closeWin(); return; }
+  /* в модуле-помещении задание закрывается обратно в комнату (и "Следующее задание" тоже): к следующему ученик идёт сам */
+  if((ROOM||(window.KURS_KOMNATA&&KURS_KOMNATA.on))&&winMode==='task'&&d.t!==winTask){ closeWin(); return; }
   if(d.t){ winMode='task'; var mm=mods.find(function(m){ return m.tasks.indexOf(d.t)>=0; }), L=mm&&LBY[mm.id]; if(!L) return;
     if(L!==curL) setLevel(L); var n=L.by[d.t]; if(n&&n!==cur){ scrBack(cur); cur=n; winTask=n.tid; wasDone=n.st==='done'; var B=n.scr?scrView(n):viewOf(n); camP.copy(B.p); camL.copy(B.l); setBg(n,LIVE); brief(n); } hud.classList.remove('on'); backB.classList.remove('on'); return; }
   if(d.m){ closeWin(function(){ var L=LBY[d.m]; if(L!==curL) setLevel(L); var c=L.by['c_'+d.m], B=viewOf(c); camP.copy(B.p).add(V(0,4,30)); camL.copy(B.l); flyOver(L,true); }); return; }
