@@ -515,8 +515,10 @@ function home() {
       ${m.tasks ? `<div class="kr-bar"><i data-w="${p * 100}"></i></div>` : ''}<div class="st">${st}</div></button>`;
   }).join('') + '</div>';
   if (CFG.role && !isCoach()) h += '<div class="kr-back"><button class="kr-btn sm" data-k="co-role">👥 Я тренер</button><span class="mut">Окно тренера: ученики и их прогресс, вход по PIN.</span></div>';
+  if (RJ() && !isCoach()) h += '<div id="krRj"></div>';   // рейтинг курса: моя площадка / все, теория / сборка
   h += setHtml(live);
   mount(h); bars();
+  if (RJ() && !isCoach()) RJ().mount($('#krRj', box));
   if (!isCoach()) tourStart();
 }
 /* настройки ученика: уровень (один на весь курс), вид, крупный текст, сообщить об ошибке */
@@ -1078,6 +1080,21 @@ K.H = { snd: (...a) => snd(...a), buzz: (...a) => buzz(...a), whyBox: (...a) => 
 const SPK_API = CFG.api || 'https://functions.yandexcloud.net/d4e4vhndceg7scc0mh3b';
 const spkCall = q => fetch(SPK_API, { method: 'POST', body: JSON.stringify(q) }).then(r => r.json());
 const sesS = { get(k) { try { return sessionStorage.getItem(k); } catch (e) { return null; } }, set(k, v) { try { sessionStorage.setItem(k, v); } catch (e) {} } };
+/* ---------- рейтинг курса (rejting.js): теория = очки заданий без полётных, после обнуления на сервере - с нуля ---------- */
+const RJ = () => window.KURS_REJT || null;
+const thRaw = () => Object.keys(K.lib).reduce((a, id) => a + (K.lib[id].fly ? 0 : taskPts(id)), 0);
+const thPts = () => Math.max(0, Math.min(100000, thRaw() - (S.th0 || 0)));
+/* ответ ksync: площадка ученика и номер обнуления теории. true - надо прислать очки ещё раз */
+function thSync(j) {
+  if (j.selo) RJ().setSelo(j.selo, j.seloName);
+  if (j.te == null) return false;
+  const te = +j.te || 0;
+  if (S.te == null) { S.te = te; try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} return te !== 0; }   // первый раз: просто узнаём номер
+  if (te === S.te) return false;
+  /* педагог обнулил теорию: старые очки не считаем, считаем то, что набрано после */
+  S.te = te; S.th0 = thRaw(); try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {}
+  return true;
+}
 function meK() { try { const P = JSON.parse(localStorage.getItem(CFG.meKey || 'spk_vzlet') || 'null'); return P && P.code && P.status === 'принят' ? P : null; } catch (e) { return null; } }
 
 /* краткая сводка для тренера: по заданию - шаги (o пройден, x через доп. задание, n нужно доп. задание, w ждёт тренера, - нет), % и т.д. */
@@ -1107,9 +1124,13 @@ function kSync(soon) {
   clearTimeout(kT);
   kT = setTimeout(() => {
     if (kBusy) return kSync(true); kBusy = true;
-    spkCall({ op: 'ksync', code: P.code, club: CLUB, e: P.e || 0, k: kSummary() }).then(j => {
+    const q = { op: 'ksync', code: P.code, club: CLUB, e: P.e || 0, k: kSummary() };
+    /* рейтинг курса по площадкам (rejting.js, только проба): очки теории th, номер обнуления te, очки сборки sb */
+    if (RJ()) { q.th = thPts(); q.te = S.te || 0; q.sb = RJ().sbPts(); }
+    spkCall(q).then(j => {
       kBusy = false;
       if (j && j.retry) return kSync(true);
+      if (RJ() && j && j.ok && thSync(j)) return kSync(true);
       /* педагог сбрасывал ученика: запоминаем новый номер сброса и отправляем снова */
       if (j && j.ok && j.reset && j.reset > (P.e || 0)) { P.e = j.reset; try { localStorage.setItem(CFG.meKey || 'spk_vzlet', JSON.stringify(P)); } catch (e) {} return kSync(true); }
       if (j && j.ok && j.kc && !j.reset) applyKc(j.kc);
@@ -1166,7 +1187,10 @@ async function coLoad(pin) {
 }
 function coParse(j) {
   CO.server = (j.list || []).some(x => 'kurs' in x);
-  CO.list = (j.list || []).filter(x => x.club === CLUB && x.st === 'принят' && !x.hid).map(x => ({ id: x.id, n: x.first, c: x.cls, k: x.kurs || {}, kc: x.kc || {}, upd: x.upd }))
+  /* площадки (с 09.11, rejting.js): scope - площадки педагога (null - видит все), sela - все площадки */
+  CO.scope = Array.isArray(j.scope) ? j.scope : null;
+  if (RJ() && j.sela) RJ().setSela(j.sela);
+  CO.list = (j.list || []).filter(x => x.club === CLUB && x.st === 'принят' && !x.hid).map(x => ({ id: x.id, n: x.first, c: x.cls, k: x.kurs || {}, kc: x.kc || {}, upd: x.upd, selo: x.selo || 'irtysh', kp: x.kp || null }))
     .sort((a, b) => (parseInt(a.c) || 99) - (parseInt(b.c) || 99) || a.n.localeCompare(b.n, 'ru'));
   /* то, что ещё в очереди на сервер, сразу видно и в свежем списке */
   COQ.q.forEach(o => coApply(o.ids, o.q));
@@ -1361,10 +1385,27 @@ const coChip = (cls, t) => `<span class="co-c ${cls}">${t}</span>`;
 const unready = () => { const u = K.mods.filter(m => !m.tasks); return u.length ? `<div class="co-un">🛠 ${u.length > 1 ? 'Модули ' + u[0].n + '-' + u[u.length - 1].n + ' готовятся' : 'Модуль ' + u[0].n + ' готовится'}</div>` : ''; };
 
 function coHead() {
-  return `<div class="kr-card top co-hd"><div class="co-hr"><div class="co-ht"><h3>👥 Ученики курса</h3>${CO.demo ? '<span class="co-demo">👀 Пример - не сохраняется</span>' : `<span class="co-upd">${E(CO.busy ? 'обновляю...' : updAgo())}</span>`}</div>
+  return `<div class="kr-card top co-hd"><div class="co-hr"><div class="co-ht"><h3>👥 Ученики курса</h3>${coSeloHead()}${CO.demo ? '<span class="co-demo">👀 Пример - не сохраняется</span>' : `<span class="co-upd">${E(CO.busy ? 'обновляю...' : updAgo())}</span>`}</div>
     <div class="co-hb"><button class="kr-btn co-ib" data-k="co-load" aria-label="Обновить" title="Обновить">↻</button><button class="kr-btn co-ib" data-k="co-menu" aria-expanded="${!!CO.menu}" aria-label="Ещё" title="Ещё">⋯</button>${bugBtn()}</div></div>
     <div class="co-tp" data-spk-panel data-club="${CLUB}" data-coach data-pin-key="vzlet_pin" data-accent="#00d4ff"></div>
     ${CO.menu ? `<div class="co-menu"><button class="kr-btn" data-k="co-demo">${CO.demo ? '✕ Убрать пример' : '👀 Пример с выдуманными учениками'}</button><button class="kr-btn" data-k="co-as">🎓 Курс глазами ученика</button><p class="mut">Нажми на ученика или модуль, чтобы зайти внутрь. Цифры сводки - фильтры списка.</p></div>` : ''}</div>`;
+}
+/* площадки в окне педагога (только с rejting.js) */
+const coSeloName = id => RJ() ? RJ().nameOf(id || 'irtysh') : '';
+const coAdmin = () => RJ() && CO.st === 'ok' && !CO.demo && !CO.scope;
+function coSeloHead() {
+  if (!RJ() || CO.st !== 'ok' || CO.demo) return '';
+  const t = CO.scope && CO.scope.length ? 'Педагог · ' + CO.scope.map(coSeloName).join(', ') : 'Все площадки';
+  return `<span class="co-upd co-selo">🏠 ${E(t)}</span>`;
+}
+function coSeloFilter() {
+  if (!coAdmin()) return '';
+  const S2 = RJ().sela(), n = id => CO.list.filter(s => s.selo === id).length;
+  return `<div class="kr-in co-self"><label>Площадка <select data-k="co-selo">${['<option value="">🌍 Все площадки (' + CO.list.length + ')</option>'].concat(S2.map(x => `<option value="${E(x.id)}"${CO.selo === x.id ? ' selected' : ''}>🏠 ${E(x.name)} (${n(x.id)})</option>`)).join('')}</select></label></div>`;
+}
+function coRj() {
+  if (!RJ() || CO.demo || !CO.tok) return '';
+  return '<div id="coRj"></div>';
 }
 function coSum(ST) {
   const w = ST.reduce((a, x) => a + x[1].waits.length, 0), n = ST.filter(x => x[1].stuck.length).length, idle = ST.filter(x => x[1].ago != null && x[1].ago >= 7).length;
@@ -1393,7 +1434,7 @@ function coRow(s, st) {
   else if (st.all) { line = '<span class="co-sl2 co-ok">✓ Все открытые модули пройдены - можно открыть следующий</span>'; bar = 100; }
   else { const m = st.cur, d = m.tasks.filter(id => kDone(s, id)).length; line = `<span class="co-sl2">Сейчас: Модуль ${m.n} · ${d} из ${m.tasks.length} заданий${st.skipped.length ? ` · <span class="co-sk">пропущено ${st.skipped.length}</span>` : ''}</span>`; bar = d / m.tasks.length * 100; }
   const seen = st.ago == null ? '' : `<span class="co-seen ${st.ago >= 7 ? 'old' : ''}">${agoTxt(st.ago)}</span>`;
-  return `<button class="co-sr ${st.stuck.length ? 'co-stk' : ''} ${st.started ? '' : 'co-nsr'}" data-k="co-who" data-s="${s.id}"><span class="co-sn"><b>${E(s.n)}</b> <small>${E(s.c)}</small></span><b class="co-sp">⭐ ${st.pts}</b>${ch.length ? `<span class="co-chs">${ch.join('')}</span>` : ''}${line}${bar != null ? `<span class="kr-bar thin"><i style="width:${bar}%"></i></span>` : ''}${seen}</button>`;
+  return `<button class="co-sr ${st.stuck.length ? 'co-stk' : ''} ${st.started ? '' : 'co-nsr'}" data-k="co-who" data-s="${s.id}"><span class="co-sn"><b>${E(s.n)}</b> <small>${E(s.c)}${RJ() && !CO.demo ? ' · 🏠 ' + E(coSeloName(s.selo)) : ''}</small></span><b class="co-sp">⭐ ${st.pts}</b>${ch.length ? `<span class="co-chs">${ch.join('')}</span>` : ''}${line}${bar != null ? `<span class="kr-bar thin"><i style="width:${bar}%"></i></span>` : ''}${seen}</button>`;
 }
 function coListHtml(ST) {
   const f = CO.f; let R = ST.slice();
@@ -1539,19 +1580,21 @@ function coDraw(quiet) {
   else if (CO.st === 'pin') h += `<div class="kr-card"><b>Вход для тренера</b><p class="mut" style="margin:4px 0 10px">${E(CFG.pinText || 'Нужен PIN портала СПЕКТР (тот же, что для заявок).')}${CO.err ? ' ' + E(CO.err) : ''}</p><form class="kr-in" id="coPin"><label>PIN<input name="pin" type="password" inputmode="numeric" autocomplete="off"></label><button class="kr-btn pri">Войти</button></form></div>`;
   else if (CO.st === 'err') h += `<div class="kr-wait">⚠ ${E(CO.err)}. <button class="kr-btn sm" data-k="co-load">Ещё раз</button></div>`;
   if (CO.st === 'ok' && !CO.demo && !CO.server) h += '<div class="kr-wait">🛠 Сервер ещё не обновлён: список учеников есть, а их прогресс по курсу появится после установки нового файла сервера. Пока можно посмотреть 👀 Пример (кнопка ⋯).</div>';
-  const L = CO.list;
+  if (coAdmin()) h += coSeloFilter();
+  const L = coAdmin() && CO.selo ? CO.list.filter(s => s.selo === CO.selo) : CO.list;
   if ((CO.st === 'ok' || CO.demo) && !L.length) h += '<div class="kr-note">Пока нет принятых учеников' + E(GRP) + '.</div>';
   if ((CO.st === 'ok' || CO.demo) && L.length) {
     const ST = L.map(s => [s, coStat(s)]), waits = waitsOf(L);
     h += coSum(ST);
     h += `<div class="co-tabs"><button data-k="co-tab" data-v="gr" class="${tab === 'gr' ? 'on' : ''}">📊 Обзор</button><button data-k="co-tab" data-v="st" class="${tab === 'st' ? 'on' : ''}">Ученики<small>${L.length}</small></button><button data-k="co-tab" data-v="mo" class="${tab === 'mo' ? 'on' : ''}">Модули<small>${K.mods.filter(m => m.tasks).length}</small></button></div>`;
     if (waits.length && (tab === 'st' || CO.f === 'w')) h += coWaitCard(waits);
-    h += tab === 'st' ? coListHtml(ST) + coRate(ST) + coResetAll(L) : tab === 'gr' ? coGridHtml(L) : coModsHtml(L);
+    h += tab === 'st' ? coListHtml(ST) + (RJ() ? coRj() : coRate(ST)) + coResetAll(L) : tab === 'gr' ? coGridHtml(L) : coModsHtml(L);
   }
   /* тихая перерисовка таблицы: прокрутка вбок остаётся на месте, открытое окошко обновляется */
   const gw = box && $('.co-gw', box), gx = gw ? gw.scrollLeft : 0;
   mount(h, quiet);
   const gw2 = $('.co-gw', box); if (gw2 && gx) gw2.scrollLeft = gx;
+  const rj = $('#coRj', box); if (rj) RJ().mount(rj, { token: CO.tok, scope: CO.scope });
   const gp = document.getElementById('krGp'); if (gp && gp.className === 'on' && gp._o) { if (tab === 'gr') gPop(gp._o.sid, gp._o.mid); else gPopClose(); }
 }
 function coResetAll(L) {
@@ -1952,6 +1995,7 @@ document.addEventListener('click', e => {
 document.addEventListener('change', e => {
   if (!box || !box.contains(e.target)) return;
   const t = e.target; if (t.dataset && t.dataset.k === 'co-lvsel' && CO.who) coAct(CO.who, { k: 'lvl', mod: t.dataset.m, v: +t.value });
+  if (t.dataset && t.dataset.k === 'co-selo') { CO.selo = t.value || null; CO.f = null; coDraw(true); }
 });
 document.addEventListener('visibilitychange', () => { if (document.hidden) undoFlush(); });
 addEventListener('pagehide', undoFlush);
@@ -2142,6 +2186,8 @@ document.addEventListener('click', e => {
 function init() {
   box = document.getElementById('t-kurs'); if (!box) return;
   fxApply(); home(); kSync(); pauseInit();
+  /* игра "Собери дрон" (в окне поверх курса) записала новый лучший результат - отправляем очки сборки */
+  if (RJ()) addEventListener('storage', e => { if (e.key === 'kursy_fpv_sborka') kSync(); });
   bodyCls(); try { new MutationObserver(bodyCls).observe(box, { attributes: true, attributeFilter: ['hidden'] }); } catch (e) {}
   setInterval(coUpd, 30000);
   const nav = document.querySelector(CFG.tabs || '#vt');
