@@ -19,6 +19,7 @@ function lsG(k){ try{ return localStorage.getItem(k); }catch(e){ return null; } 
 function lsS(k,v){ try{ if(v==null) localStorage.removeItem(k); else localStorage.setItem(k,v); }catch(e){} }
 /* графика v2 (09.11, вариант Б): свет и материалы как в игре "Собери дрон" (RoomEnvironment, металл и стекло), гладкие здания из кода.
    ?v=0 - старая графика (для сравнения). */
+var SKY=/[?&]sky=0/.test(location.search)?0:1; /* остров с небоскрёбами (09.11) */
 var PBR=/[?&]v=0/.test(location.search)?'':'b';
 function LM(o){ o=o||{}; if(!PBR) return new THREE.MeshLambertMaterial(o); var q={}; for(var k in o) q[k]=o[k];
   if(q.roughness==null) q.roughness=q.map?.55:.38; if(q.metalness==null) q.metalness=q.map?.15:.55; q.envMapIntensity=q.map?.12:.45; return new THREE.MeshStandardMaterial(q); }
@@ -578,6 +579,32 @@ mods.forEach(function(m,i){ var a=i*1.02, r=RI*.62-i*1.6, st0=i<6?i+1:6, h=TOPH[
   var rim=new THREE.Mesh(new THREE.TorusGeometry(RI,.35,8,96),new THREE.MeshBasicMaterial({color:0x7cf3ff,transparent:true,opacity:.9})); rim.rotation.x=Math.PI/2; rim.position.set(0,PY,CZ); G.add(rim); LK.rim=rim;
   var rock=new THREE.ConeGeometry(RI-2,52,28,6,true), pos=rock.attributes.position; for(var i=0;i<pos.count;i++){ var y=pos.getY(i); if(y<-25){ pos.setX(i,pos.getX(i)*.9); pos.setZ(i,pos.getZ(i)*.9); continue; } /* край под платформой: только внутрь, иначе уголки торчат за город */ if(y<25){ var f=1-Math.random()*.22; pos.setX(i,pos.getX(i)*f); pos.setZ(i,pos.getZ(i)*f); pos.setY(i,y+(Math.random()-.5)*4); } }
   rock.computeVertexNormals(); var rk=new THREE.Mesh(rock,new LM({color:0x2a2148,emissive:0x3b1d6e,emissiveIntensity:.25,flatShading:true,side:THREE.DoubleSide})); rk.rotation.x=Math.PI; rk.position.set(0,PY-2.4-26,CZ); G.add(rk);
+  /* ===== остров как на образце (09.11, вариант 1): стена неоновых небоскрёбов по дальнему краю, большая скала, дымка. ?sky=0 - без них ===== */
+  if(SKY){ var big=SKY>=1;
+    /* скала крупнее, гранёная, снизу светится */
+    rk.scale.set(1.04,2.1,1.04); rk.position.y=PY-2.4-26*2.1; rk.material=new THREE.MeshStandardMaterial({color:0x3a2a78,emissive:0x5b2bd6,emissiveIntensity:.35,metalness:.2,roughness:.7,flatShading:true,side:THREE.DoubleSide});
+    /* дымка: светящиеся облака вокруг скалы и под городом */
+    var hz=tex(function(x,s){ var g=x.createRadialGradient(s/2,s/2,0,s/2,s/2,s/2); g.addColorStop(0,'rgba(150,110,255,.55)'); g.addColorStop(.5,'rgba(110,90,240,.22)'); g.addColorStop(1,'rgba(80,60,200,0)'); x.fillStyle=g; x.fillRect(0,0,s,s); },128);
+    for(var hq=0;hq<14;hq++){ var an=hq/14*6.283, hr=RI*(.9+Math.random()*.6), hs=new THREE.Sprite(new THREE.SpriteMaterial({map:hz,transparent:true,depthWrite:false,opacity:.75,fog:false})); hs.scale.set(90+Math.random()*60,40+Math.random()*25,1); hs.position.set(Math.sin(an)*hr,PY-30-Math.random()*40,CZ+Math.cos(an)*hr); G.add(hs); }
+    var glowB=new THREE.Sprite(new THREE.SpriteMaterial({map:hz,transparent:true,depthWrite:false,opacity:.5})); glowB.scale.set(420,260,1); glowB.position.set(0,PY+40,CZ-260); G.add(glowB);
+    /* небоскрёбы: стена по дальнему краю (вариант 2 - выше, плотнее и заходит дальше по бокам) */
+    var cols=['#7cf3ff','#ff7ce0','#a78bfa','#5effc4','#ffd36e'], nT=SKY===2?44:28, arc=SKY===2?2.5:1.9;
+    var glass=new THREE.MeshPhysicalMaterial({color:0x14204a,metalness:.5,roughness:.08,clearcoat:1,envMapIntensity:.6});
+    for(var tq=0;tq<nT;tq++){ var u=tq/(nT-1), a2=Math.PI+(u-.5)*2*arc+(Math.random()-.5)*.05, rr2=RI-3.5-(tq%3)*3.2, x2=Math.sin(a2)*rr2, z2=CZ+Math.cos(a2)*rr2;
+      var mid=1-Math.abs(u-.5)*2, hT=(SKY===2?26:16)+mid*(SKY===2?52:30)*(.5+Math.random()*.6), wT=2.2+Math.random()*2.4, col=cols[tq%cols.length], tg=new THREE.Group(); tg.position.set(x2,PY,z2); tg.rotation.y=Math.random()*3; G.add(tg);
+      var kind=tq%4, wtx=winTex(col); wtx.repeat.set(2,Math.max(2,Math.round(hT/6))); var wm=new THREE.MeshStandardMaterial({map:wtx,emissive:0xffffff,emissiveMap:wtx,emissiveIntensity:1.1,metalness:.2,roughness:.5,color:0x555a70});
+      var body;
+      if(kind===0){ body=new THREE.Mesh(new THREE.BoxGeometry(wT,hT,wT*.8),wm); body.position.y=hT/2; }
+      else if(kind===1) body=new THREE.Mesh(lathe([[0,0],[wT*.6,0],[wT*.5,hT*.7],[wT*.32,hT],[0,hT]],24),wm);
+      else if(kind===2){ body=new THREE.Mesh(new THREE.CylinderGeometry(wT*.45,wT*.55,hT,24,1),glass); body.position.y=hT/2; }
+      else { body=new THREE.Mesh(new THREE.BoxGeometry(wT*.8,hT*.85,wT*.8),wm); body.position.y=hT*.425; }
+      tg.add(body); if(kind===3){ var tp=new THREE.Mesh(new THREE.BoxGeometry(wT*.55,hT*.2,wT*.55),wm); tp.position.y=hT*.95; tg.add(tp); }
+      var nm=new THREE.MeshBasicMaterial({color:new THREE.Color(col),toneMapped:false}); 
+      [-1,1].forEach(function(sd){ var st2=new THREE.Mesh(new THREE.BoxGeometry(.14,hT*.92,.14),nm); st2.position.set(sd*wT*.42,hT*.47,wT*.38); tg.add(st2); });
+      var cap=new THREE.Mesh(new THREE.TorusGeometry(wT*.42,.1,6,24),nm); cap.rotation.x=Math.PI/2; cap.position.y=hT*(kind===1?.95:1)+.1; tg.add(cap);
+      if(tq%3===0){ var sp2=new THREE.Mesh(new THREE.CylinderGeometry(.05,.12,4,6),new THREE.MeshStandardMaterial({color:0xb9c1d6,metalness:.9,roughness:.3})); sp2.position.y=hT+2; tg.add(sp2);
+        var tip2=new THREE.Sprite(new THREE.SpriteMaterial({map:glowTex('#ff4d6d'),blending:THREE.AdditiveBlending,depthWrite:false})); tip2.scale.setScalar(2); tip2.position.y=hT+4.1; tg.add(tip2); } } }
+
   LK.eng=[]; [[0,0],[24,10],[-22,14],[8,-26],[-14,-22]].forEach(function(q,j){ var e=new THREE.Sprite(new THREE.SpriteMaterial({map:glowTex(j%2?'#ff7ce0':'#7cf3ff'),blending:THREE.AdditiveBlending,depthWrite:false})); e.position.set(q[0],PY-14-j*5,CZ+q[1]); e.scale.setScalar(j?14:30); G.add(e); LK.eng.push(e); });
   var under=new THREE.Sprite(new THREE.SpriteMaterial({map:glowTex('#a78bfa'),blending:THREE.AdditiveBlending,depthWrite:false,opacity:.5})); under.scale.set(260,160,1); under.position.set(0,PY-70,CZ); G.add(under);
   /* посадочная площадка: это "мы", отсюда нить идёт к модулю 1 */
