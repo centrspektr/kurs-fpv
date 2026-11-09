@@ -24,10 +24,17 @@ function close(silent) { if (!ov) return; var o = ov; ov = null; cur = null;
   o.classList.remove('on'); setTimeout(function () { o.remove(); }, silent ? 0 : 500);
   if (window.GOLOS && GOLOS.stop) try { GOLOS.stop(); } catch (e) {} }
 /* "назад": сначала закрывается окно задания (если открыто), потом комната */
-addEventListener('popstate', function () { if (!ov) return; var w = document.getElementById('win'); if (w && w.classList.contains('on')) { try { history.pushState({ komnata: cur }, ''); } catch (e) {} return; } close(); });
+addEventListener('popstate', function () { if (!ov) return; var w = document.getElementById('win'); if (w && w.classList.contains('on')) { try { history.pushState({ komnata: cur }, ''); } catch (e) {} var x = document.getElementById('winX'); if (x) x.click(); return; } close(); });
 /* комната просит выйти */
 window.KURS_KOMNATA = { has: function (mid) { return !!KOMNATY[mid]; }, open: open,
   close: function () { if (!ov) return; if (history.state && history.state.komnata) history.back(); else close(); },
   task: function (tid) { return window.KURS_OPEN_TASK ? window.KURS_OPEN_TASK(tid) : false; },
+  /* окно задания закрылось - назад в комнату: клавиатура снова в комнате, стенды обновляются */
+  back: function (tid, fresh) { if (!ov) return; var f = ov.querySelector('iframe'); try { f.focus(); f.contentWindow.focus(); var w = f.contentWindow; if (w.AKB && w.AKB.back) w.AKB.back(tid, fresh); else if (w.AKB && w.AKB.refresh) w.AKB.refresh(); } catch (e) {} },
   get on() { return !!ov; } };
+/* клавиши, нажатые, пока фокус остался на странице курса (после кнопки окна задания), передаём в комнату */
+function winOn() { var w = document.getElementById('win'); return w && w.classList.contains('on'); }
+['keydown', 'keyup'].forEach(function (tp) { addEventListener(tp, function (e) { if (!ov || winOn()) return; var f = ov.querySelector('iframe'); if (!f || document.activeElement === f) return;
+  if (e.target && /INPUT|TEXTAREA|SELECT/.test(e.target.tagName)) return;
+  try { f.focus(); f.contentWindow.focus(); f.contentWindow.dispatchEvent(new KeyboardEvent(tp, { code: e.code, key: e.key, shiftKey: e.shiftKey, repeat: e.repeat, bubbles: true, cancelable: true })); if (/Space|Enter|Arrow/.test(e.code)) e.preventDefault(); } catch (er) {} }); });
 })();
