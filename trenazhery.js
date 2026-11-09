@@ -23,7 +23,7 @@ function cls() { try { var P = JSON.parse(lsG(CFG.meKey || 'spk_vzlet') || 'null
 function kidFirst() { var c = cls(); return c > 0 && c <= 6; }
 
 /* ---------- окно с игрой поверх курса ---------- */
-var ov = null, poll = 0, onDone = null, fired = false;
+var ov = null, poll = 0, onDone = null, onClose = null, fired = false;
 var css = document.createElement('style');
 css.textContent = '#trOv{position:fixed;inset:0;z-index:9000;background:#0b0816}#trOv iframe{position:absolute;inset:0;width:100%;height:100%;border:0;display:block}' +
   '.tr-list{display:grid;gap:12px}.tr-card{display:flex;gap:14px;align-items:flex-start}.tr-card .tr-e{font-size:38px;line-height:1;flex:none}' +
@@ -34,15 +34,16 @@ function close() {
   if (!ov) return; clearInterval(poll); poll = 0;
   try { var w = ov.querySelector('iframe').contentWindow; if (w.GOLOS) w.GOLOS.stop(); } catch (e) {}
   ov.remove(); ov = null; onDone = null; document.documentElement.style.overflow = '';
+  var oc = onClose; onClose = null; if (oc) try { oc(fired); } catch (e) {}
   if (window.GOLOS && window.GOLOS.stop) try { window.GOLOS.stop(); } catch (e) {}
 }
 /* назад (кнопка "←" в игре, кнопка "назад" телефона) закрывает игру и возвращает в курс */
 addEventListener('popstate', function () { if (ov) close(); });
 addEventListener('keydown', function (e) { if (ov && e.key === 'Escape') history.back(); });
 
-function open(id, kid, cb) {
+function open(id, kid, cb, closeCb) {
   var tr = LIST.find(function (x) { return x.id === id; }); if (!tr || tr.soon) return;
-  close(); fired = false; onDone = cb || null;
+  close(); fired = false; onDone = cb || null; onClose = closeCb || null;
   if (window.GOLOS && window.GOLOS.stop) try { window.GOLOS.stop(); } catch (e) {}
   ov = document.createElement('div'); ov.id = 'trOv';
   var f = document.createElement('iframe'); f.src = kid ? tr.kid : tr.url; f.title = tr.t; f.allow = 'autoplay; fullscreen';

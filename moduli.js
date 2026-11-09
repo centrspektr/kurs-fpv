@@ -2202,7 +2202,9 @@ window.VZ_KURS_INFO = {
   prog: id => { const m = mOf(id); return m ? modProg(m) : 0; },
   next() { const g = contTarget(); return g ? { m: g.m.id, t: g.tid } : null; },
   pts: () => allPts(),
-  go: { task: (tid, st) => taskView(tid, st), mod: id => modView(id), home: () => home(), bug: () => bugOpen() }
+  go: { task: (tid, st) => taskView(tid, st), mod: id => modView(id), home: () => home(), bug: () => bugOpen() },
+  /* шаг задания пройден вне окна задания (например, мини-игра на столе в модуле-помещении): true - задание стало пройдено */
+  step: (tid, i, res) => K.lib[tid] && K.lib[tid].steps[i] ? stepOk(tid, i, res) : false
 };
 window.VZ_KURS_GEN = { genLabel, genMix, buildQs };
 })();
