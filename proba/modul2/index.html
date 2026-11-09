@@ -1,0 +1,22 @@
+<!DOCTYPE html><html lang="ru"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#070914"><title>Модуль 2: Мастерская - проба</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}html,body{height:100%;background:#070914;overflow:hidden;font-family:system-ui,"Segoe UI",Roboto,sans-serif;color:#eef2ff}
+canvas{display:block;position:fixed;inset:0;width:100%;height:100%;touch-action:none}
+#hud{position:fixed;left:0;right:0;top:0;padding:12px 14px;display:flex;gap:10px;align-items:center;pointer-events:none;background:linear-gradient(#070914cc,#07091400)}
+#hud>*{pointer-events:auto}
+.ic{width:40px;height:40px;border-radius:50%;border:1px solid #ffffff2e;background:#ffffff12;color:#fff;display:grid;place-items:center;font-size:18px;text-decoration:none;backdrop-filter:blur(8px)}
+.ttl{flex:1}.ttl small{display:block;font-size:10px;letter-spacing:.18em;color:#a5b4fc;font-weight:800}.ttl b{font-size:16px}
+#vars{display:flex;gap:6px}#vars a{padding:8px 12px;border-radius:20px;border:1px solid #ffffff2e;background:#ffffff10;color:#fff;font-weight:800;font-size:13px;text-decoration:none}
+#vars a.on{background:#7cf3ff;color:#06121a;border-color:#7cf3ff}
+#tip{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);padding:9px 16px;border-radius:22px;background:#0b0f26d9;border:1px solid #ffffff22;font-size:13px;color:#cfd6ff;white-space:nowrap;pointer-events:none;max-width:calc(100vw - 24px);overflow:hidden;text-overflow:ellipsis}
+#cap{position:fixed;left:50%;top:70px;transform:translateX(-50%);padding:10px 16px;border-radius:16px;background:#0b0f26e6;border:1px solid #7cf3ff66;font-size:14px;display:none;text-align:center;max-width:min(420px,calc(100vw - 24px))}
+#cap b{display:block;font-size:16px;margin-bottom:2px}
+</style></head><body>
+<div id="hud"><a class="ic" href="javascript:history.back()">←</a><div class="ttl"><small>МОДУЛЬ 2 · ПРОБА</small><b>Мастерская</b></div><div id="vars"></div></div>
+<div id="cap"></div><div id="tip">Нажми на пол - иди туда. Нажми на экран или стол - подойти. Тяни - осмотреться.</div>
+<script src="three.min.js"></script><script src="RoomEnvironment.js"></script>
+<script>window.VZ_KURS={};</script><script src="kartinki.js"></script>
+<script src="modul2.js"></script>
+</body></html>
