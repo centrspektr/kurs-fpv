@@ -291,6 +291,9 @@ function toast(s) { var t = document.createElement('div'); t.className = 'toast'
 window.AKB_TOAST = toast;
 document.getElementById('snd').onclick = function () { if (!window.GOLOS) return; GOLOS.setOn(!GOLOS.on); this.textContent = GOLOS.on ? '🔊' : '🔇'; };
 if (window.GOLOS) document.getElementById('snd').textContent = GOLOS.on ? '🔊' : '🔇';
+var volEl = document.getElementById('vol'); if (volEl) { if (window.GOLOS && GOLOS.setVol) volEl.value = Math.round(GOLOS.vol * 100); else volEl.hidden = true;
+  volEl.addEventListener('pointerdown', function (e) { e.stopPropagation(); });
+  volEl.addEventListener('input', function () { if (!window.GOLOS) return; GOLOS.setVol(volEl.value / 100); if (GOLOS.vol > 0 && !GOLOS.on) { GOLOS.setOn(true); document.getElementById('snd').textContent = '🔊'; } }); }
 document.getElementById('back').onclick = function () { if (R.mode !== 'walk') { R.onEsc(); return; } exitRoom(); };
 document.addEventListener('akb-ver', function () { slideI = 0; });
 refreshStands();
@@ -302,3 +305,8 @@ var hintEl = document.getElementById('hint'); setTimeout(function () { hintEl.cl
 R.frame(function () { if (R.mode !== 'walk') hintEl.classList.add('off'); });
 window.AKB = { R: R, stands: stands, refresh: refreshStands, openLecture: openLecture, closeLecture: closeLecture, std: std, neon: neon, box: box, cyl: cyl };
 })();
+/* E/Enter и пробел не срабатывают, пока открыто окно (лекция, задание-проба, окно задания курса поверх комнаты) */
+AKB.R.busy = function () { var dm = document.getElementById('demo'), lp = document.getElementById('lect');
+  if ((dm && !dm.hidden) || (lp && !lp.hidden)) return true;
+  try { var w = parent !== window && parent.document.getElementById('win'); if (w && w.classList.contains('on')) return true; } catch (e) {}
+  return false; };
