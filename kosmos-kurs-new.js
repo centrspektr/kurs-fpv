@@ -74,9 +74,9 @@ function milkyTex(K2){ K2=K2||{a:'150,140,255',b:'255,220,240',s:['255,255,255',
     var br=Math.random(); x.fillStyle=br<.03?'rgba('+K2.s[0]+',.95)':br<.2?'rgba('+K2.s[1]+',.7)':br<.6?'rgba('+K2.s[2]+',.4)':'rgba('+K2.s[3]+',.25)'; var d=br<.03?1.8:1; x.fillRect(xx,yy,d,d); }
   for(i=0;i<140;i++){ var yy2=(Math.random()-.5)*h*.07+Math.sin(i*.37)*h*.03, xx2=(Math.random()-.5)*w*1.3; x.fillStyle='rgba(0,0,8,.18)'; x.beginPath(); x.ellipse(xx2,yy2,w*.02+Math.random()*w*.03,h*.012+Math.random()*h*.012,0,0,6.283); x.fill(); }
 },w,h); }
-var milky=new THREE.Sprite(new THREE.SpriteMaterial({map:milkyTex(),transparent:true,depthWrite:false,blending:THREE.AdditiveBlending})); milky.scale.set(900,450,1); S.add(milky);
-var milky2=new THREE.Sprite(new THREE.SpriteMaterial({map:milkyTex({a:'255,90,200',b:'255,200,250',s:['255,255,255','255,215,245','230,150,255','140,190,255']}),transparent:true,depthWrite:false,blending:THREE.AdditiveBlending,opacity:0})); milky2.scale.set(1000,500,1); milky2.material.rotation=.04; S.add(milky2);
-var milkyB=new THREE.Sprite(milky.material.clone()); milkyB.scale.set(900,450,1); S.add(milkyB); var milky2B=new THREE.Sprite(milky2.material.clone()); milky2B.scale.set(1000,500,1); S.add(milky2B);
+var milky=new THREE.Sprite(new THREE.SpriteMaterial({map:milkyTex(),transparent:true,depthWrite:false,blending:THREE.AdditiveBlending})); milky.scale.set(1300,560,1) /* шире (09.11 ночью): на широком экране слева был виден край */; S.add(milky);
+var milky2=new THREE.Sprite(new THREE.SpriteMaterial({map:milkyTex({a:'255,90,200',b:'255,200,250',s:['255,255,255','255,215,245','230,150,255','140,190,255']}),transparent:true,depthWrite:false,blending:THREE.AdditiveBlending,opacity:0})); milky2.scale.set(1400,600,1); milky2.material.rotation=.04; S.add(milky2);
+var milkyB=new THREE.Sprite(milky.material.clone()); milkyB.scale.set(1300,560,1); S.add(milkyB); var milky2B=new THREE.Sprite(milky2.material.clone()); milky2B.scale.set(1400,600,1); S.add(milky2B);
 function galaxyTex(){ return tex(function(x,s){ var c=s/2, cx=c+s*.015, cy=c-s*.01;
   var g=x.createRadialGradient(cx,cy,0,cx,cy,s*.5); g.addColorStop(0,'rgba(255,245,250,1)'); g.addColorStop(.04,'rgba(255,190,225,.75)'); g.addColorStop(.15,'rgba(200,90,255,.22)'); g.addColorStop(.42,'rgba(90,60,200,.06)'); g.addColorStop(1,'rgba(0,0,0,0)'); x.fillStyle=g; x.fillRect(0,0,s,s);
   var ARM=[{o:0,len:1,br:1,tw:7.4},{o:2.25,len:.78,br:.75,tw:6.6},{o:4.05,len:.9,br:.85,tw:8.1},{o:5.3,len:.45,br:.5,tw:5.2}];
@@ -775,7 +775,7 @@ function cityAround(L){ if(!L.open) return; var nm=LK.nodes.filter(function(n){ 
   if(L.city) L.g.remove(L.city); L.cityN=nm;
   var me=LK.by[L.mid], D=Math.max(220,TOPH[me.st0]*CF), mv=cityMoving(), cp=LK.g.clone(true), pairs=[], skip=new Set([me.g,me.bld]); LK.pulses.forEach(function(q){ skip.add(q.sp); });
   LK.drones.filter(function(q){ return !q.patrol; }).slice(2).forEach(function(q){ skip.add(q.g); }); /* снизу хватит пары дронов и патрульных: бережём телефон */
-  LK.nodes.forEach(function(n){ skip.add(n.wf); }); if(mob) LK.lamps.forEach(function(q,j){ if(j%2) skip.add(q); });
+  LK.nodes.forEach(function(n){ skip.add(n.wf); }); GATES.forEach(function(q){ skip.add(q.m); }); /* правка 09.11 ночью: кольцо-портал входа (живёт 3 с) не копируем в город вокруг модуля - иначе оно остаётся там огромным светлым кругом-куполом */ if(mob) LK.lamps.forEach(function(q,j){ if(j%2) skip.add(q); });
   (function walk(a,b){ for(var i=0;i<a.children.length;i++){ var x=a.children[i], y=b.children[i]; if(skip.has(x)){ y.visible=false; continue; } if(mv.has(x)) pairs.push([x,y]); if(x.material&&x.material.depthTest===false){ y.material=x.material.clone(); y.material.depthTest=true; } /* номера модулей не просвечивают сквозь крышу */ walk(x,y); } })(LK.g,cp);
   cp.visible=true; cp.position.set(-me.p[0],-PY,-me.p[2]);
   var o=new THREE.Group(); o.add(cp); o.scale.setScalar(CF); o.rotation.y=Math.PI-Math.atan2(-me.p[0],CZ-me.p[2]); o.position.set(0,PY-D,L.zc); L.g.add(o); L.city=o; L.sync=pairs; }
