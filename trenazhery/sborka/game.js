@@ -32,6 +32,7 @@ var VIEW = {
   pileA: function () { return fit(V(0, 0, 3), V(0, 1, .42), 12.5, 14.5, 40, 1); },
   pileB: function () { return fit(V(0, 1.2, 2.6), V(.1, 1, .55), 12.5, 15, 40, 1); },
   station: function () { return fit(V(19, 4.5, -9), V(-.62, .42, .8), 9, 7, 40); },
+  stationUp: function () { return fit(V(20.6, 5.2, -9), V(-.56, .22, .83), 15, 11, 40); },
   check: function () { return fit(V(0, 2, 2), V(.45, .75, 1), 8.5, 7, 40, 1); },
   props: function () { return fit(V(0, 1, 6), V(0, 1, .5), 12.5, 12.5, 40, 1); },
   done: function () { return fit(V(0, 7.5, 2), V(.3, .5, 1), 12, 10, 36); }
@@ -85,6 +86,7 @@ var SFX = {
   click: function () { var c = ac(); if (!c) return; var t = c.currentTime; burst(c, t, .04, 2500, 3, .12); burst(c, t + .05, .03, 4200, 4, .08); }, /* щёлк разъёма */
   drop: function () { var c = ac(); if (!c) return; burst(c, c.currentTime, .05, 1800, 2, .05); },
   motor: function (d) { var c = ac(); if (!c) return; var t = c.currentTime; d = d || 2.4; tone(c, t, d, 180, 620, .035, 'sawtooth'); tone(c, t, d, 360, 1240, .012, 'square'); },
+  beeps2: function () { var c = ac(); if (!c) return; var t = c.currentTime; tone(c, t, .12, 1320, 1320, .04, 'square'); tone(c, t + .18, .12, 1320, 1320, .04, 'square'); }, /* станция готова */
   beeps: function () { var c = ac(); if (!c) return; var t = c.currentTime; [[523, 0], [659, .16], [784, .32], [1047, .7], [1047, 1.0]].forEach(function (q) { tone(c, t + q[1], .13, q[0], q[0], .05, 'square'); }); }, /* мелодия регуляторов */
   hiss: null,
   sizzle: function (on) { var c = ac(); if (!on) { if (SFX.hiss) { try { SFX.hiss.g.gain.setTargetAtTime(.0001, c ? c.currentTime : 0, .08); SFX.hiss.s.stop((c ? c.currentTime : 0) + .4); } catch (e) {} SFX.hiss = null; } return; }
@@ -420,12 +422,31 @@ function makeIron() { var g = new T.Group(), M = A.M, grip = new T.MeshStandardM
   var h1 = A.glow('#ff7a2a', 1.3, 0), h2 = A.glow('#ffd166', .55, 0); g.add(h1, h2); g.userData.hot = [h1, h2]; return g; }
 var IRON = null, SOLD = null, SMOKE = [], DRIPS = [], GR = [], gi = -1, cur = null, heat = { on: false, h: 0 }, feed = 0, said3 = false;
 var G1 = LV === 1 ? .42 : .5, G2 = LV === 1 ? .9 : .86; /* зелёная зона нагрева (у младших шире, как в mladshie.html .hr) */
-function solderStage() { setStep(ST.sold); stage = 'temp'; H = {}; A.G.visible = false; go(VIEW.station, 1.4);
-  head('ПАЯЛЬНАЯ СТАНЦИЯ', 'Подготовка к пайке', '<div class="hint" id="hint">Выбери ответ в карточке сверху</div>'); setStep(ST.sold);
-  if (LV === 1) { hint(''); say('Регулятор стоит. Пора <b>паять</b> к нему провода моторов! Паяльник уже нагрет до 330 градусов. Он очень горячий: жало руками не трогаем.'); setTimeout(startGroups, 3200); return; }
-  say('Регулятор стоит. Пора паять к нему провода моторов. <b>Какую температуру ставим на паяльнике?</b>');
-  ask([['250°', '250° - мало: припой плавится долго, плата успеет перегреться, а пайка выйдет холодной.'], ['330°'], ['450°', '450° - слишком горячо: флюс сгорает сразу, площадки на плате могут отслоиться. Для таких плат хватает 330-350°.']], 1, function () {
-    say('Верно, <b>330°</b>. Станция уже нагрета. Летим к регулятору!'); setTimeout(startGroups, 1100); }); }
+/* паяльная станция (по фото владельца 09.11): включить выключатель питания, выставить температуру ручкой, дождаться нагрева */
+function solderStage() { setStep(ST.sold); stage = 'temp'; H = {}; A.G.visible = false; go(VIEW.stationUp, 1.4);
+  var S = A.STN, tset = 200, on = false, done = false, drag = null;
+  head('ПАЯЛЬНАЯ СТАНЦИЯ', 'Включи и настрой', '<div class="tools"><button class="tb go" id="pwr"><b>⏻</b>Включить</button><button class="tb" id="tm" style="display:none"><b>−</b>10°</button><button class="tb" id="tp" style="display:none"><b>+</b>10°</button><button class="tb hold" id="tok" style="display:none">Готово</button></div>');
+  S.disp('', false); S.knob(tset); S.rk.rotation.x = .22; S.led.material.color = lin(0x3a0d0d);
+  say(K('Регулятор стоит. Пора <b>паять</b>! Сначала включи паяльную станцию: нажми <b>красный выключатель</b> справа.', 'Регулятор стоит. Пора паять к нему провода моторов. Сначала <b>включи станцию</b>: нажми выключатель питания.'));
+  function wp(o) { var v = V(0, 0, 0); o.getWorldPosition(v); return scr(v); }
+  function power() { if (on || done) return; on = true; SFX.click(); tween(.15, function (e) { S.rk.rotation.x = .22 - .44 * e; }); S.disp(String(tset), true);
+    $('#pwr').style.display = 'none'; ['#tm', '#tp'].forEach(function (q) { $(q).style.display = ''; }); if (LV > 1) $('#tok').style.display = '';
+    say(K('Станция включилась! Теперь поверни <b>ручку температуры</b> до <b>зелёной метки</b> - 330 градусов. Крути ручку пальцем или жми плюс.', 'Станция включилась, на дисплее температура. Теперь <b>выставь температуру</b>: крути ручку пальцем или жми плюс и минус. <b>Какая температура нужна для этих плат?</b> Выставь и нажми "Готово".')); }
+  function setT(v) { if (!on || done) { if (!on) say(K('Сначала <b>включи станцию</b> - нажми красный выключатель.', 'Сначала <b>включи станцию</b>: без питания ручка ничего не меняет.')); return; }
+    v = Math.max(200, Math.min(450, Math.round(v / 10) * 10)); if (v === tset) return; tset = v; S.knob(v); S.disp(String(v), true); SFX.drop();
+    if (LV === 1 && v >= 320 && v <= 340) { tset = 330; S.knob(330); S.disp('330', true); done = true; ready(); } }
+  function check() { if (done) return; if (tset < 320) return oops(tset + '° - мало: припой плавится долго, плата успеет перегреться, а пайка выйдет холодной. Для таких плат нужно 320-350°.');
+    if (tset > 350) return oops(tset + '° - слишком горячо: флюс сгорает сразу, площадки на плате могут отслоиться. Для таких плат хватает 320-350°.'); done = true; ready(); }
+  function ready() { ['#tm', '#tp', '#tok'].forEach(function (q) { var b = $(q); if (b) b.style.display = 'none'; }); H = {};
+    say(K('Отлично, <b>330 градусов</b>! Паяльник греется... Он очень горячий: жало руками не трогаем.', 'Верно, <b>' + tset + '°</b>. Ждём, пока жало нагреется: цифры на дисплее растут.'));
+    S.led.material.color = lin(0xff3a2a); var t0 = 25; tween(2.4, function (e) { S.disp(String(Math.round(t0 + (tset - t0) * e)), true, '#ffb02a'); }, function () {
+      S.disp(String(tset), true); SFX.beeps2(); toast('✓ Станция нагрелась'); say(K('Нагрелась! Летим к регулятору.', 'Нагрелась до <b>' + tset + '°</b>. Летим к регулятору!')); setTimeout(startGroups, 1600); }); }
+  $('#pwr').onclick = power; $('#tm').onclick = function () { setT(tset - 10); }; $('#tp').onclick = function () { setT(tset + 10); }; $('#tok').onclick = check;
+  H.down = function (e) { if (done) return; var a = wp(S.rk), b = wp(S.kn);
+    if (dist(a, e.clientX, e.clientY) < 55) return power();
+    if (dist(b, e.clientX, e.clientY) < 75) { if (!on) return setT(tset); drag = { x: e.clientX, y: e.clientY, v: tset }; } };
+  H.move = function (e) { if (!drag) return; setT(drag.v + ((e.clientX - drag.x) - (e.clientY - drag.y)) * 1.2); };
+  H.up = function () { drag = null; }; }
 function startGroups() { IRON = makeIron(); IF.add(IRON); IRON.visible = false;
   for (var j = 0; j < 4; j++) GR.push({ j: j, manual: j < 2, rate: 2.4, pads: [0, 1, 2].map(function (k) { return { p: padM(j, k), done: 0, r: .17, k: k }; }), wires: [0, 1, 2].map(function (k) { return mWire(j, k); }) });
   GR.push({ power: true, manual: true, rate: 3.8, pads: [{ p: PADV[0], done: 0, r: .27, pol: 0 }, { p: PADV[1], done: 0, r: .27, pol: 1 }], wires: [pWire(0), pWire(1)] });
