@@ -12,6 +12,7 @@
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <script src="config.js"></script>
 <script src="perenos.js"></script>
+<script src="rejting.js"></script>   <!-- проба 09.11: рейтинг курса по площадкам, очки th/sb на сервер -->
 <script>window.PLAIN_URL = 'prosto.html';   /* обычная страница курса (слабый телефон, окно педагога) */</script>
 <style>
   /* Вид как у портала "Иртыш": стекло, шрифты Unbounded и Manrope, рукописное название */
@@ -286,11 +287,17 @@
 const MODE = 'public';
 document.getElementById('hudC').textContent = (window.KURSY && KURSY.name) || 'Курс';
 </script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js" defer></script>
+<script src="three.min.js" defer></script>   <!-- своя копия three r128 (09.11): чужие сайты не подключаем -->
 <script src="modeli.js" defer></script>
-<script src="zadaniya.js" defer></script>
+<script src="zadaniya.js" defer></script>   <!-- проба 09.11: картинки карточек кодом вместо неподходящих эмодзи -->
+<script src="kartinki.js" defer></script>
+<script src="trenazhery.js" defer></script>   <!-- тренажёры (08.11): "Собери дрон" в задании 2.6 и окно "Тренажёры" -->
+<script src="RoomEnvironment.js" defer></script>
+<script src="komnata.js" defer></script>   <!-- проба 09.11: движок модуля-помещения (модуль 2) -->
+<script src="masterskaya.js" defer></script>   <!-- проба 09.11: модуль 2 "Мастерская" от первого лица -->
 <script src="moduli.js" defer></script>
 <script src="golos.js" defer></script>
+<script src="komnaty.js" defer></script>   <!-- проба 09.11: модули-помещения (модуль 3 - комната от первого лица) -->
 <script src="kosmos-kurs.js" defer></script>
 </body>
 </html>
