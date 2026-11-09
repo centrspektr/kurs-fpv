@@ -889,7 +889,8 @@ function enter(n){
   startFly(p.clone().addScaledVector(d,-n.s*.2),p.clone().addScaledVector(d,60),null,red?.4:1.2,function(){
     flashOn(n.c+'dd',function(){ camP.copy(diveBack.p); camL.copy(diveBack.l); openWin(n.act==='trn'?'trn':n.kind==='tab'?'prog':'task',n); flashOff(); }); }); }
 /* правка 7: переход в модуль, у модулей разные (MOD_TRANS): portal, fpv, hyper. В конце - заставка модуля и новая локация */
-function modIn(n,col){ flashOn(col||n.c+'dd',function(){ var L=LBY[n.mid], wp=$('warp'); osdOff(); hyperOff();
+function modIn(n,col){ if(window.KURS_KOMNATY&&KURS_KOMNATY[n.mid]){ roomIn(n,col); return; } /* модуль-помещение: после пролёта к зданию - внутрь комнаты */
+  flashOn(col||n.c+'dd',function(){ var L=LBY[n.mid], wp=$('warp'); osdOff(); hyperOff();
   wp.style.setProperty('--wc',n.c); $('warpT').textContent=n.n+'. '+n.sub; wp.classList.add('on'); flashOff();
   setTimeout(function(){ setLevel(L); if(L.closed) camP.set(0,PY+26,64); else camP.set(0,30,150); camL.copy(L.oL);
     /* проба 09.11: модуль-помещение (комната от первого лица, komnaty.js) - вместо дороги открывается комната */
@@ -992,7 +993,22 @@ if(window.MutationObserver) new MutationObserver(slUpd).observe(tk,{childList:tr
 /* листание пальцем: влево - дальше, вправо - назад (не в тренажёрах, где тянут предметы) */
 (function(){ var x0=null,y0=0; pane.addEventListener('touchstart',function(e){ if(winMode!=='task'||e.target.closest('input,textarea,select,.kg-lbl,.kg-stack')) { x0=null; return; } x0=e.touches[0].clientX; y0=e.touches[0].clientY; },{passive:true});
   pane.addEventListener('touchend',function(e){ if(x0==null) return; var dx=e.changedTouches[0].clientX-x0, dy=e.changedTouches[0].clientY-y0; x0=null; if(Math.abs(dx)<60||Math.abs(dy)>Math.abs(dx)) return; if(dx<0){ if(!nxB.disabled) nxB.click(); } else if(bEl.hidden){ var b=q1('[data-k="nav-b"]'); if(b&&!b.disabled) b.click(); } }); })();
-function closeWin(after){ if(!winOn) return; var c=cur?cur.c+'cc':null; clearInterval(bTm); if(GL) GL.stop(); scrBack(cur); flashOn(c,function(){ win.classList.remove('on'); winOn=false; LIVE=false; document.body.classList.remove('livebg'); hud.classList.add('on'); backB.classList.add('on'); refresh(); lvlStars();
+/* модуль-помещение (09.11): если подключён komnata.js и для модуля есть комната (window.KURS_KOMNATY[mid]) - вход в здание открывает её поверх города.
+   Комната сама ходит, рисует и открывает задания через api.task(tid); окно задания то же, что в городе. */
+var ROOM=null;
+function roomIn(n,col){ hideCap(); st='room'; hud.classList.remove('on'); backB.classList.remove('on'); osdOff(); hyperOff(); if(GL) GL.stop();
+  flashOn(col||n.c+'dd',function(){ ROOM=KURS_KOMNATY[n.mid]; var L=LBY[n.mid];
+    ROOM.open({ mid:n.mid, color:n.c, name:n.n+'. '+n.sub,
+      state:function(tid){ return I.task(tid); },
+      task:function(tid){ refresh(); var t=L&&L.by[tid]; if(!t) return; t.st=stOf(t); if(t.st==='lock'){ return false; } openWin('task',t); return true; },
+      exit:function(){ roomOut(n); } });
+    flashOff(); }); }
+/* для проверки и ссылок: войти в узел города по id (модуль m2 - сразу в его здание) */
+window.KURS_GOROD={ enter:function(id){ var n=LK&&LK.by[id]; if(n){ refresh(); arrive(n); enter(n); } } };
+function roomOut(n){ flashOn(n.c+'dd',function(){ if(ROOM) ROOM.close(); ROOM=null; refresh(); lvlStars(); setLevel(LK); var B=viewOf(n); camP.copy(B.p); camL.copy(B.l); hud.classList.add('on'); backB.classList.add('on'); arrive(n); flashOff(); }); }
+function closeWin(after){ if(!winOn) return; var c=cur?cur.c+'cc':null; clearInterval(bTm); if(GL) GL.stop(); scrBack(cur); flashOn(c,function(){ win.classList.remove('on'); winOn=false; LIVE=false; document.body.classList.remove('livebg'); refresh(); lvlStars();
+  if(ROOM){ var rn=cur; flashOff(); if(after) after(); else ROOM.back(rn&&rn.tid,!wasDone&&rn&&rn.st==='done'); return; }
+  hud.classList.add('on'); backB.classList.add('on');
   if(after) after(); else if(cur){ var n=cur, B=viewOf(n); camP.copy(B.p); camL.copy(B.l); arrive(n);
     /* задание только что пройдено - сразу ведём к следующему */
     if(n.kind==='task'&&!wasDone&&n.st==='done'){ burst(n); starFly(n); if(target&&target!==n){ passGate=true; guideSoon(1400); } } }
@@ -1000,6 +1016,7 @@ function closeWin(after){ if(!winOn) return; var c=cur?cur.c+'cc':null; clearInt
   flashOff(); }); }
 /* экраны курса внутри окна: следующее задание - узел на карте тоже меняется; "К модулю" и "Все модули" - назад в космос */
 document.addEventListener('kurs-view',function(e){ var d=e.detail||{}; if(!winOn) return; pane.scrollTop=0;
+  if(ROOM&&!d.t&&winMode==='task'){ closeWin(); return; }
   if(d.t){ winMode='task'; var mm=mods.find(function(m){ return m.tasks.indexOf(d.t)>=0; }), L=mm&&LBY[mm.id]; if(!L) return;
     if(L!==curL) setLevel(L); var n=L.by[d.t]; if(n&&n!==cur){ scrBack(cur); cur=n; winTask=n.tid; wasDone=n.st==='done'; var B=n.scr?scrView(n):viewOf(n); camP.copy(B.p); camL.copy(B.l); setBg(n,LIVE); brief(n); } hud.classList.remove('on'); backB.classList.remove('on'); return; }
   if(d.m){ closeWin(function(){ var L=LBY[d.m]; if(L!==curL) setLevel(L); var c=L.by['c_'+d.m], B=viewOf(c); camP.copy(B.p).add(V(0,4,30)); camL.copy(B.l); flyOver(L,true); }); return; }
@@ -1186,6 +1203,7 @@ function tune(raw){ if(document.hidden||raw>.5||winOn||st==='gate') return; TN++
 /* совсем слабый телефон: убираем часть мелочей - половину дронов и роботов, они только для красоты */
 var LITE=false; function lite(){ LITE=true; (LK.drones||[]).forEach(function(q,i){ if(i%2) q.g.visible=false; }); (LK.bots||[]).forEach(function(q,i){ if(i%2) q.g.visible=false; }); }
 function frame(){ var raw=clock.getDelta(), dt=Math.min(raw,.05); tm+=dt; fc++; tune(raw);
+  if(ROOM){ requestAnimationFrame(frame); return; } /* модуль-помещение (komnata.js) рисует себя сам, город стоит */
   if(winOn&&!fly&&(!LIVE||(mob&&fc%2))){ requestAnimationFrame(frame); return; } /* под окном задания космос стоит: бережём батарею; за стеклом экрана - живой, на телефоне через кадр */
   if(fly) stepFly(dt);
   else if(st==='gate'){ camP.lerp(V(0,0,46-gp*62),Math.min(1,dt*4)); camL.set(0,0,-30); speed=Math.abs(46-gp*62-camP.z)*6; }
