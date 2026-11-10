@@ -47,6 +47,7 @@ button{font:inherit;color:inherit;border:0;cursor:pointer;background:none}
 </style></head><body><canvas id="c"></canvas><div id="ui">
 <div class="top"><button class="ic" id="back" aria-label="Назад">←</button><div class="ttl"><small>ТРЕНАЖЁР · МОДУЛЬ 5</small><b>Классы дронов: от вупа до пятёрки</b></div><button class="ic" id="snd" aria-label="Звук">🔊</button><input id="vol" type="range" min="0" max="100" step="5" title="Громкость" aria-label="Громкость"></div>
 </div>
-<script>window.KURSY={store:"kursy_fpv_gorod"};</script><script src="golos.js"></script><script src="three.min.js"></script><script src="RoomEnvironment.js"></script><script src="klassy.js"></script>
+<script>window.KURSY={store:"kursy_fpv_gorod"};</script><script>/* 10.11: в пробе курса (new.html) - голос с исправленным произношением (golos-new.js), на главной - как было */
+(function(){ var nw=/[?&]new\b/.test(location.search); try{ nw=nw||/new\.html$/.test(parent.location.pathname); }catch(e){} document.write('<script src="golos'+(nw?'-new':'')+'.js"><\/script>'); })();</script><script src="three.min.js"></script><script src="RoomEnvironment.js"></script><script src="klassy.js"></script>
 <script>(function(){var v=document.getElementById("vol");if(!window.GOLOS||!GOLOS.setVol){v.hidden=true;return;}v.value=Math.round(GOLOS.vol*100);v.oninput=function(){GOLOS.setVol(v.value/100);if(GOLOS.vol>0&&!GOLOS.on){GOLOS.setOn(true);document.getElementById("snd").textContent="🔊";}};})();</script>
 </body></html>
