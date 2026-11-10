@@ -64,13 +64,14 @@ function create(o) {
   /* ---------- рендер: тон, окружение, эффекты ---------- */
   ren.outputEncoding = T.sRGBEncoding; ren.physicallyCorrectLights = false;
   ren.shadowMap.enabled = Q !== 'low'; ren.shadowMap.type = T.PCFSoftShadowMap;
-  sc.background = col(S.bg); if (S.fog) sc.fog = new T.FogExp2(col(S.fog[0]), S.fog[1]);
+  sc.background = col(S.bg); sc.fog = S.fog ? new T.FogExp2(col(S.fog[0]), S.fog[1]) : null;
   var pm = new T.PMREMGenerator(ren);
   if (T.RoomEnvironment) sc.environment = pm.fromScene(new T.RoomEnvironment(), .04).texture;
   /* окружение из самой комнаты: блики и отражения на предметах повторяют её свет */
   G.bakeEnv = function (x, y, z) { var p = sc.position.clone(), f = sc.fog, bg = sc.background ? sc.background.clone() : null, hid = [], op = [];
     /* прозрачное и светящееся наложением в карту окружения не пишем (иначе в ней мусор) */
-    sc.traverse(function (m) { if (!m.isMesh || !m.material || !m.material.transparent || !m.visible) return; if (m.userData.floor) { m.material.transparent = false; op.push(m); } else { m.visible = false; hid.push(m); } });
+    sc.traverse(function (m) { var mt = m.material; if (!mt || !m.visible) return; var tr = m.isPoints || m.isSprite || m.isLine || (Array.isArray(mt) ? mt.some(function (q) { return q.transparent; }) : (mt.transparent || mt.blending !== T.NormalBlending || mt.wireframe)); if (!tr) return;
+      if (m.userData.floor) { mt.transparent = false; op.push(m); } else { m.visible = false; hid.push(m); } });
     sc.fog = null; sc.position.set(-x, -y, -z); sc.updateMatrixWorld(true); mirror.visible = false;
     var e = pm.fromScene(sc, .035, .1, 60).texture; sc.position.copy(p); sc.updateMatrixWorld(true); mirror.visible = true; sc.fog = f; sc.background = bg;
     hid.forEach(function (m) { m.visible = true; }); op.forEach(function (m) { m.material.transparent = true; });
@@ -289,7 +290,8 @@ function create(o) {
   if (Q !== 'low') { key.castShadow = true; var ms = Q === 'high' ? 2048 : 1024; key.shadow.mapSize.set(ms, ms); key.shadow.radius = 5; key.shadow.bias = -.0006; key.shadow.normalBias = .02;
     var kc = key.shadow.camera; kc.left = -6.5; kc.right = 6.5; kc.top = 6.5; kc.bottom = -6.5; kc.near = .5; kc.far = 14; }
   /* ключевой свет стоит над той комнатой, где ученик */
-  G.lightRoom = function (cx, cz, H) { key.position.set(cx + 1.2, (H || 3.2) + 5, cz + 1.8); key.target.position.set(cx, 0, cz); key.target.updateMatrixWorld(); };
+  G.lightRoom = function (cx, cz, H, half) { key.position.set(cx + 1.2, (H || 3.2) + 5, cz + 1.8); key.target.position.set(cx, 0, cz); key.target.updateMatrixWorld();
+    if (half && key.castShadow) { var c = key.shadow.camera; if (c.right !== half) { c.left = -half; c.right = half; c.top = half; c.bottom = -half; c.far = (H || 3.2) + 9; c.updateProjectionMatrix(); } } };
 
   /* ---------- дверь: портал, раздвижные створки, табличка ---------- */
   G.door = function (d) { /* d: { x, z, axis:'x'|'z' (вдоль какой оси стена), w, h, th (толщина стены), no, title, state } */
@@ -326,9 +328,10 @@ function create(o) {
       draw(d.state || 'open'); g.userData.sign = draw; g.userData.signObj = sg; }
     G.add(g, { live: false }); var mg = MIR.get(g);
     var open = 0, want = 0; g.userData.setOpen = function (v) { want = v; };
+    function apply() { var e = open * open * (3 - 2 * open); leaves.forEach(function (lf) { var px = lf[1] * (lw / 2 + e * (lw - .04)); lf[0].position.x = px; if (mg) mg.children[g.children.indexOf(lf[0])].position.x = px; }); }
+    g.userData.setK = function (k) { open = want = Math.max(0, Math.min(1, k)); apply(); };   /* сразу поставить створки (0 закрыто, 1 открыто) */
     G.frame(function (dt) { if (d.auto !== false) { var p = cam.position; want = !g.userData.locked && Math.hypot(p.x - d.x, p.z - d.z) < 2.6 ? 1 : 0; }
-      if (open === want) return; open += Math.sign(want - open) * dt * 2.2; open = Math.max(0, Math.min(1, open)); if (Math.abs(open - want) < .02) open = want;
-      var e = open * open * (3 - 2 * open); leaves.forEach(function (lf, i) { var px = lf[1] * (lw / 2 + e * (lw - .04)); lf[0].position.x = px; if (mg) mg.children[g.children.indexOf(lf[0])].position.x = px; }); });
+      if (open === want) return; open += Math.sign(want - open) * dt * 2.2; open = Math.max(0, Math.min(1, open)); if (Math.abs(open - want) < .02) open = want; apply(); });
     return g; };
 
   /* ---------- экран на стене ---------- */
