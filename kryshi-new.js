@@ -135,7 +135,7 @@ function shkola(L,G,c,B){ var zMin=B.zMin, i, wh=std(0xf2f4f8,{r:.5,m:.1}), dk=B
   var kx=52, kz=-84, kg=new T.Group(); kg.position.set(kx,0,kz); G.add(kg);
   decal(kg,ctex(function(x,w,h){ x.fillStyle='#b98a5a'; x.fillRect(0,0,w,h); for(var k=0;k<16;k++){ x.fillStyle='rgba(60,35,15,'+(.08+Math.random()*.16)+')'; x.fillRect(k*w/16,0,w/16-2,h); x.fillStyle='rgba(40,20,5,.5)'; x.fillRect(k*w/16-1,0,2,h); } },256,256),34,30,0,0,0,1);
   var cols=[]; [-15,15].forEach(function(x){ [-12,12].forEach(function(z){ cols.push([x,5,z]); }); }); inst(kg,cyl(.3,.34,10,12),wh,cols);
-  var roofG=new T.CylinderGeometry(26,26,34,24,1,true,-.42,.84); roofG.rotateZ(Math.PI/2); M(kg,roofG,std(0xffffff,{r:.6,m:0,side:T.DoubleSide,e:'#fff4dd',ei:.18}),0,-14.3,0);
+  var roofG=new T.CylinderGeometry(26,26,34,24,1,true,-.42,.84); roofG.rotateZ(Math.PI/2); roofG.rotateX(-Math.PI/2); M(kg,roofG,std(0xffffff,{r:.6,m:0,side:T.DoubleSide,e:'#fff4dd',ei:.18}),0,-14.3,0);
   [-15,15].forEach(function(x){ M(kg,box(.3,.3,26),wh,x,10,0); }); M(kg,box(30,.12,.12),neon('#ffe9b8'),0,9.7,-10); M(kg,box(30,.12,.12),neon('#ffe9b8'),0,9.7,10);
   var bn=[]; for(i=0;i<3;i++) [-7,7].forEach(function(x){ bn.push([x,.9,2+i*4.2]); }); inst(kg,rr(9.5,.5,1.5,.2),std(0xe0a060,{r:.6,m:0}),bn); var bl=[]; bn.forEach(function(p){ bl.push([p[0]-3.6,.45,p[2]]); bl.push([p[0]+3.6,.45,p[2]]); }); inst(kg,box(.3,.9,1.2),dk,bl);
   var rules=ctex(function(x,w,h){ x.fillStyle='#0b1326'; x.fillRect(0,0,w,h); font(x,h*.085); x.fillStyle='#7cf3ff'; x.textAlign='center'; x.fillText('ЗОЛОТЫЕ ПРАВИЛА',w/2,h*.14); var R2=[['#4ade80','Очки и пульт проверь до взлёта'],['#ffd36e','До людей - не ближе 5 метров'],['#ff8fd8','Винты крутятся - руки убери'],['#7cf3ff','Сел - сначала выключи моторы']];
