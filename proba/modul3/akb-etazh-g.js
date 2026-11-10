@@ -298,14 +298,17 @@ function stripe(r) { return; /* синяя полоса по стенам ком
   var a = P(r, 0, RD7), b = P(r, RW, RD7); box(RW, .12, .02, m, (a[0] + b[0]) / 2, y, a[1] + (r.south ? -.01 : .01));
   box(.02, .12, RD7, m, r.ox + .01 + TH / 2 * 0, y, (r.z0 + r.z1) / 2); box(.02, .12, RD7, m, r.ox + RW - .01, y, (r.z0 + r.z1) / 2); }
 
+function holoCell(w, h, d, c) { var m = new T.Mesh(new T.BoxGeometry(w, h, d), new T.MeshBasicMaterial({ color: new T.Color(c).multiplyScalar(.55), transparent: true, opacity: .32, blending: T.AdditiveBlending, depthWrite: false, toneMapped: false })); m.userData.noShadow = true;
+  var e = new T.LineSegments(new T.EdgesGeometry(m.geometry), new T.LineBasicMaterial({ color: new T.Color(c).multiplyScalar(1.5), toneMapped: false })); m.add(e);
+  var t = new T.Mesh(new T.BoxGeometry(w * .12, h * .5, d * .5), new T.MeshBasicMaterial({ color: new T.Color(c).multiplyScalar(1.6), toneMapped: false })); t.position.x = w * .56; t.userData.noShadow = true; m.add(t); return m; }
 /* ---------- КОМНАТА 1. Устройство АКБ: голограмма банок, разрез ---------- */
 var r1 = roomById('N0'); roomBanner(r1); stripe(r1); roomScreen(r1, 4);
 (function () { var p = P(r1, 4, 3.6), g = grp(p[0], 0, p[1]);
-  cyl(.7, .8, .5, std('#2c323c', .4, .7), 0, .25, 0, g); cyl(.62, .62, .02, neon(CY, .9), 0, .51, 0, g);
+  cyl(.62, .7, .42, std(GS.dark ? '#1a1f33' : '#e9edf3', .3, GS.dark ? .7 : .2), 0, .21, 0, g, 48); cyl(.56, .56, .02, std('#0c0e16', .25, .6), 0, .43, 0, g, 48); var hr = new T.Mesh(new T.TorusGeometry(.5, .012, 8, 64), neon(CY, 1.2)); hr.rotation.x = Math.PI / 2; hr.position.y = .445; g.add(hr); var hh = G.halo(CY, .5, 1.5); hh.rotation.x = -Math.PI / 2; hh.position.y = .45; g.add(hh);
   var holo = new T.Group(); holo.position.y = 1.35; g.add(holo);
   var hm = new T.MeshBasicMaterial({ color: new T.Color(A).multiplyScalar(1.3), wireframe: true, transparent: true, opacity: .6, toneMapped: false });
-  for (var k = 0; k < 4; k++) { var cell = new T.Mesh(new T.BoxGeometry(.8, .13, .5), hm); cell.position.y = -.3 + k * .19; holo.add(cell); }
-  var beam = new T.Mesh(new T.CylinderGeometry(.62, .62, .85, 32, 1, true), new T.MeshBasicMaterial({ color: col(CY), transparent: true, opacity: .07, side: T.DoubleSide, depthWrite: false })); beam.position.y = .95; g.add(beam);
+  for (var k = 0; k < 4; k++) { var cell = holoCell(.8, .13, .5, A); cell.position.y = -.3 + k * .19; holo.add(cell); }
+  var beam = new T.Mesh(new T.CylinderGeometry(.5, .5, .95, 48, 1, true), new T.MeshBasicMaterial({ color: col(CY), transparent: true, opacity: .045, blending: T.AdditiveBlending, side: T.DoubleSide, depthWrite: false })); beam.position.y = .95; g.add(beam);
   R.frame(function (dt, t) { if (curReg !== 'N0' && curReg !== 'C') return; holo.rotation.y += dt * .5; holo.children.forEach(function (ch, k) { ch.position.y = -.3 + k * (.19 + .05 * Math.sin(t * 1.4)); }); });
   R.block(p[0] - .8, p[1] - .8, p[0] + .8, p[1] + .8); })();
 putR(r1, 'desk', .55, 4.5, 0, Math.PI / 2, 1); putR(r1, 'lamp', .3, 4.0, .79, Math.PI / 2, 1); putR(r1, 'stool', 1.4, 4.4, 0, 0, 1);
@@ -319,13 +322,13 @@ var r2 = roomById('S0'); roomBanner(r2); stripe(r2); roomScreen(r2, 4);
 var TB = { w: 3.0, d: 1.3, h: .9 }; (function () { var p = P(r2, 4, 3.7); TB.x = p[0]; TB.z = p[1]; })();
 var table = grp(TB.x, 0, TB.z);
 [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(function (s) { box(.07, TB.h, .07, legM, s[0] * (TB.w / 2 - .1), TB.h / 2, s[1] * (TB.d / 2 - .1), table); });
-box(TB.w, .05, TB.d, std('#a7a9ac', .45, .5), 0, TB.h, 0, table);
+(function () { var t = G.rbox(TB.w, TB.d, .06, .05, std(GS.dark ? '#2a2f3d' : '#f1f3f6', .4, GS.dark ? .5 : .1)); t.rotation.x = Math.PI / 2; t.position.y = TB.h; table.add(t); })();
 box(TB.w - .3, .012, TB.d - .3, std('#1f3a3c', .95, 0), 0, TB.h + .031, 0, table);
-box(TB.w - .2, .14, .03, std('#cfd2d6', .5, .3), 0, TB.h + .095, -TB.d / 2 + .02, table); /* бортик */
+
 box(TB.w, .025, .03, neon(A, 1.1), 0, TB.h - .02, TB.d / 2 + .005, table);
 var holo2 = new T.Group(); holo2.position.set(0, TB.h + .8, 0); table.add(holo2);
 var hm2 = new T.MeshBasicMaterial({ color: new T.Color(A).multiplyScalar(1.3), wireframe: true, transparent: true, opacity: .5, toneMapped: false });
-for (var hi = 0; hi < 4; hi++) { var cell2 = new T.Mesh(new T.BoxGeometry(.36, .06, .22), hm2); cell2.position.y = -.12 + hi * .085; holo2.add(cell2); }
+for (var hi = 0; hi < 4; hi++) { var cell2 = holoCell(.36, .06, .22, A); cell2.position.y = -.12 + hi * .085; holo2.add(cell2); }
 R.frame(function (dt) { if (curReg === 'S0') holo2.rotation.y += dt * .6; });
 put('mmeter', -TB.w / 2 + .35, TB.h + .025, -TB.d / 2 + .3, .3, 1, table); put('lamp', TB.w / 2 - .25, TB.h + .025, -TB.d / 2 + .2, -.4, 1, table);
 R.block(TB.x - TB.w / 2, TB.z - TB.d / 2, TB.x + TB.w / 2, TB.z + TB.d / 2);
@@ -341,11 +344,19 @@ var r3 = roomById('N1'); roomBanner(r3); stripe(r3); roomScreen(r3, 1.8);
 var simTex = R.tex(1280, 720, function (c, w, h) { var g = c.createLinearGradient(0, 0, 0, h); g.addColorStop(0, '#3d7fd6'); g.addColorStop(.58, '#bfe2ff'); g.addColorStop(.58, '#4d7b45'); g.addColorStop(1, '#2a4a2a'); c.fillStyle = g; c.fillRect(0, 0, w, h);
   c.strokeStyle = '#ffd36e'; c.lineWidth = 12; c.beginPath(); c.ellipse(w * .55, h * .5, 110, 140, 0, 0, 7); c.stroke(); c.beginPath(); c.ellipse(w * .3, h * .56, 60, 78, 0, 0, 7); c.stroke();
   U.txt(c, 'СИМУЛЯТОР', 170, 50, 44, '#fff'); U.txt(c, '3,82 В', w - 140, 50, 44, '#9dff7c'); U.txt(c, '01:24', w - 140, 105, 40, '#fff'); });
-(function () { var p = P(r3, 5.6, RD7 - .13); var g = grp(p[0], 0, p[1], RY(r3, 0)); box(3.0, 1.75, .08, std('#15181d', .35, .6), 0, 1.7, 0, g);
+(function () { var p = P(r3, 5.6, RD7 - .13); var g = grp(p[0], 0, p[1], RY(r3, 0)); g.add(G.rbox(2.98, 1.72, .06, .05, std('#0c0e16', .3, .6), 0, 1.7, 0));
   var m = new T.Mesh(new T.PlaneGeometry(2.88, 1.62), new T.MeshBasicMaterial({ map: simTex, toneMapped: false })); m.position.set(0, 1.7, .045); g.add(m); })();
 var simG = (function () { var p = P(r3, 5.6, 3.6), g = grp(p[0], 0, p[1], RY(r3, Math.PI));
-  box(.62, .45, .62, std('#22262e', .5, .5), 0, .25, 0, g); box(.62, .8, .12, std('#a02828', .55, .2), 0, .9, -.3, g); box(.64, .1, .66, std('#1a1d22', .6), 0, .52, 0, g);
-  box(.26, .06, .16, std('#222', .4, .5), 0, .66, .32, g); R.block(p[0] - .45, p[1] - .45, p[0] + .45, p[1] + .45); return g; })();
+  var cm = std('#16181e', .55, .2), ca = std(STYLE === 'A' ? '#f2a100' : '#d8342c', .5, .1), cf = std('#2a2e38', .3, .8);
+  cyl(.34, .36, .04, cf, 0, .02, 0, g, 40); cyl(.05, .05, .36, cf, 0, .22, 0, g, 16);
+  var st = G.rbox(.6, .58, .14, .06, cm); st.rotation.x = Math.PI / 2; st.position.set(0, .47, .02); g.add(st);
+  var bk = new T.Group(); bk.position.set(0, .5, -.27); bk.rotation.x = -.14; g.add(bk);
+  bk.add(G.rbox(.58, .86, .12, .1, cm, 0, .45, 0)); bk.add(G.rbox(.22, .7, .13, .06, ca, 0, .43, .005)); bk.add(G.rbox(.3, .2, .12, .07, cm, 0, .98, .02));
+  [-1, 1].forEach(function (s) { bk.add(G.rbox(.09, .6, .2, .04, cm, s * .3, .4, .07)); g.add(G.rbox(.07, .05, .4, .02, cf, s * .36, .68, .02)); cyl(.018, .018, .2, cf, s * .36, .57, -.1, g, 10); });
+  /* стойка с пультом перед креслом */
+  cyl(.025, .025, .78, cf, 0, .39, .62, g, 12); cyl(.16, .18, .03, cf, 0, .015, .62, g, 28);
+  var pl = G.rbox(.3, .17, .05, .04, std('#23262d', .45, .3)); pl.rotation.x = -1.1; pl.position.set(0, .8, .6); g.add(pl);
+  [-1, 1].forEach(function (s) { var k = cyl(.012, .012, .05, std('#c9ccd2', .3, .9), s * .08, .84, .6, g, 10); k.rotation.x = .47; }); R.block(p[0] - .45, p[1] - .45, p[0] + .45, p[1] + .45); return g; })();
 var simIt = R.item({ obj: simG, name: 'Кресло-симулятор', kicker: 'Полёты модуля', sub: 'Полёты в симуляторе: следим за временем и вольтами, учимся плавному газу.',
   at: (function () { var p = P(r3, 4.2, 3.0); return p; })(), look: (function () { var p = P(r3, 5.6, 3.6); return [p[0], .9, p[1]]; })(), tagY: 1.9, actLabel: 'Сесть',
   act: function () { openTask(taskState('fly_sim1') === 'done' ? 'fly_sim2' : 'fly_sim1'); } }); simIt.reg = 'N1'; simIt.at3 = (function () { var p = P(r3, 5.6, 3.6); return [p[0], 0, p[1]]; })();
@@ -372,13 +383,16 @@ var r5 = roomById('N2'); roomBanner(r5); stripe(r5); roomScreen(r5, 3.4);
 /* зарядная станция у правой стены (x - максимум комнаты): так считает akb-zaryadka.js */
 var ZB = { x: r5.ox + RW - .45 - TH / 2 * 0, z: 3.4, w: .9, d: 3.0, h: .92 };
 var bench = grp(ZB.x, 0, ZB.z);
-box(ZB.w, .06, ZB.d, std('#5b5e63', .6, .2), 0, ZB.h, 0, bench);
-box(ZB.w, ZB.h - .06, ZB.d, std('#3d4a5a', .55, .4), 0, (ZB.h - .06) / 2, 0, bench);
+(function () { var top = G.rbox(ZB.w + .04, ZB.d + .04, .05, .03, G.pbr ? std(GS.dark ? '#2b3040' : '#c9a57a', .55, 0) : std('#c9a57a', .55)); top.rotation.x = Math.PI / 2; top.position.y = ZB.h - .005; bench.add(top);
+  var bm = std(GS.dark ? '#1c2132' : '#eef1f5', .4, GS.dark ? .6 : .1), hm = std('#8d939e', .3, .9), fx = -ZB.w / 2;
+  box(ZB.w - .06, .1, ZB.d - .04, std('#14161f', .5, .4), .02, .05, 0, bench);
+  for (var i = 0; i < 3; i++) { var z = (i - 1) * (ZB.d / 3); box(ZB.w - .04, ZB.h - .16, ZB.d / 3 - .03, bm, .01, .1 + (ZB.h - .16) / 2, z, bench);
+    for (var j = 0; j < 3; j++) { var y = .22 + j * .235; box(.012, .2, ZB.d / 3 - .1, bm, fx + .012, y + .04, z, bench); box(.02, .016, .3, hm, fx - .002, y + .11, z, bench); } } })();
 box(.03, .03, ZB.d, neon(OR, 1.1), -ZB.w / 2 - .005, ZB.h - .02, 0, bench);
 var peg = R.tex(512, 512, function (c, w, h) { c.fillStyle = '#c9cdd2'; c.fillRect(0, 0, w, h); c.fillStyle = '#6d727a'; for (var i = 16; i < w; i += 32) for (var j = 16; j < h; j += 32) { c.beginPath(); c.arc(i, j, 4, 0, 7); c.fill(); } });
-var pb = new T.Mesh(new T.PlaneGeometry(ZB.d, 1.3), std('#ffffff', .8)); pb.material.map = peg; pb.position.set(ZB.w / 2 - .02, ZB.h + .95, 0); pb.rotation.y = -Math.PI / 2; bench.add(pb);
+var pb = new T.Mesh(new T.PlaneGeometry(ZB.d, 1.3), std('#ffffff', .8)); pb.material.map = peg; pb.position.set(.45 - HT - .012, ZB.h + .85, 0); pb.rotation.y = -Math.PI / 2; bench.add(pb);
 var zSign = R.tex(1024, 200, function (c, w, h) { c.fillStyle = '#0b0d1e'; c.fillRect(0, 0, w, h); U.txt(c, '⚡ ЗАРЯДНАЯ СТАНЦИЯ', w / 2, 70, 64, OR); U.txt(c, 'заряжаем только под присмотром', w / 2, 150, 36, '#ffe3c8', 'center', 700); });
-var zs = new T.Mesh(new T.PlaneGeometry(2.2, .43), new T.MeshBasicMaterial({ map: zSign, toneMapped: false })); zs.position.set(ZB.w / 2 - .04, ZB.h + 1.85, 0); zs.rotation.y = -Math.PI / 2; bench.add(zs);
+var zs = new T.Mesh(new T.PlaneGeometry(2.2, .43), new T.MeshBasicMaterial({ map: zSign, toneMapped: false })); zs.position.set(.45 - HT - .014, ZB.h + 1.78, 0); zs.rotation.y = -Math.PI / 2; bench.add(zs);
 R.block(ZB.x - ZB.w / 2, ZB.z - ZB.d / 2, ZB.x + ZB.w / 2, ZB.z + ZB.d / 2);
 window.AKB_BENCH = { g: bench, x: ZB.x, z: ZB.z, y: ZB.h + .03 };
 var benchIt = R.item({ obj: bench, name: 'Зарядная станция', kicker: 'Урок на зарядке', sub: 'Зарядка ViFly WhoopStor 3: две кнопки, ток, вольты, заряд и хранение АКБ 1S, как у Mobula 7.',
