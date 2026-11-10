@@ -85,7 +85,8 @@ body:has(.k-card:not([hidden])) #nextb,body.k-focus #nextb{display:none}
 </div>
 <div id="load">ЗАГРУЗКА</div>
 <script>window.KURSY = window.KURSY || { store: 'kursy_fpv_gorod', meKey: 'kursy_fpv_me' };</script>
-<script src="golos.js"></script><script src="three.min.js"></script><script src="RoomEnvironment.js"></script>
+<script>/* 10.11: в пробе курса (new.html) - голос с исправленным произношением (golos-new.js), на главной - как было */
+(function(){ var nw=/[?&]new\b/.test(location.search); try{ nw=nw||/new\.html$/.test(parent.location.pathname); }catch(e){} document.write('<script src="golos'+(nw?'-new':'')+'.js"><\/script>'); })();</script><script src="three.min.js"></script><script src="RoomEnvironment.js"></script>
 <script src="GLTFLoader.js"></script>
 <script src="komnata.js"></script><script src="akb-teoriya.js"></script><script>/* проба new.html (09.11 ночью): в пробе курса - этаж с правками (akb-etazh-new.js), на главной - как было */
 (function(){ var nw=/[?&]new\b/.test(location.search); try{ nw=nw||/new\.html$/.test(parent.location.pathname); }catch(e){} document.write('<script src="akb-etazh'+(nw?'-new':'')+'.js"><\/script>'); })();</script>
