@@ -14,3 +14,8 @@
 Прежние файлы главной сохранены с меткой 0111: `index-0111.html`, `prosto-0111.html`, `golos-0111.js`, `kosmos-kurs-0111.js`, `zadaniya-0111.js`.
 Как откатить: скопировать их в корень без "-0111" (index.html, prosto.html, golos.js, kosmos-kurs.js, zadaniya.js) - только после "ставь".
 Проба new.html и файлы *-new.js остаются для следующих проб.
+
+## Выкладка 10.11.2026 (голос)
+По "ставь" Alexandr на главную ушёл исправленный голос: тренажёры "Пульт", "Mobula 7", "Классы дронов" и этаж модуля 3 тоже читают с исправленным произношением (раньше Betaflight, ELRS, SA, 1S шли по-английски), "Комната первая", "из пяти", название комнаты не обрывает приветствие.
+Прежние файлы: `golos-1011.js` (голос курса и модуля 3), `golos-trenazhery-1011.js` (голос тренажёров), `akb-etazh-1011.js` (этаж модуля 3).
+Как откатить (только после "ставь"): `golos-1011.js` -> `golos.js` в корне и в `proba/modul3/`; `golos-trenazhery-1011.js` -> `golos.js` в `trenazhery/pult`, `trenazhery/mobula`, `trenazhery/klassy`; `akb-etazh-1011.js` -> `proba/modul3/akb-etazh.js`.

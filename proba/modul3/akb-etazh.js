@@ -317,7 +317,8 @@ function hello() { if (helloDone || !sayOk()) return; helloDone = true; GOLOS.sa
 /* браузер разрешает голос только после нажатия: пробуем сразу, а если молчит - при первом касании или клавише */
 setTimeout(hello, 1200);
 ['pointerdown', 'keydown', 'touchstart'].forEach(function (ev) { addEventListener(ev, function () { if (!helloDone) hello(); }, { passive: true }); });
-R.frame(function () { var r = roomById(curReg); if (!r || heard[r.id] || !sayOk()) return; heard[r.id] = true; helloDone = true;
+/* 10.11: название комнаты не обрывает приветствие на полуслове - ждёт, пока голос договорит (если ученик ещё в комнате) */
+R.frame(function () { var r = roomById(curReg); if (!r || heard[r.id] || !sayOk() || (helloDone && window.speechSynthesis && speechSynthesis.speaking)) return; heard[r.id] = true; helloDone = true;
   GOLOS.say('Комната ' + r.no + '. ' + r.n + '. ' + (r.tasks.length > 1 ? r.tasks.length + ' задания.' : 'Одно задание.')); });
 
 /* ---------- терминал задания (стойка с экраном) ---------- */
