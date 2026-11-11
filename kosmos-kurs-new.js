@@ -26,13 +26,13 @@ function LM(o){ o=o||{}; if(!PBR) return new THREE.MeshLambertMaterial(o); var q
 var mob=matchMedia('(pointer:coarse)').matches, red=matchMedia('(prefers-reduced-motion:reduce)').matches;
 var force=/[?&]3d=1/.test(location.search);
 var weak=(navigator.deviceMemory&&navigator.deviceMemory<=2)||(mob&&navigator.hardwareConcurrency&&navigator.hardwareConcurrency<=2);
-function plain(){ location.replace(PLAIN); }
+function plain(why){ location.replace(PLAIN+(why?(PLAIN.indexOf('?')<0?'?':'&')+'why='+why:'')); } /* 11.11: в адресе видно, почему не открылся город */
 /* 11.11: GitVerse иногда отвечает 502 на отдельный файл - тогда один раз перезагружаем страницу, а не уходим сразу в обычный вид */
-if(!K||!I||!window.THREE){ var RK='kurs_retry3d'; try{ if(!sessionStorage.getItem(RK)){ sessionStorage.setItem(RK,'1'); location.reload(); return; } sessionStorage.removeItem(RK); }catch(e){} plain(); return; }
+if(!K||!I||!window.THREE){ var RK='kurs_retry3d'; try{ if(!sessionStorage.getItem(RK)){ sessionStorage.setItem(RK,'1'); location.reload(); return; } sessionStorage.removeItem(RK); }catch(e){} plain(!window.THREE?'three':!K?'kurs':'info'); return; }
 try{ sessionStorage.removeItem('kurs_retry3d'); }catch(e){}
-if(!force&&(lsG(VKEY)==='plain'||weak)){ plain(); return; }
+if(!force&&(lsG(VKEY)==='plain'||weak)){ plain(weak?'weak':'vid'); return; }
 var cv=document.getElementById('c'), R;
-try{ R=new THREE.WebGLRenderer({canvas:cv,antialias:!mob,powerPreference:'high-performance'}); }catch(e){ plain(); return; }
+try{ R=new THREE.WebGLRenderer({canvas:cv,antialias:!mob,powerPreference:'high-performance'}); }catch(e){ plain('webgl'); return; }
 document.getElementById('plainB').onclick=function(){ lsS(VKEY,'plain'); location.href=PLAIN; };
 var DPR=Math.min(devicePixelRatio||1,mob?1.25:1.75), DPRMIN=mob?.8:1; R.setPixelRatio(DPR); /* если кадры долгие - DPR снижаем (см. tune в frame) */
 var S=new THREE.Scene(), C=new THREE.PerspectiveCamera(62,1,.4,2600); /* ближняя плоскость .4 (было .1): точнее глубина, крыши не мерцают полосками */
