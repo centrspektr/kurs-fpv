@@ -6,6 +6,8 @@
 (function () {
 'use strict';
 var KOMNATY = { m3: 'proba/modul3/index.html' };
+/* проба 11.11: модуль 5 - гоночный клуб от первого лица; только в пробе курса (new.html, g.html), на главной - как было */
+if (/\/(new|g)\.html$/.test(location.pathname)) KOMNATY.m5 = 'proba/modul3/gonki.html';
 var ov = null, cur = null;
 var css = document.createElement('style');
 css.textContent = '#komOv{position:fixed;inset:0;z-index:15;background:#05060d;opacity:0;transition:opacity .5s}#komOv.on{opacity:1}#komOv iframe{position:absolute;inset:0;width:100%;height:100%;border:0;display:block}';
