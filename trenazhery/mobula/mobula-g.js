@@ -176,7 +176,7 @@ var bar = el('div', 'acts'); ui.appendChild(bar);
 var bars = el('div', 'bars'); ui.appendChild(bars);
 function bubble(h, cls) { bub.className = 'bub glass' + (cls ? ' ' + cls : ''); bub.innerHTML = h; bub.hidden = false; }
 function actions(list) { bar.innerHTML = ''; list.forEach(function (a) { var b = el('button', 'tb' + (a.cls ? ' ' + a.cls : ''), a.t); b.onclick = function () { a.f(b); }; bar.appendChild(b); }); }
-function say(s) { if (window.GOLOS && GOLOS.on) GOLOS.say(s.replace(/(\d),(\d)/g, '$1 и $2 десятых')); }
+function say(s) { if (window.GOLOS && GOLOS.on) GOLOS.say(window.VSLUH ? VSLUH(s) : s.replace(/<[^>]+>/g, '')); } /* VSLUH (../vsluh.js): единицы, дроби и ударения для голоса */
 var PARTS = ['Знакомство', 'К заезду', 'Вопросы'], part = 0, MODE = 'learn';
 function progress() { bars.innerHTML = PARTS.map(function (p, i) { var k = i < part ? 1 : i > part ? 0 : (part === 0 ? Object.keys(seen).length / HS.length : part === 1 ? prep.i / prep.list.length : qz.i / qz.list.length); return '<i><b style="width:' + Math.round(k * 100) + '%"></b><span>' + p + '</span></i>'; }).join(''); }
 
