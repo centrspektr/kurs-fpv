@@ -129,15 +129,55 @@ function drawLCD() { pwrRing.material.color.set(ST.on ? '#39ff6a' : '#1a2a1a').m
 drawLCD();
 
 STUDIYA.shadows(P); body.castShadow = true;
-/* ---------- голограмма дрона ---------- */
-var D = new T.Group(); D.position.set(0, 1.25, -.2); sc.add(D); D.visible = false;
-var hm = neon(A, 1.6), props = [];
-[[1, 1], [-1, 1], [1, -1], [-1, -1]].forEach(function (q) { var arm = new T.Mesh(new T.BoxGeometry(.03, .02, .42), hm); arm.position.set(q[0] * .1, 0, q[1] * .1); arm.rotation.y = Math.atan2(q[0], q[1]); D.add(arm);
-  var duct = new T.Mesh(new T.TorusGeometry(.12, .008, 6, 32), hm); duct.rotation.x = Math.PI / 2; duct.position.set(q[0] * .2, 0, q[1] * .2); D.add(duct);
-  var pr = new T.Mesh(new T.BoxGeometry(.2, .004, .025), neon(PK, 1.4)); pr.position.copy(duct.position); D.add(pr); props.push(pr); });
-var dbody = new T.Mesh(new T.BoxGeometry(.13, .05, .17), hm); D.add(dbody); var camM = new T.Mesh(new T.BoxGeometry(.05, .05, .04), neon(Y, 1.4)); camM.position.set(0, .03, -.1); D.add(camM);
-var pad = new T.Mesh(new T.RingGeometry(.32, .34, 48), neon(A, 1)); pad.rotation.x = -Math.PI / 2; pad.position.set(0, .9, -.2); sc.add(pad); pad.visible = false;
-var beam = new T.Mesh(new T.CylinderGeometry(.33, .05, .9, 32, 1, true), new T.MeshBasicMaterial({ color: A, transparent: true, opacity: .06, side: T.DoubleSide, depthWrite: false })); beam.position.set(0, .45, -.2); sc.add(beam); beam.visible = false;
+/* ---------- дрон за пультом: настоящая модель (вуп), отвечает на стики ---------- */
+var D = new T.Group(); D.position.set(0, .05, -1.6); sc.add(D); D.visible = false;
+var props = [], discs = [], rpm = 0;
+(function () { var M = new T.Group(); M.scale.setScalar(1.45); M.position.y = .068; D.add(M);
+  function ph(c, r, o) { var x = new T.MeshPhysicalMaterial({ color: new T.Color(c).convertSRGBToLinear(), roughness: r, clearcoat: .7, clearcoatRoughness: .2, envMap: ENV, envMapIntensity: .5 }); if (o) Object.assign(x, o); return x; }
+  function lat(p, n) { return new T.LatheGeometry(p.map(function (q) { return new T.Vector2(q[0], q[1]); }), n || 64); }
+  var frameM = ph('#34373f', .28, { transparent: true, opacity: .88, side: T.DoubleSide }), MX = .29;
+  var ductG = lat([[.226, -.032], [.234, -.04], [.243, -.03], [.246, .06], [.24, .084], [.231, .086], [.227, .07], [.226, -.032]], 72);
+  var bladeG = (function () { var sh2 = new T.Shape(); sh2.moveTo(.012, -.014); sh2.bezierCurveTo(.07, -.07, .16, -.06, .205, -.02); sh2.bezierCurveTo(.22, 0, .2, .022, .17, .026); sh2.bezierCurveTo(.1, .04, .05, .03, .012, .014);
+    var g = new T.ExtrudeGeometry(sh2, { depth: .003, bevelEnabled: true, bevelThickness: .0015, bevelSize: .002, bevelSegments: 2, curveSegments: 14 }); g.rotateX(-Math.PI / 2);
+    var p = g.attributes.position; for (var i = 0; i < p.count; i++) { var x = p.getX(i), z = p.getZ(i), tw = .5 - x * 1.6; p.setY(i, p.getY(i) - z * Math.sin(tw)); p.setZ(i, z * Math.cos(tw)); } g.computeVertexNormals(); return g; })();
+  var coilT = tex(256, 32, function (c, w, h) { for (var i = 0; i < 9; i++) { var g = c.createLinearGradient(i * w / 9, 0, (i + 1) * w / 9, 0); g.addColorStop(0, '#5a2c12'); g.addColorStop(.5, '#e89a55'); g.addColorStop(1, '#5a2c12'); c.fillStyle = g; c.fillRect(i * w / 9, 0, w / 9 - 3, h); c.fillStyle = '#120a06'; c.fillRect((i + 1) * w / 9 - 3, 0, 3, h); } });
+  var bellM = std('#26262c', .3, .8, { envMapIntensity: .9, side: T.DoubleSide }), propM = ph('#c9d0da', .2, { transparent: true, opacity: .7, depthWrite: false, side: T.DoubleSide });
+  [[MX, -MX], [-MX, -MX], [MX, MX], [-MX, MX]].forEach(function (q, i) { var g = new T.Group(); g.position.set(q[0], 0, q[1]); M.add(g);
+    g.add(new T.Mesh(ductG, frameM)); var a0 = Math.atan2(-q[1], -q[0]);
+    for (var k = 0; k < 3; k++) { var sp = new T.Mesh(new T.BoxGeometry(.2, .014, .012), frameM), a = a0 + k * 2.094; sp.position.set(Math.cos(a) * .135, -.026, Math.sin(a) * .135); sp.rotation.y = -a; g.add(sp); }
+    var st = new T.Mesh(new T.CylinderGeometry(.046, .05, .012, 32), dark); st.position.y = -.012; g.add(st);
+    var coil = new T.Mesh(new T.CylinderGeometry(.04, .04, .03, 32, 1, true), new T.MeshStandardMaterial({ map: coilT, roughness: .4, metalness: .8, envMap: ENV, envMapIntensity: .8 })); coil.position.y = .008; g.add(coil);
+    var bell = new T.Mesh(lat([[0, .012], [.03, .012], [.046, .006], [.049, -.002], [.049, -.012], [.044, -.012], [.044, -.002], [0, .002]], 40), bellM); bell.position.y = .034; g.add(bell);
+    var pr = new T.Group(); pr.position.y = .065; g.add(pr);
+    for (var bb = 0; bb < 2; bb++) { var bl = new T.Mesh(bladeG, propM); bl.rotation.y = bb * Math.PI; pr.add(bl); }
+    pr.add(new T.Mesh(new T.CylinderGeometry(.02, .024, .022, 24), propM)); props.push(pr);
+    /* размытый круг: чем быстрее мотор, тем заметнее */
+    var dk = new T.Mesh(new T.CircleGeometry(.21, 40), new T.MeshBasicMaterial({ color: new T.Color(i < 2 ? A : '#ffffff'), transparent: true, opacity: 0, depthWrite: false, side: T.DoubleSide })); dk.rotation.x = -Math.PI / 2; dk.position.y = .068; g.add(dk); discs.push(dk); });
+  [[0, -MX, .13, .03], [0, MX, .13, .03], [-MX, 0, .03, .13], [MX, 0, .03, .13]].forEach(function (q) { var bx = new T.Mesh(new T.BoxGeometry(q[2], .05, q[3]), frameM); bx.position.set(q[0], .03, q[1]); M.add(bx); });
+  var plate = new T.Mesh(STUDIYA.rbox(.3, .3, .02, .05), frameM); plate.rotation.set(-Math.PI / 2, 0, Math.PI / 4); plate.position.y = -.012; M.add(plate);
+  var canopy = new T.Mesh(lat([[.118, 0], [.122, .02], [.112, .07], [.085, .112], [.045, .132], [0, .136]], 48), ph('#1a1b20', .32)); canopy.scale.set(1, 1, 1.22); canopy.position.y = .022; M.add(canopy);
+  /* нос: камера и два ярких огонька спереди, сзади красный - чтобы было видно, где перёд */
+  var cg = new T.Group(); cg.position.set(0, .088, -.118); cg.rotation.x = .35; M.add(cg);
+  var hood = new T.Mesh(new T.CylinderGeometry(.048, .052, .06, 32), ph('#1a1b20', .32)); hood.rotation.x = Math.PI / 2; hood.position.z = .01; cg.add(hood);
+  var gl = new T.Mesh(new T.SphereGeometry(.03, 24, 12, 0, Math.PI * 2, 0, .9), new T.MeshPhysicalMaterial({ color: new T.Color('#0a1836').convertSRGBToLinear(), roughness: .02, metalness: .6, clearcoat: 1, clearcoatRoughness: 0, envMap: ENV, envMapIntensity: 2 })); gl.rotation.x = -Math.PI / 2; gl.position.z = -.046; cg.add(gl);
+  [-.08, .08].forEach(function (x) { var l = new T.Mesh(new T.SphereGeometry(.014, 12, 8), neon(A, 1.8)); l.position.set(x, .03, -.2); M.add(l); var gw = STUDIYA.glow(A, .16, .7); gw.position.copy(l.position); M.add(gw); });
+  var rl = new T.Mesh(new T.SphereGeometry(.014, 12, 8), neon(RD, 1.8)); rl.position.set(0, .05, .17); M.add(rl); var rg = STUDIYA.glow(RD, .16, .7); rg.position.copy(rl.position); M.add(rg);
+  var bat = new T.Mesh(STUDIYA.rbox(.13, .07, .4, .02), std('#7a3ad0', .45)); bat.position.set(0, -.06, .02); M.add(bat);
+  STUDIYA.shadows(M); })();
+var pad = new T.Mesh(new T.RingGeometry(.86, .885, 64), neon(A, 1)); pad.rotation.x = -Math.PI / 2; pad.position.set(0, .012, -1.6); sc.add(pad); pad.visible = false;
+/* подиум за пультом: дрон стоит выше пульта, его хорошо видно (в части "Стики") */
+var beam = new T.Group(); sc.add(beam); beam.visible = false; var GY = .9, GZ = -1.9;
+(function () { var pd = new T.Mesh(new T.LatheGeometry([[0, 0], [1.02, 0], [1.04, .03], [.98, GY - .04], [.94, GY], [0, GY]].map(function (q) { return new T.Vector2(q[0], q[1]); }), 80), std('#12101a', .38, .5, { envMapIntensity: .5 })); pd.castShadow = pd.receiveShadow = true; beam.add(pd);
+  var tp = new T.Mesh(new T.CylinderGeometry(.93, .93, .008, 64), std('#0d0b14', .97, 0, { envMapIntensity: .04 })); tp.position.y = GY + .002; tp.receiveShadow = true; beam.add(tp);
+  var rg = new T.Mesh(new T.TorusGeometry(.95, .009, 8, 96), neon(A, 1.2)); rg.rotation.x = Math.PI / 2; rg.position.y = GY; beam.add(rg); beam.position.z = GZ; beam.scale.set(1.3, 1, 1.3); })();
+/* кольца-подсказки вокруг стиков и невидимые зоны захвата */
+var grabZ = [], grabRing = [];
+[-.5, .5].forEach(function (x, i) { var z = new T.Mesh(new T.SphereGeometry(.26, 12, 8), new T.MeshBasicMaterial({ visible: false })); z.position.set(x, .2, FZ + .12); P.add(z); z.userData.stick = i; grabZ.push(z);
+  var r = new T.Mesh(new T.TorusGeometry(.245, .008, 8, 64), neon(i ? PK : A, 1.5)); r.position.set(x, .2, FZ + .03); P.add(r); r.visible = false; grabRing.push(r); });
+/* звук моторов: тихий гул, выше газ - выше тон (слушается кнопки звука и громкости) */
+var AU = null;
+function motorSnd() { if (AU || !(window.AudioContext || window.webkitAudioContext)) return; try { var ac = new (window.AudioContext || window.webkitAudioContext)(), o = ac.createOscillator(), o2 = ac.createOscillator(), f = ac.createBiquadFilter(), g = ac.createGain();
+  o.type = 'sawtooth'; o2.type = 'square'; f.type = 'lowpass'; f.frequency.value = 900; g.gain.value = 0; o.connect(f); o2.connect(f); f.connect(g); g.connect(ac.destination); o.start(); o2.start(); AU = { ac: ac, o: o, o2: o2, g: g }; } catch (e) {} }
 var DS = { h: 0, yaw: 0, px: 0, pz: 0, tiltX: 0, tiltZ: 0 };
 
 /* ---------- камера: облёт пальцем и подлёт к деталям ---------- */
@@ -145,12 +185,19 @@ function RR(r) { return innerWidth < innerHeight ? r * 1.55 : r; } /* на те�
 var orb = { th: 0, ph: .5, r: RR(3.0), tgt: new T.Vector3(0, .62, 0) }, fly = null;
 function camPose() { var p = new T.Vector3(orb.tgt.x + orb.r * Math.sin(orb.th) * Math.cos(orb.ph), orb.tgt.y + orb.r * Math.sin(orb.ph), orb.tgt.z + orb.r * Math.cos(orb.th) * Math.cos(orb.ph)); return p; }
 function goCam(th, ph, r, tgt, d) { fly = { a: { th: orb.th, ph: orb.ph, r: orb.r, t: orb.tgt.clone() }, b: { th: th, ph: ph, r: r, t: tgt.clone() }, k: 0, d: d || 1 }; }
-var down = null;
-cv.addEventListener('pointerdown', function (e) { down = { x: e.clientX, y: e.clientY, th: orb.th, ph: orb.ph, m: false }; try { cv.setPointerCapture(e.pointerId); } catch (er) {} });
-cv.addEventListener('pointermove', function (e) { if (!down) return; var dx = e.clientX - down.x, dy = e.clientY - down.y; if (Math.abs(dx) + Math.abs(dy) > 6) down.m = true;
+var down = null, grabs = {};
+function stickPx(i) { var a = new T.Vector3(), b = new T.Vector3(); grabZ[i].getWorldPosition(a); b.copy(a); a.project(cam); b.x += .2; b.project(cam); return Math.max(34, Math.abs(b.x - a.x) * innerWidth / 2 * 1.1); } /* сколько пикселей - полный ход стика */
+function grabAt(e) { if (MODE !== 'sticks') return null; var m = new T.Vector2(e.clientX / innerWidth * 2 - 1, -(e.clientY / innerHeight) * 2 + 1), rc = new T.Raycaster(); rc.setFromCamera(m, cam); var h = rc.intersectObjects(grabZ)[0]; return h ? h.object.userData.stick : null; }
+cv.addEventListener('pointerdown', function (e) { var gi = grabAt(e); if (gi != null) { motorSnd(); grabs[e.pointerId] = { i: gi, x: e.clientX, y: e.clientY, sx: sticks[gi].tx, sy: sticks[gi].ty, k: stickPx(gi) }; try { cv.setPointerCapture(e.pointerId); } catch (er) {} cv.style.cursor = 'grabbing'; return; }
+  down = { x: e.clientX, y: e.clientY, th: orb.th, ph: orb.ph, m: false }; try { cv.setPointerCapture(e.pointerId); } catch (er) {} });
+cv.addEventListener('pointermove', function (e) { var gr = grabs[e.pointerId]; if (gr) { var st = sticks[gr.i]; st.tx = Math.max(-1, Math.min(1, gr.sx + (e.clientX - gr.x) / gr.k)); st.ty = Math.max(-1, Math.min(1, gr.sy - (e.clientY - gr.y) / gr.k)); return; }
+  if (MODE === 'sticks' && !down) cv.style.cursor = grabAt(e) != null ? 'grab' : '';
+  if (!down) return; var dx = e.clientX - down.x, dy = e.clientY - down.y; if (Math.abs(dx) + Math.abs(dy) > 6) down.m = true;
   if (down.m && !fly) { orb.th = Math.max(-1.3, Math.min(1.3, down.th - dx * .006)); orb.ph = Math.max(.08, Math.min(1.25, down.ph + dy * .005)); } });
-cv.addEventListener('pointerup', function (e) { var d = down; down = null; if (d && !d.m) tap(e.clientX, e.clientY); });
-cv.addEventListener('wheel', function (e) { orb.r = Math.max(1.0, Math.min(6, orb.r + e.deltaY * .002)); }, { passive: true });
+function dropStick(e) { var gr = grabs[e.pointerId]; if (!gr) return false; delete grabs[e.pointerId]; sticks[gr.i].tx = 0; if (gr.i === 1) sticks[gr.i].ty = 0; cv.style.cursor = ''; return true; } /* газ (левый, вверх-вниз) остаётся где оставили, остальное пружинит в центр */
+cv.addEventListener('pointercancel', dropStick);
+cv.addEventListener('pointerup', function (e) { if (dropStick(e)) return; var d = down; down = null; if (d && !d.m) tap(e.clientX, e.clientY); });
+cv.addEventListener('wheel', function (e) { orb.r = Math.max(1.0, Math.min(10, orb.r + e.deltaY * .002)); }, { passive: true });
 
 /* ---------- точки-подсказки ---------- */
 var HS = KID ? [
@@ -208,7 +255,7 @@ function progress() { bars.innerHTML = PARTS.map(function (p, i) { var k = i < p
 var MODE = 'learn';
 
 /* ---------- часть 1: знакомство ---------- */
-function partLearn() { MODE = 'learn'; part = 0; D.visible = pad.visible = beam.visible = false; padsEl.hidden = true;
+function partLearn() { document.body.classList.remove('sticks'); MODE = 'learn'; part = 0; D.visible = pad.visible = beam.visible = false; padsEl.hidden = true; grabRing.forEach(function (r) { r.visible = false; });
   bubble('<span class="chip">ПУЛЬТ RADIOMASTER POCKET</span><br>' + (KID ? 'Это пульт, которым управляют дроном. Нажимай на <b>жёлтые точки</b> - расскажу, что где.' : 'Компактный пульт на EdgeTX со встроенным ExpressLRS. Нажимай на <b>жёлтые точки</b>: камера подлетит и расскажет про каждую часть. Крути пульт пальцем.'), '');
   say(KID ? 'Это пульт, которым управляют дроном. Нажимай на жёлтые точки.' : 'Пульт РадиоМастер Покет. Нажимай на жёлтые точки, чтобы узнать, что где.');
   actions([]); progress(); }
@@ -234,11 +281,12 @@ var padsEl = el('div', 'pads'); padsEl.innerHTML = '<div class="pad" data-i="0">
   pd.addEventListener('pointermove', function (e) { if (e.pointerId === id) upd(e); });
   pd.addEventListener('pointerup', function () { id = null; sticks[i].tx = 0; if (i === 1) sticks[i].ty = 0; });
   pd.knob = kn; });
-function partSticks() { pad.position.set(0, .9, -.2); MODE = 'sticks'; part = 1; stk.i = 0; ST.on = true; drawLCD(); D.visible = pad.visible = beam.visible = true; DS.h = 0; DS.yaw = 0; DS.px = DS.pz = 0;
-  hsM.forEach(function (s) { s.visible = false; }); padsEl.hidden = false; goCam(0, .55, innerWidth < innerHeight ? 3.7 : 3.0, new T.Vector3(0, .62, -.1), 1.2);
-  bubble('<span class="chip">СТИКИ · MODE 2</span><br>Двигай стики пальцами внизу экрана. Голограмма над пультом - это дрон. ' + stk.list[0].q, ''); say('Двигай стики внизу экрана. ' + stk.list[0].q.replace(/<[^>]+>/g, '')); actions([]); progress(); }
+function partSticks() { D.scale.setScalar(1); pad.scale.setScalar(1); pad.position.set(0, GY + .012, GZ); MODE = 'sticks'; part = 1; stk.i = 0; ST.on = true; drawLCD(); D.visible = pad.visible = beam.visible = true; DS.h = 0; DS.yaw = 0; DS.px = DS.pz = 0;
+  hsM.forEach(function (s) { s.visible = false; }); padsEl.hidden = true; grabRing.forEach(function (r) { r.visible = true; }); sticks[0].tx = 0; sticks[0].ty = -1; sticks[1].tx = sticks[1].ty = 0;
+  goCam(0, .44, innerWidth < innerHeight ? 9.6 : 6.3, new T.Vector3(0, 1.3, -.9), 1.4); document.body.classList.add('sticks'); /* пульт отъезжает вниз, за ним виден дрон */
+  bubble('<span class="chip">СТИКИ · MODE 2</span><br>Двигай стики <b>прямо на пульте</b> - мышкой или пальцем. За пультом стоит дрон: смотри, как он отвечает. ' + stk.list[0].q, ''); say('Двигай стики прямо на пульте, мышкой или пальцем, и смотри на дрон. ' + stk.list[0].q.replace(/<[^>]+>/g, '')); actions([]); progress(); }
 function stickTick() { if (MODE !== 'sticks') return; var g = stk.list[stk.i]; if (g && g.ok()) { stk.i++; progress();
-    if (stk.i >= stk.list.length) { bubble('<span class="chip">ГОТОВО</span><br>' + (KID ? 'Левый стик - вверх-вниз и поворот, правый - куда лететь.' : 'Левый: газ и рыскание. Правый: тангаж и крен. Это Mode 2 - так летает большинство пилотов.'), 'ok'); padsEl.hidden = true; actions([{ t: 'Дальше: тумблеры →', cls: 'pri', f: partSwitches }]); MODE = 'sticks-done'; return; }
+    if (stk.i >= stk.list.length) { bubble('<span class="chip">ГОТОВО</span><br>' + (KID ? 'Левый стик - вверх-вниз и поворот, правый - куда лететь.' : 'Левый: газ и рыскание. Правый: тангаж и крен. Это Mode 2 - так летает большинство пилотов.'), 'ok'); padsEl.hidden = true; grabRing.forEach(function (r) { r.visible = false; }); actions([{ t: 'Дальше: тумблеры →', cls: 'pri', f: partSwitches }]); MODE = 'sticks-done'; return; }
     bubble('<span class="chip">ВЕРНО · ' + stk.i + ' ИЗ ' + stk.list.length + '</span><br>' + stk.list[stk.i].q, 'ok'); say(stk.list[stk.i].q.replace(/<[^>]+>/g, '')); } }
 
 /* ---------- часть 3: тумблеры и Betaflight ---------- */
@@ -260,7 +308,7 @@ sws.list = KID ? [
   { bf: 1, q: 'Тумблеры - просто каналы AUX1...AUX4. Что они делают, задаём в <b>Betaflight → Modes</b>: функция + канал + диапазон. Хочу <b>TURTLE</b> (перевернуть упавший дрон) на <b>SC</b>. Что делаем?',
     opts: ['В Betaflight Modes: FLIP OVER AFTER CRASH на AUX3, диапазон верхнего положения SC', 'Ничего: TURTLE включается сам', 'Меняем прошивку пульта'], a: 0, e: 'Верно. Любой тумблер или кнопку можно назначить на любую функцию: в пульте (EdgeTX, миксер канала) и в Betaflight (вкладка Modes). Главное - проверить на вкладке Receiver, что канал двигается.' }
 ];
-function partSwitches() { MODE = 'sw'; part = 2; sws.i = 0; padsEl.hidden = true; sticks[0].tx = 0; sticks[0].ty = -1; sticks[1].tx = sticks[1].ty = 0;
+function partSwitches() { beam.visible = false; grabRing.forEach(function (r) { r.visible = false; }); D.scale.setScalar(.5); document.body.classList.remove('sticks'); MODE = 'sw'; part = 2; sws.i = 0; padsEl.hidden = true; sticks[0].tx = 0; sticks[0].ty = -1; sticks[1].tx = sticks[1].ty = 0;
   hsM.forEach(function (h) { h.visible = false; }); ST.on = true; drawLCD(); goCam(0, 1.18, (innerWidth < innerHeight ? 2.9 : 1.75), new T.Vector3(0, .55, -.55), 1.1); swAsk(); progress(); }
 var swMark = new T.Sprite(new T.SpriteMaterial({ map: dotT(Y), depthTest: false, toneMapped: false })); swMark.renderOrder = 11; swMark.visible = false; P.add(swMark);
 function swAsk() { var q = sws.list[sws.i]; bfEl.hidden = !q.bf; swMark.visible = !q.bf && !!q.sw; if (q.sw) swMark.position.set(sw[q.sw].g.position.x, TOPY + .2, .02);
@@ -277,7 +325,7 @@ function flip(n) { var s = sw[n]; setSw(n, (s.pos + 1) % s.n); var q = sws.list[
 function finish() { swMark.visible = false; MODE = 'done'; part = 3; progress(); bfEl.hidden = true; lsS(KEY, '1'); try { localStorage.setItem(KEY + '_best', '100'); } catch (e) {}
   bubble('<span class="chip">ТРЕНАЖЁР ПРОЙДЕН</span><br>' + (KID ? 'Ты знаешь пульт: стики, взвод, режимы. Дальше - полёты!' : 'Пульт изучен: стики Mode 2, взвод, режимы, и что любой тумблер назначается в Betaflight → Modes.'), 'ok');
   say('Тренажёр пройден!'); actions([{ t: 'Ещё раз', f: function () { location.reload(); } }, { t: 'Назад в курс', cls: 'pri', f: function () { history.back(); } }]); }
-window.SBG = { sc: sc, ren: ren, P: P, st: function () { return { stage: MODE === 'done' ? 'done' : MODE }; }, jump: function (p) { if (p === 'sticks') partSticks(); else if (p === 'sw') partSwitches(); else if (p === 'learn') partLearn(); else if (p === 'all') HS.forEach(function (h) { seen[h.id] = 1; }); }, stk: stk, sws: sws, sticks: sticks, DS: DS, flip: flip, showHS: function (i) { showHS(HS[i]); }, HS: HS };
+window.SBG = { sc: sc, ren: ren, P: P, cam: cam, DS: DS, sticks: sticks, st: function () { return { stage: MODE === 'done' ? 'done' : MODE }; }, jump: function (p) { if (p === 'sticks') partSticks(); else if (p === 'sw') partSwitches(); else if (p === 'learn') partLearn(); else if (p === 'all') HS.forEach(function (h) { seen[h.id] = 1; }); }, stk: stk, sws: sws, sticks: sticks, DS: DS, flip: flip, showHS: function (i) { showHS(HS[i]); }, HS: HS };
 
 /* ---------- кадр ---------- */
 var clock = new T.Clock(), lcdAcc = 0;
@@ -286,26 +334,32 @@ function loop() { requestAnimationFrame(loop); var dt = Math.min(clock.getDelta(
     orb.th = fly.a.th + (fly.b.th - fly.a.th) * k; orb.ph = fly.a.ph + (fly.b.ph - fly.a.ph) * k; orb.r = fly.a.r + (fly.b.r - fly.a.r) * k; orb.tgt.lerpVectors(fly.a.t, fly.b.t, k); if (fly.k >= 1) fly = null; }
   cam.position.copy(camPose()); cam.lookAt(orb.tgt);
   /* стики плавно к цели */
-  sticks.forEach(function (s, i) { s.x += (s.tx - s.x) * Math.min(1, dt * 14); s.y += (s.ty - s.y) * Math.min(1, dt * 14); s.piv.rotation.y = s.x * .35; s.piv.rotation.x = -s.y * .35;
+  sticks.forEach(function (s, i) { s.x += (s.tx - s.x) * Math.min(1, dt * 14); s.y += (s.ty - s.y) * Math.min(1, dt * 14); s.piv.rotation.y = s.x * .42; s.piv.rotation.x = -s.y * .42;
     var kn = padsEl.querySelectorAll('.pad i')[i]; if (kn) kn.style.transform = 'translate(' + (s.x * 50) + '%,' + (-s.y * 50) + '%)'; });
   /* голограмма дрона: Mode 2 */
   if (D.visible) { var thr = (sticks[0].y + 1) / 2, lift = (thr - .5) * 1.6; DS.h = Math.max(0, Math.min(1.1, DS.h + lift * dt)); if (thr < .08) DS.h = Math.max(0, DS.h - dt * .8);
     var air = DS.h > .02; if (air) DS.yaw -= sticks[0].x * dt * 1.6;
-    DS.tiltX += ((air ? -sticks[1].y * .45 : 0) - DS.tiltX) * Math.min(1, dt * 6); DS.tiltZ += ((air ? -sticks[1].x * .45 : 0) - DS.tiltZ) * Math.min(1, dt * 6);
+    var tk = air ? .5 : thr > .03 ? .16 : 0; /* в воздухе наклон полный, на земле с газом - чуть заметный */
+    DS.tiltX += (-sticks[1].y * tk - DS.tiltX) * Math.min(1, dt * 6); DS.tiltZ += (-sticks[1].x * tk - DS.tiltZ) * Math.min(1, dt * 6);
     var fx = -Math.sin(DS.yaw), fz = -Math.cos(DS.yaw), rx = Math.cos(DS.yaw), rz = -Math.sin(DS.yaw);
     if (air) { DS.px += (fx * sticks[1].y + rx * sticks[1].x) * dt * .5; DS.pz += (fz * sticks[1].y + rz * sticks[1].x) * dt * .5; }
-    DS.px *= Math.pow(.6, dt); DS.pz *= Math.pow(.6, dt); DS.px = Math.max(-.6, Math.min(.6, DS.px)); DS.pz = Math.max(-.6, Math.min(.6, DS.pz));
-    D.position.set(DS.px, .95 + DS.h, -.2 + DS.pz); D.rotation.set(0, 0, 0); D.rotateY(DS.yaw); D.rotateX(DS.tiltX); D.rotateZ(DS.tiltZ);
-    var spin = ST.armed || air ? (10 + thr * 40) : 0; props.forEach(function (p, i) { p.rotation.y += (i % 2 ? 1 : -1) * spin * dt; });
+    DS.px *= Math.pow(.6, dt); DS.pz *= Math.pow(.6, dt); DS.px = Math.max(-.8, Math.min(.8, DS.px)); DS.pz = Math.max(-.6, Math.min(.6, DS.pz));
+    D.position.set(DS.px, GY + .05 + DS.h, GZ + DS.pz); D.rotation.set(0, 0, 0); D.rotateY(DS.yaw); D.rotateX(DS.tiltX); D.rotateZ(DS.tiltZ);
+    /* моторы: раскручиваются и затихают плавно, вместе с газом */
+    var want = (ST.armed || air || thr > .03) ? 10 + thr * 46 : 0; rpm += (want - rpm) * Math.min(1, dt * (want > rpm ? 5 : 2.2)); props.forEach(function (p, i) { p.rotation.y += (i % 2 ? 1 : -1) * rpm * dt; });
+    discs.forEach(function (d) { d.material.opacity = Math.min(.3, rpm / 56 * .3); });
+    if (!air && rpm > 2) { D.position.x += Math.sin(t * 61) * .002 * thr; D.rotation.z += Math.sin(t * 47) * .006 * thr; } /* на земле дрон дрожит от моторов */
     stickTick(); }
   else if (ST.armed) props.forEach(function (p) { p.rotation.y += dt * 12; });
-  if (MODE === 'sw' || MODE === 'done') { pad.position.set(0, .02, -.95); D.rotation.set(0, 0, 0); }
-  if (MODE === 'sw' && ST.armed) { D.visible = pad.visible = true; D.position.set(0, .14 + .02 * Math.sin(t * 6), -.95); props.forEach(function (p, i) { p.rotation.y += (i % 2 ? 1 : -1) * 14 * dt; }); }
-  else if (MODE === 'sw' || MODE === 'done') { D.visible = pad.visible = true; D.position.set(0, .06, -.95); }
+  if (MODE === 'sw' || MODE === 'done') { pad.position.set(0, .02, -1.45); pad.scale.setScalar(.5); D.rotation.set(0, 0, 0); }
+  if (MODE === 'sw' && ST.armed) { D.visible = pad.visible = true; D.position.set(0, .14 + .02 * Math.sin(t * 6), -1.45); props.forEach(function (p, i) { p.rotation.y += (i % 2 ? 1 : -1) * 14 * dt; }); }
+  else if (MODE === 'sw' || MODE === 'done') { D.visible = pad.visible = true; D.position.set(0, .06, -1.45); }
   if (swMark.visible) swMark.scale.setScalar(.1 + .03 * Math.sin(t * 5));
   antArm.rotation.x += ((antOpen ? 0 : -1.35) - antArm.rotation.x) * Math.min(1, dt * 4);
   hsM.forEach(function (s, i) { if (s.visible) s.scale.setScalar(.075 + .02 * Math.sin(t * 4 + i)); });
   lcdAcc += dt; if (lcdAcc > .15 && ST.on) { lcdAcc = 0; drawLCD(); }
+  grabRing.forEach(function (r, i) { if (r.visible) r.scale.setScalar(1 + .04 * Math.sin(t * 4 + i * 2)); });
+  if (AU) { var on = MODE === 'sticks' && D.visible && window.GOLOS ? GOLOS.on : MODE === 'sticks' && D.visible, vol = on ? (window.GOLOS && GOLOS.vol != null ? GOLOS.vol : 1) : 0, now = AU.ac.currentTime; AU.g.gain.setTargetAtTime(rpm > 1 ? .035 * vol * Math.min(1, rpm / 20) : 0, now, .06); AU.o.frequency.setTargetAtTime(70 + rpm * 5.5, now, .05); AU.o2.frequency.setTargetAtTime((70 + rpm * 5.5) * 2.02, now, .05); }
   ren.render(sc, cam); }
 partLearn(); loop();
 document.getElementById('back').onclick = function () { history.back(); };
