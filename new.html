@@ -303,7 +303,7 @@
 const MODE = 'public';
 document.getElementById('hudC').textContent = (window.KURSY && KURSY.name) || 'Курс';
 </script>
-<script src="three.min.js" defer></script>   <!-- своя копия three r128 (09.11): чужие сайты не подключаем -->
+<script src="three-umd.js" defer></script><script src="three.min.js" defer></script><script src="three-umd.js" defer></script>   <!-- 11.11: чужой загрузчик модулей (расширения браузера) не мешает three -->   <!-- своя копия three r128 (09.11): чужие сайты не подключаем -->
 <script src="modeli.js" defer></script>
 <script src="zadaniya-new.js" defer></script>   <!-- проба 09.11: картинки карточек кодом вместо неподходящих эмодзи -->
 <script src="kartinki.js" defer></script>
