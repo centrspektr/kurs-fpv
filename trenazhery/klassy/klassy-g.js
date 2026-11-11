@@ -69,19 +69,9 @@ function antenna(par, x, z, len, tilt, capCol) { var g = new T.Group(); g.positi
   cylM(len * .025, len * .025, len, std('#1a1a1a', .5), g, 0, len / 2, 0, 8); cylM(len * .09, len * .09, len * .25, std(capCol || '#2a2a2a', .5), g, 0, len, 0, 12); return g; }
 
 /* ---------- дрон 1: Mobula 7 (вуп 75 мм) ---------- */
-function buildMobula() { var M = new T.Group(), props = [];
-  [[1, -1], [-1, -1], [1, 1], [-1, 1]].forEach(function (q, i) { var x = q[0] * .0265 * 2.5, z = q[1] * .0265 * 2.5;
-    var g = new T.Group(); g.position.set(x, 0, z); M.add(g);
-    mesh(ductG(.0215 * 2.5, .009 * 2.5), frameM, g, 0, -.001 * 2.5, 0);
-    for (var k = 0; k < 3; k++) { var a = Math.atan2(-q[1], -q[0]) + k * 2.094, sp = mesh(new T.BoxGeometry(.02 * 2.5, .0012 * 2.5, .001 * 2.5), frameM, g, Math.cos(a) * .0115 * 2.5, -.0018 * 2.5, Math.sin(a) * .0115 * 2.5); sp.rotation.y = -a; }
-    motor(g, 0, 0, .0045 * 2.5, .006 * 2.5, std('#202024', .35, .6)); props.push(prop(g, .0068 * 2.5, .04 * 2.5, 2, .005 * 2.5)); });
-  var pl = boxM(.03 * 2.5, .0025 * 2.5, .03 * 2.5, frameM, M, 0, 0, 0); pl.rotation.y = Math.PI / 4;
-  var can = mesh(lathe([[.0118, 0], [.0122, .002], [.0112, .007], [.0085, .0112], [.0045, .0132], [0, .0136]].map(function (q) { return [q[0] * 2.5, q[1] * 2.5]; }), 40), phys('#1a1b20', .32), M, 0, .002, 0); can.scale.set(1, 1, 1.22);
-  var cm = boxM(.0075 * 2.5, .0075 * 2.5, .0065 * 2.5, std('#18181c', .4, .2), M, 0, .009 * 2.5, -.01 * 2.5); cm.rotation.x = .35;
-  var b = boxM(.012 * 2.5, .0065 * 2.5, .04 * 2.5, std('#7a3ad0', .45), M, 0, -.007 * 2.5, .002);
-  antenna(M, 0, .013 * 2.5, .018 * 2.5, [-.7, 0], '#d33');
-  M.userData.props = props; return M; }
-
+function buildMobula() { /* общая модель по фото владельца (../mobula-model.js), приведена к размеру сцены: 75 мм */
+  var M = new T.Group(), MB = MOBULA({ env: ENV }); MB.g.scale.setScalar(.0265 * 2.5 / MB.MX); M.add(MB.g);
+  M.userData.props = MB.props; return M; }
 /* ---------- дрон 2: 3-дюймовый синевуп (как GEPRC CineLog 30): чёрная рама, кольца, красные моторы, две антенны ---------- */
 function buildCine() { var M = new T.Group(), props = [], WB = .127 * 2.5, R = WB / 2 / Math.SQRT2, duct = .041 * 2.5;
   [[1, -1], [-1, -1], [1, 1], [-1, 1]].forEach(function (q) { var g = new T.Group(); g.position.set(q[0] * R, 0, q[1] * R); M.add(g);
