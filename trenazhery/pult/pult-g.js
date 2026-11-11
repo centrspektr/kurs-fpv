@@ -29,34 +29,36 @@ function tex(w, h, draw) { var c = document.createElement('canvas'); c.width = w
 function txt(c, s, x, y, sz, col, al, wt) { c.font = (wt || 800) + ' ' + sz + 'px Manrope, "Segoe UI", sans-serif'; c.fillStyle = col; c.textAlign = al || 'center'; c.textBaseline = 'middle'; c.fillText(s, x, y); }
 
 /* ---------- пульт RadioMaster Pocket (по фото владельца: дымчатый корпус, видна плата) ---------- */
-var P = new T.Group(); P.position.set(0, .42, 0); P.rotation.x = -1.05; sc.add(P);   /* стоит на ножке, наклонён к нам */
-var smoke = new T.MeshPhysicalMaterial({ color: new T.Color('#15171c').convertSRGBToLinear(), roughness: .12, metalness: 0, clearcoat: 1, clearcoatRoughness: .08, transparent: true, opacity: .7, envMap: ENV, envMapIntensity: .55, depthWrite: false });
+var P = new T.Group(); P.position.set(0, .5, 0); P.rotation.x = -1.05; sc.add(P);   /* стоит на ножке, наклонён к нам */
+var smoke = new T.MeshPhysicalMaterial({ color: new T.Color('#25211d').convertSRGBToLinear(), roughness: .12, metalness: 0, clearcoat: 1, clearcoatRoughness: .08, transparent: true, opacity: .58, envMap: ENV, envMapIntensity: .55, depthWrite: false });
 var black = std('#0b0c10', .42, .1, { envMapIntensity: .6 }), metal = std('#b4bac6', .3, 1, { envMapIntensity: 1 }), dark = std('#15161b', .6, .05), gloss = new T.MeshPhysicalMaterial({ color: new T.Color('#08090c').convertSRGBToLinear(), roughness: .32, clearcoat: .6, clearcoatRoughness: .25, envMap: ENV, envMapIntensity: .3 });
 /* корпус: плечи сверху, две ручки снизу, между ними выемка */
-var sh = new T.Shape(), W = .86, Hh = .58;
-sh.moveTo(-.6, .58); sh.lineTo(.6, .58); sh.bezierCurveTo(.8, .58, .9, .5, .9, .3); sh.bezierCurveTo(.92, .05, .95, -.2, .93, -.4); sh.bezierCurveTo(.92, -.58, .8, -.66, .62, -.64); sh.bezierCurveTo(.4, -.62, .25, -.54, 0, -.54);
-sh.bezierCurveTo(-.25, -.54, -.4, -.62, -.62, -.64); sh.bezierCurveTo(-.8, -.66, -.92, -.58, -.93, -.4); sh.bezierCurveTo(-.95, -.2, -.92, .05, -.9, .3); sh.bezierCurveTo(-.9, .5, -.8, .58, -.6, .58);
+var sh = new T.Shape(), W = .86, Hh = .68; /* по фото: корпус почти квадратный, плечи сверху, ручки снизу, снизу посередине выемка */
+sh.moveTo(-.62, .68); sh.lineTo(.62, .68); sh.bezierCurveTo(.8, .68, .88, .6, .89, .42); sh.bezierCurveTo(.92, .15, .96, -.2, .95, -.5); sh.bezierCurveTo(.94, -.72, .82, -.82, .62, -.8); sh.bezierCurveTo(.4, -.78, .25, -.7, 0, -.7);
+sh.bezierCurveTo(-.25, -.7, -.4, -.78, -.62, -.8); sh.bezierCurveTo(-.82, -.82, -.94, -.72, -.95, -.5); sh.bezierCurveTo(-.96, -.2, -.92, .15, -.89, .42); sh.bezierCurveTo(-.88, .6, -.8, .68, -.62, .68);
 var bodyG = new T.ExtrudeGeometry(sh, { depth: .18, bevelEnabled: true, bevelThickness: .05, bevelSize: .05, bevelSegments: 10, curveSegments: 40 }); bodyG.translate(0, 0, -.09);
 var body = new T.Mesh(bodyG, smoke); body.renderOrder = 2; P.add(body);
 var backG = new T.ExtrudeGeometry(sh, { depth: .05, bevelEnabled: false, curveSegments: 40 }); backG.translate(0, 0, -.1); backG.scale(.985, .985, 1);
 P.add(new T.Mesh(backG, std('#0a0b0e', .7, .1)));
 /* плата внутри - видна сквозь дымчатый корпус: дорожки, чипы, два аккумулятора */
-var pcbT = tex(1024, 720, function (c, w, h) { c.fillStyle = '#0d2a1c'; c.fillRect(0, 0, w, h);
-  c.strokeStyle = '#1f5a3c'; c.lineWidth = 3; for (var i = 0; i < 70; i++) { var x = Math.random() * w, y = Math.random() * h, l = 40 + Math.random() * 160; c.beginPath(); c.moveTo(x, y); c.lineTo(x + l, y); c.lineTo(x + l + 20, y + 20 * (i % 2 ? 1 : -1)); c.stroke(); }
-  c.fillStyle = '#c9a44a'; for (var k = 0; k < 120; k++) c.fillRect(Math.random() * w, Math.random() * h, 5, 5);
-  [[430, 420, 120, 90], [250, 500, 70, 70], [700, 480, 90, 60], [480, 80, 80, 50], [120, 300, 60, 40], [840, 300, 60, 40]].forEach(function (q) { c.fillStyle = '#121316'; c.fillRect(q[0], q[1], q[2], q[3]); c.fillStyle = '#8b8f98'; for (var p = 0; p < q[2]; p += 10) { c.fillRect(q[0] + p, q[1] - 5, 5, 5); c.fillRect(q[0] + p, q[1] + q[3], 5, 5); } });
-  [[150, 540], [770, 540]].forEach(function (q) { var g = c.createLinearGradient(0, q[1], 0, q[1] + 150); g.addColorStop(0, '#2b6cb8'); g.addColorStop(.5, '#7fb4ee'); g.addColorStop(1, '#1d4f8c'); c.fillStyle = g; c.fillRect(q[0], q[1], 110, 150); c.fillStyle = '#d9dde4'; c.fillRect(q[0], q[1] - 8, 110, 10); }); });
-var pcb = new T.Mesh(new T.PlaneGeometry(1.52, 1.02), new T.MeshStandardMaterial({ map: pcbT, roughness: .75, metalness: 0, envMap: ENV, envMapIntensity: .1 })); pcb.position.set(0, -.01, -.04); P.add(pcb);
+var pcbT = tex(1024, 832, function (c, w, h) { c.fillStyle = '#191715'; c.fillRect(0, 0, w, h);
+  c.strokeStyle = '#34302b'; c.lineWidth = 3; for (var i = 0; i < 110; i++) { var x = Math.random() * w, y = Math.random() * h, l = 40 + Math.random() * 160; c.beginPath(); c.moveTo(x, y); c.lineTo(x + l, y); c.lineTo(x + l + 20, y + 20 * (i % 2 ? 1 : -1)); c.stroke(); }
+  c.fillStyle = '#8f7a45'; for (var k = 0; k < 140; k++) c.fillRect(Math.random() * w, Math.random() * h, 4, 4);
+  c.fillStyle = '#4a4640'; for (var d = 0; d < 26; d++) { c.beginPath(); c.arc(60 + Math.random() * (w - 120), 60 + Math.random() * (h - 120), 7, 0, 7); c.fill(); }
+  [[430, 520, 120, 90], [250, 600, 70, 70], [700, 560, 90, 60], [470, 60, 90, 50], [110, 330, 60, 40], [850, 330, 60, 40]].forEach(function (q) { c.fillStyle = '#0c0c0d'; c.fillRect(q[0], q[1], q[2], q[3]); c.fillStyle = '#77736c'; for (var p = 0; p < q[2]; p += 10) { c.fillRect(q[0] + p, q[1] - 5, 5, 5); c.fillRect(q[0] + p, q[1] + q[3], 5, 5); } });
+  /* цветные провода справа, как на фото */
+  ['#e07a1e', '#e9c12a', '#b5441f'].forEach(function (col, n) { c.strokeStyle = col; c.lineWidth = 7; c.beginPath(); c.moveTo(930 + n * 14, 250); c.bezierCurveTo(985 + n * 8, 330, 900 + n * 16, 430, 950 + n * 10, 560); c.stroke(); }); });
+var pcb = new T.Mesh(new T.PlaneGeometry(1.66, 1.36), new T.MeshStandardMaterial({ map: pcbT, roughness: .75, metalness: 0, envMap: ENV, envMapIntensity: .1 })); pcb.position.set(0, -.06, -.04); P.add(pcb);
 var leg = new T.Mesh(STUDIYA.rbox(.5, .07, .52, .03), dark); leg.position.set(0, .2, -.39); P.add(leg);
-var FZ = .145; /* лицевая сторона */
+var FZ = .145, SX = .55, SY = .13; /* лицевая сторона; где стоят стики */
 function onFace(m, x, y, z) { m.position.set(x, y, FZ + (z || 0)); P.add(m); return m; }
 /* стики: чёрный колодец, купол шарнира, металлическая ручка с насечкой */
 var sticks = [], capG = (function () { var p = [[0, 0], [.036, 0], [.046, .008], [.046, .04], [.056, .05], [.056, .066], [.046, .074], [0, .07]].map(function (q) { return new T.Vector2(q[0], q[1]); }); var g = new T.LatheGeometry(p, 40); g.rotateX(Math.PI / 2); return g; })();
-[-.5, .5].forEach(function (x, i) {
-  onFace(new T.Mesh(new T.CylinderGeometry(.215, .215, .02, 64), gloss), x, .2, .0).rotation.x = Math.PI / 2;
-  onFace(new T.Mesh(new T.TorusGeometry(.215, .016, 12, 72), gloss), x, .2, .012);
-  onFace(new T.Mesh(STUDIYA.rbox(.25, .25, .02, .05), dark), x, .2, .016);
-  var piv = new T.Group(); piv.position.set(x, .2, FZ + .01); P.add(piv);
+[-SX, SX].forEach(function (x, i) {
+  onFace(new T.Mesh(new T.CylinderGeometry(.24, .24, .02, 64), gloss), x, SY, .0).rotation.x = Math.PI / 2;
+  onFace(new T.Mesh(new T.TorusGeometry(.24, .02, 12, 72), gloss), x, SY, .012);
+  onFace(new T.Mesh(STUDIYA.rbox(.27, .27, .02, .04), dark), x, SY, .016);
+  var piv = new T.Group(); piv.position.set(x, SY, FZ + .01); P.add(piv);
   var dome = new T.Mesh(new T.SphereGeometry(.085, 32, 16, 0, Math.PI * 2, 0, Math.PI / 2), gloss); dome.rotation.x = Math.PI / 2; dome.scale.z = .7; dome.position.z = .012; piv.add(dome);
   var shaft = new T.Mesh(new T.CylinderGeometry(.014, .018, .17, 20), metal); shaft.rotation.x = Math.PI / 2; shaft.position.z = .12; piv.add(shaft);
   var cap = new T.Mesh(capG, metal); cap.position.z = .19; piv.add(cap);
@@ -65,36 +67,43 @@ var sticks = [], capG = (function () { var p = [[0, 0], [.036, 0], [.046, .008],
 });
 /* экран (EdgeTX): рамка, подсветка, стекло с бликом */
 var lcdT = tex(512, 384, function () {});
-onFace(new T.Mesh(STUDIYA.rbox(.48, .36, .03, .035), gloss), 0, .26, 0);
-var lcd = onFace(new T.Mesh(new T.PlaneGeometry(.42, .3), new T.MeshBasicMaterial({ map: lcdT, toneMapped: false })), 0, .26, .017);
-onFace(new T.Mesh(new T.PlaneGeometry(.44, .32), new T.MeshPhysicalMaterial({ color: 0xffffff, roughness: .05, clearcoat: 1, transparent: true, opacity: .1, envMap: ENV, envMapIntensity: 1.5, depthWrite: false })), 0, .26, .019);
-var lcdGlow = onFace(STUDIYA.glow('#bfe4ff', .9, 0), 0, .26, .05);
-var pkT = tex(256, 64, function (c, w, h) { c.clearRect(0, 0, w, h); txt(c, 'POCKET', w / 2, h / 2 + 2, 40, '#c9ced8', 'center', 900); });
-onFace(new T.Mesh(new T.PlaneGeometry(.22, .055), new T.MeshBasicMaterial({ map: pkT, transparent: true, opacity: .7 })), 0, .045, .004);
+onFace(new T.Mesh(STUDIYA.rbox(.5, .39, .03, .03), gloss), 0, .2, 0);
+var lcd = onFace(new T.Mesh(new T.PlaneGeometry(.44, .33), new T.MeshBasicMaterial({ map: lcdT, toneMapped: false })), 0, .2, .017);
+onFace(new T.Mesh(new T.PlaneGeometry(.44, .32), new T.MeshPhysicalMaterial({ color: 0xffffff, roughness: .05, clearcoat: 1, transparent: true, opacity: .1, envMap: ENV, envMapIntensity: 1.5, depthWrite: false })), 0, .2, .019);
+var lcdGlow = onFace(STUDIYA.glow('#bfe4ff', .9, 0), 0, .2, .05);
+var pkT = tex(256, 64, function (c, w, h) { c.clearRect(0, 0, w, h); c.font = 'italic 900 42px Manrope, sans-serif'; c.fillStyle = '#b9b4ab'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('POCKET', w / 2, h / 2 + 2); });
+onFace(new T.Mesh(new T.PlaneGeometry(.22, .055), new T.MeshBasicMaterial({ map: pkT, transparent: true, opacity: .8 })), 0, -.045, .004);
+/* маленький ползунок под надписью */
+onFace(new T.Mesh(STUDIYA.rbox(.16, .05, .02, .02), gloss), 0, -.115, .004); onFace(new T.Mesh(STUDIYA.rbox(.07, .034, .03, .012), black), .02, -.115, .012);
 /* колесо прокрутки */
-var roller = new T.Mesh(new T.CylinderGeometry(.036, .036, .2, 32), std('#2a2c33', .35, .6, { envMapIntensity: .9 })); roller.rotation.z = Math.PI / 2; onFace(roller, 0, -.015, .02);
-for (var rr = 0; rr < 9; rr++) { var gr = new T.Mesh(new T.TorusGeometry(.036, .004, 6, 24), black); gr.rotation.y = Math.PI / 2; gr.position.x = -.08 + rr * .02; roller.add(gr); gr.rotation.set(Math.PI / 2, 0, 0); gr.position.set(0, -.08 + rr * .02, 0); }
+onFace(new T.Mesh(STUDIYA.rbox(.13, .34, .016, .05), gloss), .68, -.45, .0);
+var roller = new T.Mesh(new T.CylinderGeometry(.045, .045, .26, 32), std('#1c1d22', .35, .6, { envMapIntensity: .9 })); onFace(roller, .68, -.45, .03);
+for (var rr = 0; rr < 16; rr++) { var gr = new T.Mesh(new T.BoxGeometry(.008, .2, .008), black), ga = rr / 16 * Math.PI * 2; gr.position.set(Math.cos(ga) * .046, 0, Math.sin(ga) * .046); gr.rotation.y = -ga; roller.add(gr); }
+[-.14, .14].forEach(function (y) { var e = new T.Mesh(new T.CylinderGeometry(.03, .03, .03, 20), metal); e.position.y = y; roller.add(e); });
 /* триммеры-крестики и кнопка питания */
 var trims = [];
-[-.24, .24].forEach(function (x) { var g = new T.Group(); g.position.set(x, -.1, FZ + .012); P.add(g);
-  g.add(new T.Mesh(new T.CylinderGeometry(.068, .068, .02, 40), gloss)).rotation.x = Math.PI / 2;
+[-.3, .3].forEach(function (x) { var g = new T.Group(); g.position.set(x, -.21, FZ + .012); P.add(g);
+  g.add(new T.Mesh(new T.CylinderGeometry(.078, .078, .02, 40), gloss)).rotation.x = Math.PI / 2;
   var b1 = new T.Mesh(STUDIYA.rbox(.1, .028, .03, .012), dark); b1.position.z = .015; g.add(b1); var b2 = new T.Mesh(STUDIYA.rbox(.028, .1, .03, .012), dark); b2.position.z = .015; g.add(b2); trims.push(g); });
-var power = onFace(new T.Mesh(new T.CylinderGeometry(.045, .048, .03, 40), gloss), 0, -.1, .015); power.rotation.x = Math.PI / 2;
-/* зелёное кольцо вокруг кнопки питания - горит, когда пульт включён */
-var pwrRing = onFace(new T.Mesh(new T.TorusGeometry(.058, .009, 12, 48), neon('#2a3a2a', 1)), 0, -.1, .02);
-var pwrGlow = onFace(STUDIYA.glow('#39ff6a', .34, 0), 0, -.1, .04);
+var pwT = tex(128, 64, function (c, w, h) { c.clearRect(0, 0, w, h); c.strokeStyle = '#c9ced8'; c.lineWidth = 5; c.lineCap = 'round'; c.beginPath(); c.arc(w / 2, h / 2 + 2, 15, -1.0, Math.PI + 1.0); c.stroke(); c.beginPath(); c.moveTo(w / 2, h / 2 - 18); c.lineTo(w / 2, h / 2 - 2); c.stroke(); });
+var power = onFace(new T.Mesh(STUDIYA.rbox(.2, .1, .03, .04), gloss), 0, -.21, .015);
+var pwL = new T.Mesh(new T.PlaneGeometry(.12, .06), new T.MeshBasicMaterial({ map: pwT, transparent: true })); pwL.position.z = .016; power.add(pwL);
+/* зелёная рамка вокруг кнопки питания - горит, когда пульт включён */
+var pwrRing = onFace(new T.Mesh(STUDIYA.rbox(.235, .135, .012, .055), neon('#2a3a2a', 1)), 0, -.21, .004);
+var pwrGlow = onFace(STUDIYA.glow('#39ff6a', .4, 0), 0, -.21, .04);
 /* кнопки слева: RTN, PAGE>, PAGE<, TELE; круглые SYS и MDL */
 function lblTex(s) { return tex(128, 48, function (c, w, h) { c.clearRect(0, 0, w, h); txt(c, s, w / 2, h / 2 + 1, 26, '#a9aebb', 'center', 800); }); }
 var btns = {};
-['RTN', 'PAGE>', 'PAGE<', 'TELE'].forEach(function (s, i) { var m = onFace(new T.Mesh(STUDIYA.rbox(.135, .06, .034, .02), black), -.66, -.06 - i * .1, .012);
+['RTN', 'PAGE>', 'PAGE<', 'TELE'].forEach(function (s, i) { var m = onFace(new T.Mesh(STUDIYA.rbox(.135, .06, .034, .02), black), -.68, -.26 - i * .105, .012);
   var l = new T.Mesh(new T.PlaneGeometry(.12, .045), new T.MeshBasicMaterial({ map: lblTex(s), transparent: true })); l.position.z = .0175; m.add(l); btns[s] = m; });
-function roundBtn(s, x, y) { var g = new T.Group(); g.position.set(x, y, FZ + .012); P.add(g); var m = new T.Mesh(new T.CylinderGeometry(.052, .057, .03, 40), black); m.rotation.x = Math.PI / 2; g.add(m);
+function roundBtn(s, x, y) { var g = new T.Group(); g.position.set(x, y, FZ + .012); P.add(g); var m = new T.Mesh(new T.CylinderGeometry(.068, .073, .03, 40), black); m.rotation.x = Math.PI / 2; g.add(m);
   var l = new T.Mesh(new T.PlaneGeometry(.08, .03), new T.MeshBasicMaterial({ map: lblTex(s), transparent: true })); l.position.z = .017; g.add(l); btns[s] = g; return g; }
-roundBtn('SYS', -.42, -.26); roundBtn('MDL', .44, -.3);
+roundBtn('SYS', -.43, -.47); roundBtn('MDL', .43, -.47);
 /* динамик */
-var spk = onFace(new T.Mesh(new T.CylinderGeometry(.14, .14, .015, 48), std('#16171c', .6)), .02, -.33, .005); spk.rotation.x = Math.PI / 2;
-onFace(new T.Mesh(new T.TorusGeometry(.14, .008, 10, 64), gloss), .02, -.33, .012);
-for (var hy = -2; hy <= 2; hy++) for (var hx = -3; hx <= 3; hx++) if (hx * hx + hy * hy * 2.4 < 11) onFace(new T.Mesh(new T.CircleGeometry(.008, 12), neon('#000', 1)), .02 + hx * .03, -.33 + hy * .045, .014);
+var spk = onFace(new T.Mesh(new T.CylinderGeometry(.16, .16, .015, 8), std('#3a3631', .5, 0, { transparent: true, opacity: .75 })), 0, -.5, .005); spk.rotation.x = Math.PI / 2; spk.rotation.y = Math.PI / 8;
+for (var hy = -2; hy <= 2; hy++) for (var hx = -3; hx <= 3; hx++) if (Math.abs(hx) + Math.abs(hy) * 1.2 < 4.4) onFace(new T.Mesh(new T.CircleGeometry(.011, 12), neon('#000', 1)), hx * .038 + (hy % 2 ? .019 : 0), -.5 + hy * .045, .014);
+/* гнездо снизу посередине */
+onFace(new T.Mesh(STUDIYA.rbox(.36, .05, .02, .02), gloss), 0, -.645, .0);
 /* верхняя кромка: тумблеры SA SB (слева), SC SD (справа), USB-C, складная антенна */
 var TOPY = Hh + .03, sw = {};
 function toggle(name, x, pos3) { var g = new T.Group(); g.position.set(x, TOPY, .0); P.add(g);
@@ -105,20 +114,20 @@ function toggle(name, x, pos3) { var g = new T.Group(); g.position.set(x, TOPY, 
 function setSw(name, p) { var s = sw[name]; s.pos = p; var ang = s.n === 3 ? [-.5, 0, .5][p] : [-.5, .5][p]; s.lev.rotation.x = ang; }
 toggle('SA', -.66, false); toggle('SB', -.46, true); toggle('SC', .46, true); toggle('SD', .66, false);
 ['SA', 'SB', 'SC', 'SD'].forEach(function (n) { var lt = tex(128, 64, function (c, w, h) { txt(c, n, w / 2, h / 2, 46, '#e8f6ff', 'center', 900); }); var sp = new T.Sprite(new T.SpriteMaterial({ map: lt, transparent: true, depthTest: false })); sp.scale.set(.12, .06, 1); sp.position.set(sw[n].g.position.x, TOPY + .02, .14); sp.renderOrder = 9; P.add(sp); });
-var usb = new T.Mesh(new T.BoxGeometry(.09, .03, .035), std('#050505', .4)); usb.position.set(-.12, TOPY - .005, .03); P.add(usb);
-var ant = new T.Group(); ant.position.set(.12, TOPY + .02, -.06); P.add(ant);
-var hinge = new T.Mesh(STUDIYA.rbox(.12, .06, .06, .015), black); ant.add(hinge); var antArm = new T.Group(); ant.add(antArm);
-var stem = new T.Mesh(STUDIYA.rbox(.06, .3, .04, .015), black); stem.position.y = .17; antArm.add(stem);
-var bar = new T.Mesh(STUDIYA.rbox(.7, .06, .04, .015), black); bar.position.y = .34; antArm.add(bar);
-var rmT = tex(512, 64, function (c, w, h) { c.fillStyle = '#121318'; c.fillRect(0, 0, w, h); txt(c, 'RADIOMASTER', w / 2, h / 2 + 2, 44, '#d8dbe4', 'center', 900); });
-var barL = new T.Mesh(new T.PlaneGeometry(.6, .05), new T.MeshBasicMaterial({ map: rmT })); barL.position.set(0, .34, .021); antArm.add(barL);
+var usb = new T.Mesh(new T.BoxGeometry(.09, .03, .035), std('#050505', .4)); usb.position.set(-.26, TOPY - .005, .03); P.add(usb);
+var ant = new T.Group(); ant.position.set(0, TOPY + .02, -.06); P.add(ant);
+var hinge = new T.Mesh(STUDIYA.rbox(.3, .08, .08, .02), black); ant.add(hinge); var antArm = new T.Group(); ant.add(antArm);
+var stemSh = new T.Shape(); stemSh.moveTo(-.13, 0); stemSh.lineTo(.13, 0); stemSh.bezierCurveTo(.1, .1, .09, .18, .1, .25); stemSh.lineTo(-.1, .25); stemSh.bezierCurveTo(-.09, .18, -.1, .1, -.13, 0);
+var stem = new T.Mesh(new T.ExtrudeGeometry(stemSh, { depth: .03, bevelEnabled: true, bevelThickness: .01, bevelSize: .01, bevelSegments: 2 }), black); stem.position.set(0, .02, -.025); antArm.add(stem);
+var bar = new T.Mesh(STUDIYA.rbox(1.16, .085, .06, .04), black); bar.position.y = .3; antArm.add(bar);
 antArm.rotation.x = -1.35; /* сложена */
-/* надпись сбоку */
-var rmV = new T.Mesh(new T.PlaneGeometry(.5, .07), new T.MeshBasicMaterial({ map: rmT, transparent: true })); rmV.position.set(.74, .02, FZ + .003); rmV.rotation.z = Math.PI / 2; P.add(rmV);
+/* выпуклая надпись RADIOMASTER сверху, как на фото */
+var rmT = tex(1024, 128, function (c, w, h) { c.clearRect(0, 0, w, h); c.font = 'italic 900 104px Manrope, "Segoe UI", sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillStyle = 'rgba(0,0,0,.55)'; c.fillText('RADIOMASTER', w / 2 + 4, h / 2 + 9); c.fillStyle = '#a8a49c'; c.fillText('RADIOMASTER', w / 2, h / 2 + 4); });
+var rmV = new T.Mesh(new T.PlaneGeometry(1.0, .125), new T.MeshBasicMaterial({ map: rmT, transparent: true, depthWrite: false })); rmV.position.set(0, .51, FZ + .004); rmV.renderOrder = 3; P.add(rmV);
 
 /* экран EdgeTX: рисуем по состоянию */
 var ST = { on: false, armed: false, mode: 'ANGLE', page: 0, msg: '' };
-function drawLCD() { pwrRing.material.color.set(ST.on ? '#39ff6a' : '#1a2a1a').multiplyScalar(ST.on ? 1.6 : 1); pwrGlow.material.opacity = ST.on ? .7 : 0; lcdGlow.material.opacity = ST.on ? .16 : 0; lcdT.redraw(function (c, w, h) { var bg = ST.on ? '#cfe6f7' : '#27303a'; c.fillStyle = bg; c.fillRect(0, 0, w, h); if (!ST.on) return;
+function drawLCD() { pwrRing.material.color.set(ST.on ? '#39ff6a' : '#1a2a1a').multiplyScalar(ST.on ? 1.6 : 1); pwrGlow.material.opacity = ST.on ? .7 : 0; lcdGlow.material.opacity = ST.on ? .16 : 0; lcdT.redraw(function (c, w, h) { var bg = ST.on ? '#d9e8ee' : '#93a4aa'; c.fillStyle = bg; c.fillRect(0, 0, w, h); if (!ST.on) return;
   c.fillStyle = '#10202e'; c.font = '800 30px ui-monospace, Menlo, monospace'; c.textAlign = 'left'; c.textBaseline = 'top';
   c.fillText('Mobula7', 16, 12); c.textAlign = 'right'; c.fillText('7.6V', w - 16, 12); c.fillRect(0, 52, w, 3);
   c.textAlign = 'left'; c.font = '900 50px ui-monospace, Menlo, monospace'; c.fillText(ST.armed ? 'ARMED' : 'DISARM', 16, 74);
@@ -132,37 +141,15 @@ STUDIYA.shadows(P); body.castShadow = true;
 /* ---------- дрон за пультом: настоящая модель (вуп), отвечает на стики ---------- */
 var D = new T.Group(); D.position.set(0, .05, -1.6); sc.add(D); D.visible = false;
 var props = [], discs = [], rpm = 0;
-(function () { var M = new T.Group(); M.scale.setScalar(1.45); M.position.y = .068; D.add(M);
-  function ph(c, r, o) { var x = new T.MeshPhysicalMaterial({ color: new T.Color(c).convertSRGBToLinear(), roughness: r, clearcoat: .7, clearcoatRoughness: .2, envMap: ENV, envMapIntensity: .5 }); if (o) Object.assign(x, o); return x; }
-  function lat(p, n) { return new T.LatheGeometry(p.map(function (q) { return new T.Vector2(q[0], q[1]); }), n || 64); }
-  var frameM = ph('#34373f', .28, { transparent: true, opacity: .88, side: T.DoubleSide }), MX = .29;
-  var ductG = lat([[.226, -.032], [.234, -.04], [.243, -.03], [.246, .06], [.24, .084], [.231, .086], [.227, .07], [.226, -.032]], 72);
-  var bladeG = (function () { var sh2 = new T.Shape(); sh2.moveTo(.012, -.014); sh2.bezierCurveTo(.07, -.07, .16, -.06, .205, -.02); sh2.bezierCurveTo(.22, 0, .2, .022, .17, .026); sh2.bezierCurveTo(.1, .04, .05, .03, .012, .014);
-    var g = new T.ExtrudeGeometry(sh2, { depth: .003, bevelEnabled: true, bevelThickness: .0015, bevelSize: .002, bevelSegments: 2, curveSegments: 14 }); g.rotateX(-Math.PI / 2);
-    var p = g.attributes.position; for (var i = 0; i < p.count; i++) { var x = p.getX(i), z = p.getZ(i), tw = .5 - x * 1.6; p.setY(i, p.getY(i) - z * Math.sin(tw)); p.setZ(i, z * Math.cos(tw)); } g.computeVertexNormals(); return g; })();
-  var coilT = tex(256, 32, function (c, w, h) { for (var i = 0; i < 9; i++) { var g = c.createLinearGradient(i * w / 9, 0, (i + 1) * w / 9, 0); g.addColorStop(0, '#5a2c12'); g.addColorStop(.5, '#e89a55'); g.addColorStop(1, '#5a2c12'); c.fillStyle = g; c.fillRect(i * w / 9, 0, w / 9 - 3, h); c.fillStyle = '#120a06'; c.fillRect((i + 1) * w / 9 - 3, 0, 3, h); } });
-  var bellM = std('#26262c', .3, .8, { envMapIntensity: .9, side: T.DoubleSide }), propM = ph('#c9d0da', .2, { transparent: true, opacity: .7, depthWrite: false, side: T.DoubleSide });
-  [[MX, -MX], [-MX, -MX], [MX, MX], [-MX, MX]].forEach(function (q, i) { var g = new T.Group(); g.position.set(q[0], 0, q[1]); M.add(g);
-    g.add(new T.Mesh(ductG, frameM)); var a0 = Math.atan2(-q[1], -q[0]);
-    for (var k = 0; k < 3; k++) { var sp = new T.Mesh(new T.BoxGeometry(.2, .014, .012), frameM), a = a0 + k * 2.094; sp.position.set(Math.cos(a) * .135, -.026, Math.sin(a) * .135); sp.rotation.y = -a; g.add(sp); }
-    var st = new T.Mesh(new T.CylinderGeometry(.046, .05, .012, 32), dark); st.position.y = -.012; g.add(st);
-    var coil = new T.Mesh(new T.CylinderGeometry(.04, .04, .03, 32, 1, true), new T.MeshStandardMaterial({ map: coilT, roughness: .4, metalness: .8, envMap: ENV, envMapIntensity: .8 })); coil.position.y = .008; g.add(coil);
-    var bell = new T.Mesh(lat([[0, .012], [.03, .012], [.046, .006], [.049, -.002], [.049, -.012], [.044, -.012], [.044, -.002], [0, .002]], 40), bellM); bell.position.y = .034; g.add(bell);
-    var pr = new T.Group(); pr.position.y = .065; g.add(pr);
-    for (var bb = 0; bb < 2; bb++) { var bl = new T.Mesh(bladeG, propM); bl.rotation.y = bb * Math.PI; pr.add(bl); }
-    pr.add(new T.Mesh(new T.CylinderGeometry(.02, .024, .022, 24), propM)); props.push(pr);
+(function () { var M = new T.Group(); M.scale.setScalar(1.45); M.position.y = .155; D.add(M);
+  /* общая модель Mobula 7 по фото (../mobula-model.js) */
+  var MB = MOBULA({ env: ENV }); M.add(MB.g);
+  MB.props.forEach(function (pr, i) { props.push(pr);
     /* размытый круг: чем быстрее мотор, тем заметнее */
-    var dk = new T.Mesh(new T.CircleGeometry(.21, 40), new T.MeshBasicMaterial({ color: new T.Color(i < 2 ? A : '#ffffff'), transparent: true, opacity: 0, depthWrite: false, side: T.DoubleSide })); dk.rotation.x = -Math.PI / 2; dk.position.y = .068; g.add(dk); discs.push(dk); });
-  [[0, -MX, .13, .03], [0, MX, .13, .03], [-MX, 0, .03, .13], [MX, 0, .03, .13]].forEach(function (q) { var bx = new T.Mesh(new T.BoxGeometry(q[2], .05, q[3]), frameM); bx.position.set(q[0], .03, q[1]); M.add(bx); });
-  var plate = new T.Mesh(STUDIYA.rbox(.3, .3, .02, .05), frameM); plate.rotation.set(-Math.PI / 2, 0, Math.PI / 4); plate.position.y = -.012; M.add(plate);
-  var canopy = new T.Mesh(lat([[.118, 0], [.122, .02], [.112, .07], [.085, .112], [.045, .132], [0, .136]], 48), ph('#1a1b20', .32)); canopy.scale.set(1, 1, 1.22); canopy.position.y = .022; M.add(canopy);
-  /* нос: камера и два ярких огонька спереди, сзади красный - чтобы было видно, где перёд */
-  var cg = new T.Group(); cg.position.set(0, .088, -.118); cg.rotation.x = .35; M.add(cg);
-  var hood = new T.Mesh(new T.CylinderGeometry(.048, .052, .06, 32), ph('#1a1b20', .32)); hood.rotation.x = Math.PI / 2; hood.position.z = .01; cg.add(hood);
-  var gl = new T.Mesh(new T.SphereGeometry(.03, 24, 12, 0, Math.PI * 2, 0, .9), new T.MeshPhysicalMaterial({ color: new T.Color('#0a1836').convertSRGBToLinear(), roughness: .02, metalness: .6, clearcoat: 1, clearcoatRoughness: 0, envMap: ENV, envMapIntensity: 2 })); gl.rotation.x = -Math.PI / 2; gl.position.z = -.046; cg.add(gl);
+    var dk = new T.Mesh(new T.CircleGeometry(.235, 40), new T.MeshBasicMaterial({ color: new T.Color(i < 2 ? A : '#ffffff'), transparent: true, opacity: 0, depthWrite: false, side: T.DoubleSide })); dk.rotation.x = -Math.PI / 2; dk.position.y = MB.propY + .004; pr.parent.add(dk); discs.push(dk); });
+  /* два ярких огонька спереди, сзади красный - чтобы было видно, где перёд */
   [-.08, .08].forEach(function (x) { var l = new T.Mesh(new T.SphereGeometry(.014, 12, 8), neon(A, 1.8)); l.position.set(x, .03, -.2); M.add(l); var gw = STUDIYA.glow(A, .16, .7); gw.position.copy(l.position); M.add(gw); });
   var rl = new T.Mesh(new T.SphereGeometry(.014, 12, 8), neon(RD, 1.8)); rl.position.set(0, .05, .17); M.add(rl); var rg = STUDIYA.glow(RD, .16, .7); rg.position.copy(rl.position); M.add(rg);
-  var bat = new T.Mesh(STUDIYA.rbox(.13, .07, .4, .02), std('#7a3ad0', .45)); bat.position.set(0, -.06, .02); M.add(bat);
   STUDIYA.shadows(M); })();
 var pad = new T.Mesh(new T.RingGeometry(.86, .885, 64), neon(A, 1)); pad.rotation.x = -Math.PI / 2; pad.position.set(0, .012, -1.6); sc.add(pad); pad.visible = false;
 /* подиум за пультом: дрон стоит выше пульта, его хорошо видно (в части "Стики") */
@@ -172,7 +159,7 @@ var beam = new T.Group(); sc.add(beam); beam.visible = false; var GY = .9, GZ = 
   var rg = new T.Mesh(new T.TorusGeometry(.95, .009, 8, 96), neon(A, 1.2)); rg.rotation.x = Math.PI / 2; rg.position.y = GY; beam.add(rg); beam.position.z = GZ; beam.scale.set(1.3, 1, 1.3); })();
 /* кольца-подсказки вокруг стиков и невидимые зоны захвата */
 var grabZ = [], grabRing = [];
-[-.5, .5].forEach(function (x, i) { var z = new T.Mesh(new T.SphereGeometry(.26, 12, 8), new T.MeshBasicMaterial({ visible: false })); z.position.set(x, .2, FZ + .12); P.add(z); z.userData.stick = i; grabZ.push(z);
+[-SX, SX].forEach(function (x, i) { var z = new T.Mesh(new T.SphereGeometry(.26, 12, 8), new T.MeshBasicMaterial({ visible: false })); z.position.set(x, SY, FZ + .12); P.add(z); z.userData.stick = i; grabZ.push(z);
   var r = new T.Mesh(new T.TorusGeometry(.245, .008, 8, 64), neon(i ? PK : A, 1.5)); r.position.set(x, .2, FZ + .03); P.add(r); r.visible = false; grabRing.push(r); });
 /* звук моторов: тихий гул, выше газ - выше тон (слушается кнопки звука и громкости) */
 var AU = null;
@@ -182,7 +169,7 @@ var DS = { h: 0, yaw: 0, px: 0, pz: 0, tiltX: 0, tiltZ: 0 };
 
 /* ---------- камера: облёт пальцем и подлёт к деталям ---------- */
 function RR(r) { return innerWidth < innerHeight ? r * 1.55 : r; } /* на телефоне стоя камера дальше, чтобы пульт влез по ширине */
-var orb = { th: 0, ph: .5, r: RR(3.0), tgt: new T.Vector3(0, .62, 0) }, fly = null;
+var orb = { th: 0, ph: .5, r: RR(3.35), tgt: new T.Vector3(0, .78, 0) }, fly = null;
 function camPose() { var p = new T.Vector3(orb.tgt.x + orb.r * Math.sin(orb.th) * Math.cos(orb.ph), orb.tgt.y + orb.r * Math.sin(orb.ph), orb.tgt.z + orb.r * Math.cos(orb.th) * Math.cos(orb.ph)); return p; }
 function goCam(th, ph, r, tgt, d) { fly = { a: { th: orb.th, ph: orb.ph, r: orb.r, t: orb.tgt.clone() }, b: { th: th, ph: ph, r: r, t: tgt.clone() }, k: 0, d: d || 1 }; }
 var down = null, grabs = {};
@@ -201,26 +188,26 @@ cv.addEventListener('wheel', function (e) { orb.r = Math.max(1.0, Math.min(10, o
 
 /* ---------- точки-подсказки ---------- */
 var HS = KID ? [
-  { id: 'lst', p: [-.5, .2, .25], h: 'Левый стик', t: 'Вверх-вниз - <b>газ</b>: дрон поднимается и опускается. Влево-вправо - дрон <b>поворачивается</b> на месте. Газ не возвращается в центр сам.' },
-  { id: 'rst', p: [.5, .2, .25], h: 'Правый стик', t: 'Вперёд-назад - дрон <b>летит вперёд или назад</b>. Влево-вправо - <b>наклоняется вбок</b> и летит туда. Отпустил - стик сам встаёт в центр.' },
-  { id: 'lcd', p: [0, .26, .05], h: 'Экран', t: 'Показывает, какой дрон выбран, заряд пульта, таймер и взведён ли дрон.' },
-  { id: 'pwr', p: [0, -.1, .06], h: 'Кнопка питания', t: '<b>Удержи</b> - пульт включается или выключается. Сначала включаем пульт, потом дрон. Выключаем наоборот.' },
-  { id: 'sw', p: [-.56, .62, .1], h: 'Тумблеры SA, SB, SC, SD', t: 'Четыре тумблера сверху. Одним <b>взводим</b> дрон (моторы готовы крутиться), другим меняем режим полёта.' },
-  { id: 'ant', p: [.12, .66, -.05], h: 'Антенна', t: 'Складная антенна. Перед полётом раскладываем - так связь с дроном лучше.' },
-  { id: 'trim', p: [.24, -.1, .06], h: 'Триммеры', t: 'Маленькие крестики. На FPV-дронах их не трогаем: если трогал - покажи тренеру.' },
-  { id: 'menu', p: [-.55, -.2, .06], h: 'Кнопки меню', t: 'SYS, MDL, TELE, RTN, PAGE и колесо - для настройки пульта. Ими занимается тренер, в полёте не нужны.' }
+  { id: 'lst', p: [-.55, .13, .25], h: 'Левый стик', t: 'Вверх-вниз - <b>газ</b>: дрон поднимается и опускается. Влево-вправо - дрон <b>поворачивается</b> на месте. Газ не возвращается в центр сам.' },
+  { id: 'rst', p: [.55, .13, .25], h: 'Правый стик', t: 'Вперёд-назад - дрон <b>летит вперёд или назад</b>. Влево-вправо - <b>наклоняется вбок</b> и летит туда. Отпустил - стик сам встаёт в центр.' },
+  { id: 'lcd', p: [0, .2, .05], h: 'Экран', t: 'Показывает, какой дрон выбран, заряд пульта, таймер и взведён ли дрон.' },
+  { id: 'pwr', p: [0, -.21, .06], h: 'Кнопка питания', t: '<b>Удержи</b> - пульт включается или выключается. Сначала включаем пульт, потом дрон. Выключаем наоборот.' },
+  { id: 'sw', p: [-.56, .72, .1], h: 'Тумблеры SA, SB, SC, SD', t: 'Четыре тумблера сверху. Одним <b>взводим</b> дрон (моторы готовы крутиться), другим меняем режим полёта.' },
+  { id: 'ant', p: [0, .76, -.05], h: 'Антенна', t: 'Складная антенна. Перед полётом раскладываем - так связь с дроном лучше.' },
+  { id: 'trim', p: [.3, -.21, .06], h: 'Триммеры', t: 'Маленькие крестики. На FPV-дронах их не трогаем: если трогал - покажи тренеру.' },
+  { id: 'menu', p: [-.6, -.42, .06], h: 'Кнопки меню', t: 'SYS, MDL, TELE, RTN, PAGE и колесо - для настройки пульта. Ими занимается тренер, в полёте не нужны.' }
 ] : [
-  { id: 'lst', p: [-.5, .2, .25], h: 'Левый стик (Mode 2)', t: 'Вверх-вниз - <b>газ</b> (throttle): тяга всех моторов. Не пружинит, остаётся где оставил. Влево-вправо - <b>рыскание</b> (yaw): поворот вокруг вертикали.' },
-  { id: 'rst', p: [.5, .2, .25], h: 'Правый стик', t: 'Вперёд-назад - <b>тангаж</b> (pitch): наклон носом вниз и полёт вперёд. Влево-вправо - <b>крен</b> (roll). Пружинит в центр. Стики на холловских датчиках - не изнашиваются.' },
-  { id: 'trim', p: [-.24, -.1, .06], h: 'Триммеры (крестики)', t: 'Сдвигают центр стиков. На FPV-дронах держим в нуле: центр и подстройку делает полётный контроллер (Betaflight). Сбитые триммеры = дрон "тянет".' },
-  { id: 'lcd', p: [0, .26, .05], h: 'Экран EdgeTX', t: 'Пульт работает на прошивке EdgeTX. На главном экране: модель, напряжение АКБ пульта, таймеры, положения стиков и триммеров.' },
-  { id: 'roll', p: [0, -.015, .06], h: 'Колесо прокрутки', t: 'Крутим - листаем меню и меняем значения. <b>Нажатие</b> колеса - ввод (ENTER).' },
-  { id: 'pwr', p: [0, -.1, .06], h: 'Питание', t: '<b>Удержать</b> - включить или выключить. Порядок: пульт → дрон, выключение: дрон → пульт. Иначе дрон может остаться без сигнала.' },
-  { id: 'menu', p: [-.62, -.2, .06], h: 'RTN, PAGE, TELE', t: 'RTN - назад. PAGE &lt; &gt; - листать страницы. TELE - телеметрия: что дрон шлёт обратно (сигнал RSSI/LQ, напряжение).' },
-  { id: 'sys', p: [-.42, -.26, .06], h: 'SYS и MDL', t: 'SYS - системное меню пульта (звук, яркость, скрипт ELRS для настройки связи). MDL - модели: у каждого дрона своя модель с миксами и тумблерами.' },
-  { id: 'sw', p: [-.56, .62, .1], h: 'Тумблеры SA, SB, SC, SD', t: 'SA и SD - на 2 положения, SB и SC - на 3. Каждый тумблер пульт передаёт на дрон отдельным каналом AUX. Что он делает - решаем мы (дальше покажу).' },
-  { id: 'ant', p: [.12, .66, -.05], h: 'Антенна ELRS', t: 'Встроенный передатчик ExpressLRS 2,4 ГГц. Антенну раскладываем и не направляем кончиком на дрон: сильнее всего сигнал идёт вбок от антенны.' },
-  { id: 'usb', p: [-.12, .62, .08], h: 'USB-C', t: 'Зарядка аккумуляторов пульта и подключение к компьютеру: пульт становится джойстиком для симулятора, через него же обновляют прошивку.' }
+  { id: 'lst', p: [-.55, .13, .25], h: 'Левый стик (Mode 2)', t: 'Вверх-вниз - <b>газ</b> (throttle): тяга всех моторов. Не пружинит, остаётся где оставил. Влево-вправо - <b>рыскание</b> (yaw): поворот вокруг вертикали.' },
+  { id: 'rst', p: [.55, .13, .25], h: 'Правый стик', t: 'Вперёд-назад - <b>тангаж</b> (pitch): наклон носом вниз и полёт вперёд. Влево-вправо - <b>крен</b> (roll). Пружинит в центр. Стики на холловских датчиках - не изнашиваются.' },
+  { id: 'trim', p: [-.3, -.21, .06], h: 'Триммеры (крестики)', t: 'Сдвигают центр стиков. На FPV-дронах держим в нуле: центр и подстройку делает полётный контроллер (Betaflight). Сбитые триммеры = дрон "тянет".' },
+  { id: 'lcd', p: [0, .2, .05], h: 'Экран EdgeTX', t: 'Пульт работает на прошивке EdgeTX. На главном экране: модель, напряжение АКБ пульта, таймеры, положения стиков и триммеров.' },
+  { id: 'roll', p: [.68, -.45, .1], h: 'Колесо прокрутки', t: 'Крутим - листаем меню и меняем значения. <b>Нажатие</b> колеса - ввод (ENTER).' },
+  { id: 'pwr', p: [0, -.21, .06], h: 'Питание', t: '<b>Удержать</b> - включить или выключить. Порядок: пульт → дрон, выключение: дрон → пульт. Иначе дрон может остаться без сигнала.' },
+  { id: 'menu', p: [-.68, -.37, .06], h: 'RTN, PAGE, TELE', t: 'RTN - назад. PAGE &lt; &gt; - листать страницы. TELE - телеметрия: что дрон шлёт обратно (сигнал RSSI/LQ, напряжение).' },
+  { id: 'sys', p: [-.43, -.47, .06], h: 'SYS и MDL', t: 'SYS - системное меню пульта (звук, яркость, скрипт ELRS для настройки связи). MDL - модели: у каждого дрона своя модель с миксами и тумблерами.' },
+  { id: 'sw', p: [-.56, .72, .1], h: 'Тумблеры SA, SB, SC, SD', t: 'SA и SD - на 2 положения, SB и SC - на 3. Каждый тумблер пульт передаёт на дрон отдельным каналом AUX. Что он делает - решаем мы (дальше покажу).' },
+  { id: 'ant', p: [0, .76, -.05], h: 'Антенна ELRS', t: 'Встроенный передатчик ExpressLRS 2,4 ГГц. Антенну раскладываем и не направляем кончиком на дрон: сильнее всего сигнал идёт вбок от антенны.' },
+  { id: 'usb', p: [-.26, .72, .08], h: 'USB-C', t: 'Зарядка аккумуляторов пульта и подключение к компьютеру: пульт становится джойстиком для симулятора, через него же обновляют прошивку.' }
 ];
 var hsM = HS.map(function (h) { var s = new T.Sprite(new T.SpriteMaterial({ map: dotT(Y), depthTest: false, toneMapped: false })); s.scale.setScalar(.09); s.position.fromArray(h.p); P.add(s); s.userData.hs = h; s.renderOrder = 10; return s; });
 function dotT(col) { return tex(128, 128, function (c, w, h) { var g = c.createRadialGradient(64, 64, 4, 64, 64, 62); g.addColorStop(0, '#fff'); g.addColorStop(.25, col); g.addColorStop(.6, col + '55'); g.addColorStop(1, col + '00'); c.fillStyle = g; c.fillRect(0, 0, w, h); }); }
@@ -237,7 +224,7 @@ function showHS(h) { seen[h.id] = 1; var s = hsM.find(function (m) { return m.us
   if (h.id === 'ant') antOpen = true;
   if (h.id === 'sw') { setSw('SB', 1); setTimeout(function () { setSw('SB', 0); }, 700); }
   say(h.h + '. ' + h.t.replace(/<[^>]+>/g, ''));
-  actions([{ t: 'Весь пульт', f: function () { goCam(0, .42, RR(2.7), new T.Vector3(0, .35, 0)); } }].concat(n >= HS.length ? [{ t: 'Дальше: стики →', cls: 'pri', f: partSticks }] : []));
+  actions([{ t: 'Весь пульт', f: function () { goCam(0, .42, RR(3.2), new T.Vector3(0, .62, 0)); } }].concat(n >= HS.length ? [{ t: 'Дальше: стики →', cls: 'pri', f: partSticks }] : []));
   progress(); }
 var antOpen = false;
 
