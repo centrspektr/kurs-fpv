@@ -24,6 +24,7 @@ var css = document.createElement('style');
 css.textContent = [
 '#kmn{position:fixed;inset:0;z-index:9;display:none;background:#05060f;touch-action:none;user-select:none;-webkit-user-select:none}',
 '#kmn.on{display:block}#kmn canvas{position:absolute;inset:0;width:100%;height:100%;display:block;transition:filter .5s}',
+'body.kmn-lock #kmn::after{content:"";position:absolute;left:50%;top:50%;width:8px;height:8px;margin:-4px;border-radius:50%;background:#fff;box-shadow:0 0 0 2px rgba(0,0,0,.45),0 0 10px #7cf3ff;pointer-events:none;z-index:4}',
 'body.kmn-win #kmn canvas{filter:blur(3px) brightness(.62)}body.kmn-win .wbg{opacity:0!important}body.kmn-win #c{visibility:hidden}',
 '#kmn .k-top{position:absolute;left:0;right:0;top:0;padding:calc(12px + env(safe-area-inset-top,0px)) max(14px,env(safe-area-inset-right,0px)) 26px max(14px,env(safe-area-inset-left,0px));display:flex;align-items:center;gap:10px;background:linear-gradient(#05060fd0,#05060f00);pointer-events:none}',
 '#kmn .k-top>*{pointer-events:auto}',
@@ -182,6 +183,20 @@ function make(cfg) {
   }
 
   /* ---------- модель квадрокоптера ---------- */
+  function droneWallP(o) { var g = grp(o.x, 0, o.z, o.ry), fr = M({ color: '#15171d', roughness: .45, metalness: .5 }), shots = [], lab = o.labels || ['75 мм', '3 дюйма', '5 дюймов'];
+    ['vup', 'tri', 'five'].forEach(function (k, i) { var x = (i - 1) * 1.5; box(1.38, 1.06, .05, fr, x, 2.72, 0, g);
+      var rt = new T.WebGLRenderTarget(1024, 1024); rt.texture.encoding = T.sRGBEncoding; rt.texture.generateMipmaps = true; rt.texture.minFilter = T.LinearMipmapLinearFilter; rt.texture.anisotropy = 8;
+      var p = new T.Mesh(new T.PlaneGeometry(1.28, .96), new T.MeshBasicMaterial({ map: rt.texture, toneMapped: false })); p.position.set(x, 2.72, .03); g.add(p); shots.push([k, rt]);
+      var t = tex(512, 96, function (c) { c.fillStyle = '#15171d'; c.fillRect(0, 8, 512, 80); c.fillStyle = '#f2f4fa'; c.font = '800 40px ' + FONT; c.textAlign = 'center'; c.fillText(lab[i] || '', 256, 62); });
+      var lp = new T.Mesh(new T.PlaneGeometry(1.3, .244), new T.MeshBasicMaterial({ map: t, transparent: true, toneMapped: false })); lp.position.set(x, 2.04, .03); g.add(lp); });
+    setTimeout(function () { try { var st = new T.Scene(); st.background = new T.Color('#9aa3b3').convertSRGBToLinear();
+      st.add(new T.HemisphereLight(0xffffff, 0x9aa0ad, .95)); var dl = new T.DirectionalLight(0xffffff, 1.7); dl.position.set(18, 40, 26); st.add(dl); var d2 = new T.DirectionalLight(0xbfd4ff, .5); d2.position.set(-30, 12, -10); st.add(d2);
+      var sh = new T.Mesh(new T.CircleGeometry(13, 48), new T.MeshBasicMaterial({ map: tex(256, 256, function (c) { var q = c.createRadialGradient(128, 128, 10, 128, 128, 128); q.addColorStop(0, 'rgba(40,46,60,.55)'); q.addColorStop(1, 'rgba(40,46,60,0)'); c.fillStyle = q; c.fillRect(0, 0, 256, 256); }), transparent: true, depthWrite: false })); sh.rotation.x = -Math.PI / 2; sh.position.y = -.4; st.add(sh);
+      var cm = new T.PerspectiveCamera(30, 4 / 3, 1, 300); cm.position.set(13.5, 12.5, 19); cm.lookAt(0, 1.9, 0);
+      var old = R.getRenderTarget(), sc = R.shadowMap.enabled; R.shadowMap.enabled = false;
+      shots.forEach(function (q) { var d = window.SBDron(q[0]); d.rotation.y = .25; st.add(d); R.setRenderTarget(q[1]); R.clear(); R.render(st, cm); st.remove(d); });
+      R.setRenderTarget(old); R.shadowMap.enabled = sc; } catch (e) {} }, 60);
+    return g; }
   function quad(s, col) {
     var g = new T.Group(), arm = M({ color: '#16181e', roughness: .4, metalness: .3 });
     [Math.PI / 4, -Math.PI / 4].forEach(function (a) { var b = box(1.3 * s, .03 * s, .14 * s, arm, 0, 0, 0, g); b.rotation.y = a; });
@@ -267,9 +282,14 @@ function make(cfg) {
   var SPEAK = false; /* приветствие говорит - монитор ждёт */
 
   /* ---------- стол с мини-игрой ---------- */
+  var PROBA = /\/(new|g)\.html$/.test(location.pathname);   /* правки 11.11 сначала в пробе курса */
   var TABLE = null;
   function table(o) {
     var g = grp(o.x, 0, o.z, o.ry || 0);
+    var SBT = null; if (PROBA && window.SBStol) try { SBT = window.SBStol(); } catch (e) { SBT = null; }
+    if (SBT) { SBT.scale.setScalar(.02); SBT.position.y = .95; g.add(SBT);
+      [[-1.4, -.6], [1.4, -.6], [-1.4, .6], [1.4, .6]].forEach(function (p) { box(.09, .9, .09, mSteel, p[0], .45, p[1], g); }); box(2.8, .05, 1.2, mSteel, 0, .25, 0, g);
+    } else {
     box(3.4, .1, 1.6, mWood, 0, .92, 0, g); box(3.2, .02, 1.4, mMat, 0, .98, 0, g);
     [[-1.55, -.7], [1.55, -.7], [-1.55, .7], [1.55, .7]].forEach(function (p) { box(.1, .9, .1, mSteel, p[0], .45, p[1], g); });
     box(3.2, .06, 1.4, mSteel, 0, .25, 0, g);
@@ -288,17 +308,18 @@ function make(cfg) {
     box(.05, .9, .05, mMetal, -1.5, 1.4, -.6, g); box(.05, .05, .9, mMetal, -1.5, 1.85, -.2, g); cyl(.18, .1, .16, mDark, -1.5, 1.78, .22, g);
     var bl = new T.Mesh(new T.CircleGeometry(.16, 24), glow('#fff6dc')); bl.rotation.x = Math.PI / 2; bl.position.set(-1.5, 1.69, .22); g.add(bl);
     var sl = new T.SpotLight('#fff1d6', 1.5, 5, .7, .5, 1.5); sl.position.set(-1.5, 1.7, .22); sl.target.position.set(0, 1, 0); g.add(sl); g.add(sl.target);
+    }
     /* голограмма */
-    var holo = quad(.55, MC); holo.position.set(0, 1.72, 0); holo.traverse(function (m) { if (m.material) m.material = new T.MeshBasicMaterial({ color: '#7cf3ff', wireframe: true, transparent: true, opacity: .55, toneMapped: false }); }); g.add(holo);
-    var cone = new T.Mesh(new T.ConeGeometry(.5, .6, 32, 1, true), glow('#7cf3ff', .08)); cone.position.set(0, 1.36, 0); cone.rotation.x = Math.PI; g.add(cone);
-    TICK.push(function (t) { holo.rotation.y = t * .6; holo.position.y = 1.72 + Math.sin(t * 1.6) * .04; });
+    var holo = quad(.55, MC); holo.position.set(0, SBT ? 2.25 : 1.72, 0); var holoY = holo.position.y; holo.traverse(function (m) { if (m.material) m.material = new T.MeshBasicMaterial({ color: '#7cf3ff', wireframe: true, transparent: true, opacity: .55, toneMapped: false }); }); g.add(holo);
+    var cone = new T.Mesh(new T.ConeGeometry(.5, .6, 32, 1, true), glow('#7cf3ff', .08)); cone.position.set(0, 1.36, 0); cone.visible = !SBT; cone.rotation.x = Math.PI; g.add(cone);
+    TICK.push(function (t) { holo.rotation.y = t * .6; holo.position.y = holoY + Math.sin(t * 1.6) * .04; });
     ring(0, 0, 2.4, '#7cf3ff', g);
     var n = mod.tasks.indexOf(o.task) + 1;
     var ptx = tex(1024, 192, function (c, w, h) { c.fillStyle = '#060a18'; c.fillRect(0, 0, w, h); c.fillStyle = MC; c.fillRect(0, 0, 14, h); c.fillRect(w - 14, 0, 14, h);
       c.textBaseline = 'middle'; c.font = '900 76px ' + DISP; c.fillStyle = '#7cf3ff'; c.shadowColor = '#7cf3ff'; c.shadowBlur = 24; c.fillText(o.title || 'СОБЕРИ ДРОН', 48, 74);
       c.shadowBlur = 0; c.font = '700 38px ' + FONT; c.fillStyle = '#cfd7ff'; c.fillText('задание ' + n + ' · нажми на стол', 50, 150); c.font = '900 110px ' + FONT; c.textAlign = 'right'; c.fillText('🛠', w - 40, 100); });
-    var pan = new T.Mesh(new T.PlaneGeometry(2.6, .49), new T.MeshBasicMaterial({ map: ptx, toneMapped: false })); pan.position.set(0, .6, .81); g.add(pan);
-    box(2.7, .58, .04, mDark, 0, .6, .78, g);
+    var pan = new T.Mesh(new T.PlaneGeometry(2.6, .49), new T.MeshBasicMaterial({ map: ptx, toneMapped: false })); pan.position.set(0, .6, SBT ? .735 : .81); g.add(pan);
+    box(2.7, .58, .04, mDark, 0, .6, SBT ? .705 : .78, g);
     block(o.x, o.z, 1.8, .9, o.ry);
     var at = fwd(o.ry || 0, 2.0, o.x, o.z);
     TABLE = { o: o, g: g, n: n, center: new T.Vector3(o.x, 1.0, o.z) };
@@ -313,7 +334,7 @@ function make(cfg) {
       [-1, 1].forEach(function (s) { box(.08, 3.2, .6, mSteel, s * 1.5, 1.6, 0, g); });
       for (var i = 0; i < 5; i++) { box(3.1, .05, .6, mSteel, 0, .3 + i * .7, 0, g); for (var j = 0; j < 5; j++) { box(.48, .3, .45, M({ color: cols[(i + j * 2) % cols.length], roughness: .55 }), -1.15 + j * .58, .48 + i * .7, .02, g); box(.3, .06, .01, M({ color: '#fff', roughness: .9 }), -1.15 + j * .58, .5 + i * .7, .25, g); } }
       block(o.x, o.z, 1.6, .4, o.ry); return g; },
-    droneWall: function (o) { var g = grp(o.x, 0, o.z, o.ry), pb = M({ color: '#141829', roughness: .85 }); box(4.4, 2.4, .05, mSteel, 0, 2.6, -.02, g); box(4.2, 2.2, .06, pb, 0, 2.6, 0, g); box(4.4, .04, .04, glow(MC), 0, 3.8, .04, g, 1);
+    droneWall: function (o) { if (PROBA && window.SBDron) return droneWallP(o); var g = grp(o.x, 0, o.z, o.ry), pb = M({ color: '#141829', roughness: .85 }); box(4.4, 2.4, .05, mSteel, 0, 2.6, -.02, g); box(4.2, 2.2, .06, pb, 0, 2.6, 0, g); box(4.4, .04, .04, glow(MC), 0, 3.8, .04, g, 1);
       ['#ea580c', '#7cf3ff', '#ffd36e'].forEach(function (c, i) { var q = quad([.45, .7, .95][i], c); q.rotation.x = Math.PI / 2; q.position.set(-1.35 + i * 1.35, 2.65, .12); g.add(q); });
       var t = tex(1024, 96, function (c) { c.fillStyle = '#dbe3ff'; c.font = '800 40px ' + FONT; c.textAlign = 'center'; (o.labels || ['75 мм', '3 дюйма', '5 дюймов']).forEach(function (l, i) { c.fillText(l, 512 + (i - 1) * 345, 62); }); });
       var p = new T.Mesh(new T.PlaneGeometry(4, .38), new T.MeshBasicMaterial({ map: t, transparent: true, toneMapped: false })); p.position.set(0, 1.62, .05); g.add(p); return g; },
@@ -416,15 +437,25 @@ function make(cfg) {
   }
   function stopTalk() { if (window.GOLOS) GOLOS.stop(); if (MON) MON.talk = false; SPEAK = false; }
 
+  /* снимок комнаты во все стороны от стола (без самого стола): его показывает игра "Собери дрон" вместо своего фона */
+  function fonCube(x, y, z, hide) { var N = MOB ? 384 : 768, faces = [], sv = { p: CAM.position.clone(), q: CAM.quaternion.clone(), f: CAM.fov, a: CAM.aspect, up: CAM.up.clone() };
+    GX.show(hide, false); R.setSize(N, N, false); GX.resize(N, N, 1); CAM.fov = 90; CAM.aspect = 1; CAM.updateProjectionMatrix(); CAM.position.set(x, y, z);
+    /* порядок и повороты - как их читает THREE.CubeTexture (проверено): -x, +x, +y, -y, +z, -z */
+    [[-1, 0, 0, 0, 1, 0], [1, 0, 0, 0, 1, 0], [0, 1, 0, 0, 0, -1], [0, -1, 0, 0, 0, 1], [0, 0, 1, 0, 1, 0], [0, 0, -1, 0, 1, 0]].forEach(function (d) {
+      CAM.up.set(d[3], d[4], d[5]); CAM.lookAt(x + d[0], y + d[1], z + d[2]); CAM.updateMatrixWorld(); GX.render(0);
+      var c = document.createElement('canvas'); c.width = c.height = N; c.getContext('2d').drawImage(R.domElement, 0, 0, N, N); faces.push(c); });
+    GX.show(hide, true); CAM.up.copy(sv.up); CAM.position.copy(sv.p); CAM.quaternion.copy(sv.q); CAM.fov = sv.f; CAM.aspect = sv.a; CAM.updateProjectionMatrix(); R.setSize(innerWidth, innerHeight); gfit();
+    return faces; }
   /* ---------- провал в стол: камера ныряет к столу, вспышка, игра; назад - выныриваем ---------- */
   function diveTable(kid) {
-    if (!TABLE || !window.KURS_TREN) return; stopTalk(); card(null);
+    if (!TABLE || !window.KURS_TREN) return; stopTalk(); card(null); unlock();
     var c = TABLE.center, from = pos.clone(), fy = yaw, fp = pitch, to = new T.Vector3(c.x + Math.sin(TABLE.o.ry || 0) * .5, 2.2, c.z + Math.cos(TABLE.o.ry || 0) * .5);
     var dyaw = Math.atan2(-(c.x - to.x), -(c.z - to.z));
     anim = { t: 0, d: RED ? .3 : 1.4, step: function (u) { var e = ease(u); pos.lerpVectors(from, to, e); yaw = fy + angD(fy, dyaw) * e; pitch = fp + (-1.25 - fp) * e; CAM.fov = fov0() - 26 * e; CAM.updateProjectionMatrix(); ui.fade.style.background = '#fff'; ui.fade.style.transition = 'none'; ui.fade.style.opacity = Math.max(0, (u - .7) / .3); },
       end: function () {
         var tid = TABLE.o.task, step = TABLE.o.step, fresh = false, built = false, gm = TABLE.o.game || 'sborka';
         if (step == null && K.lib[tid]) step = K.lib[tid].steps.findIndex(function (x) { return x.g === gm; }); if (step < 0) step = null;
+        window.KURS_FON = null; if (PROBA && GX && gm === 'sborka') try { window.KURS_FON = { faces: fonCube(c.x, 1.7, c.z + .45, TABLE.g) }; GX.render(0); } catch (e) { window.KURS_FON = null; }
         KURS_TREN.open(gm, kid, function () { built = true; if (api.state(tid) !== 'lock' && I && I.step && step != null) fresh = I.step(tid, step, {}); },
           function () { paused = false; ui.fade.style.transition = 'opacity .7s'; ui.fade.style.opacity = 0; setTimeout(function () { ui.fade.style.background = '#05060f'; }, 800);
             var back = from.clone(); anim = { t: 0, d: RED ? .3 : 1.2, step: function (u) { var e = ease(u); pos.lerpVectors(to, back, e); pitch = -1.25 + (fp + 1.25) * e; CAM.fov = fov0() - 26 + 26 * e; CAM.updateProjectionMatrix(); },
@@ -473,10 +504,17 @@ function make(cfg) {
 
   /* ---------- управление ---------- */
   var ray = new T.Raycaster(), mp = new T.Vector2(), drag = null, keys = {};
+  var MLOOK = PROBA && !MOB && !!document.documentElement.requestPointerLock, lockHint = false;
+  function locked() { return document.pointerLockElement === cv; }
+  function unlock() { if (locked()) try { document.exitPointerLock(); } catch (e) {} }
   function input() {
     cv.addEventListener('pointerdown', function (e) { if (anim) return; drag = { id: e.pointerId, x: e.clientX, y: e.clientY, yaw: yaw, pitch: pitch, moved: false }; });
     addEventListener('pointermove', function (e) { if (!on) return; if (!drag || drag.id !== e.pointerId) { hover(e); return; } var dx = e.clientX - drag.x, dy = e.clientY - drag.y; if (Math.abs(dx) + Math.abs(dy) > 8) drag.moved = true; if (drag.moved) { yaw = drag.yaw + dx * .0055; pitch = Math.max(-1.1, Math.min(.85, drag.pitch + dy * .0045)); lookAt = null; } });
-    addEventListener('pointerup', function (e) { if (!on || !drag || drag.id !== e.pointerId) return; var d = drag; drag = null; if (!d.moved && !anim && !paused) tap(e.clientX, e.clientY); });
+    addEventListener('pointerup', function (e) { if (!on || !drag || drag.id !== e.pointerId) return; var d = drag; drag = null; if (d.moved || anim || paused) return;
+      if (MLOOK && e.pointerType === 'mouse') { if (locked()) interact(); else { if (sel && arrived) tap(e.clientX, e.clientY); else { try { cv.requestPointerLock(); } catch (er) {} } } return; }
+      tap(e.clientX, e.clientY); });
+    if (MLOOK) { addEventListener('mousemove', function (e) { if (!on || !locked() || anim || paused) return; var mx = e.movementX || 0, my = e.movementY || 0; if (Math.abs(mx) > 250 || Math.abs(my) > 250) return; /* браузер иногда присылает ложный рывок */ yaw -= mx * .0023; pitch = Math.max(-1.1, Math.min(.85, pitch - my * .0023)); lookAt = null; });
+      document.addEventListener('pointerlockchange', function () { var L = locked(); document.body.classList.toggle('kmn-lock', L); if (L && !lockHint) { lockHint = true; hint('Мышь поворачивает камеру. Щелчок или E - подойти и открыть. Esc - вернуть стрелку.', 6000); } }); }
     /* тачпад и колесо мыши: два пальца по тачпаду (или колесо) - поворот камеры вверх-вниз и влево-вправо; щипок (Ctrl + колесо) - шаг вперёд-назад */
     cv.addEventListener('wheel', function (e) { if (anim || paused) return; e.preventDefault(); var k = e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? 400 : 1, dx = e.deltaX * k, dy = e.deltaY * k;
       if (e.ctrlKey) { var f = new T.Vector3(-Math.sin(yaw), 0, -Math.cos(yaw)); target = pos.clone().addScaledVector(f, dy < 0 ? .8 : -.8); clampP(target); sel = null; card(null); return; }
@@ -531,7 +569,7 @@ function make(cfg) {
       if (kx || kz) { var f = new T.Vector3(-Math.sin(yaw), 0, -Math.cos(yaw)), r = new T.Vector3(-f.z, 0, f.x); target = pos.clone().addScaledVector(f, kz * st).addScaledVector(r, kx * st); clampP(target); target.y = EYE; lookAt = null; if (sel) { sel = null; card(null); } }
       /* ходьба к цели: плавный разгон и торможение, обход препятствий скольжением */
       if (target) { var d = target.clone().sub(pos); d.y = 0; var L = d.length();
-        if (L < .04) { target = null; vel.set(0, 0, 0); if (sel) arrived = true; }
+        if (L < .04) { target = null; vel.set(0, 0, 0); if (sel) { arrived = true; unlock(); } }
         else { var want = d.normalize().multiplyScalar(Math.min(run ? 6.0 : 3.0, L * (run ? 3.6 : 2.2) + .25)); vel.lerp(want, Math.min(1, dt * 5)); var nx = pos.x + vel.x * dt, nz = pos.z + vel.z * dt;
           if (!blocked(nx, nz, pos.x, pos.z)) { pos.x = nx; pos.z = nz; } else if (!blocked(nx, pos.z, pos.x, pos.z)) pos.x = nx; else if (!blocked(pos.x, nz, pos.x, pos.z)) pos.z = nz; else { target = null; vel.set(0, 0, 0); if (sel) arrived = true; }
           bob += vel.length() * dt * 2.4; } }
@@ -570,14 +608,14 @@ function make(cfg) {
         var G = window.GOLOS; if (first && cfg.hello && G && G.on && G.can && G.can()) { SPEAK = true; G.say(cfg.hello, { onend: function () { SPEAK = false; } }); } } };
     clock.getDelta(); frame();
     /* окно задания поверх: комната размыта и стоит */
-    winObs = new MutationObserver(function () { var w = document.getElementById('win'), o = w && w.classList.contains('on'); document.body.classList.toggle('kmn-win', !!o); if (o) { stopTalk(); paused = true; winP = true; card(null); }
+    winObs = new MutationObserver(function () { var w = document.getElementById('win'), o = w && w.classList.contains('on'); document.body.classList.toggle('kmn-win', !!o); if (o) { stopTalk(); paused = true; winP = true; card(null); unlock(); }
       else if (winP) { winP = false; if (!anim) { paused = false; clock.getDelta(); } } });   /* окно закрыли любым способом - комната снова живая (раньше без back() всё замирало) */
     var w = document.getElementById('win'); if (w) winObs.observe(w, { attributes: true, attributeFilter: ['class'] });
   }
   /* ворота: закрыть после входа (0) или открыть (1) за секунду */
   function doorAnim(open) { var a0 = doorR.position.x, a1 = open ? 2.4 : .8, t0 = clock.elapsedTime;
     TICK.push(function dA(t) { var u = Math.min(1, (t - t0) / 1.1), e = ease(u), x = a0 + (a1 - a0) * e; doorR.position.x = x; doorL.position.x = -x; if (u >= 1) TICK.splice(TICK.indexOf(dA), 1); }); }
-  function close() { on = false; cancelAnimationFrame(raf); stopTalk(); root.classList.remove('on'); document.body.classList.remove('kmn-win'); if (winObs) winObs.disconnect(); card(null); }
+  function close() { unlock(); on = false; cancelAnimationFrame(raf); stopTalk(); root.classList.remove('on'); document.body.classList.remove('kmn-win'); if (winObs) winObs.disconnect(); card(null); }
   function leave() { stopTalk(); if (api) api.exit(); }
   /* окно задания закрыто: обновляем стенды, при свежем прохождении - праздник и проводник к следующему */
   function back(tid, fresh) {
