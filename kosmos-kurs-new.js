@@ -27,7 +27,9 @@ var mob=matchMedia('(pointer:coarse)').matches, red=matchMedia('(prefers-reduced
 var force=/[?&]3d=1/.test(location.search);
 var weak=(navigator.deviceMemory&&navigator.deviceMemory<=2)||(mob&&navigator.hardwareConcurrency&&navigator.hardwareConcurrency<=2);
 function plain(){ location.replace(PLAIN); }
-if(!K||!I||!window.THREE){ plain(); return; }
+/* 11.11: GitVerse иногда отвечает 502 на отдельный файл - тогда один раз перезагружаем страницу, а не уходим сразу в обычный вид */
+if(!K||!I||!window.THREE){ var RK='kurs_retry3d'; try{ if(!sessionStorage.getItem(RK)){ sessionStorage.setItem(RK,'1'); location.reload(); return; } sessionStorage.removeItem(RK); }catch(e){} plain(); return; }
+try{ sessionStorage.removeItem('kurs_retry3d'); }catch(e){}
 if(!force&&(lsG(VKEY)==='plain'||weak)){ plain(); return; }
 var cv=document.getElementById('c'), R;
 try{ R=new THREE.WebGLRenderer({canvas:cv,antialias:!mob,powerPreference:'high-performance'}); }catch(e){ plain(); return; }
