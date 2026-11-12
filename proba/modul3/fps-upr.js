@@ -1,6 +1,6 @@
 /* fps-upr.js - управление в помещениях от первого лица "как в игре SCP: Побег" (проба 12.11.2026, просьба Alexandr).
-   Компьютер: щелчок по сцене захватывает мышь, мышь смотрит по сторонам и вверх-вниз, W A S D - ходить, Shift - бегом, пробел - прыжок,
-     E или щелчок - действие с тем, что в прицеле, Esc - вернуть стрелку. Без захвата можно смотреть, зажав кнопку мыши и водя.
+   Компьютер (как в "Побеге", 12.11): водишь пальцем по тачпаду (мышью) без нажатия - камера смотрит следом; щелчок по полу захватывает мышь,
+     W A S D - ходить, Shift - бегом, пробел - прыжок, E или щелчок - действие с тем, что в прицеле, Esc - вернуть стрелку.
    Телефон: слева джойстик - ходить, справа води пальцем - смотреть, кнопки БЕГ, ПРЫЖОК и E (действие). Касание предмета - подойти, как раньше.
    Подключение: FPSUPR.create({ canvas, root, walk(): можно ли ходить, look(dx, dy): повернуть (в радианах), act(): действие,
      jump(), lockOk(): можно ли захватывать мышь, noMouse: мышь не трогать }) -> { joy: {f, s, run}, locked(), unlock() }.
@@ -10,7 +10,7 @@
 var TOUCH = matchMedia('(pointer:coarse)').matches && 'ontouchstart' in window;
 function create(o) {
   var cv = o.canvas, root = o.root || document.body, U = { joy: { f: 0, s: 0, run: false }, touch: TOUCH };
-  var canLock = !TOUCH && !o.noMouse && !!cv.requestPointerLock; /* noMouse: мышью управляет сама комната (модуль 2), отсюда только телефон */
+  var canLock = o.lock !== false && !TOUCH && !o.noMouse && !!cv.requestPointerLock; /* 12.11 вечер: щелчок по полу захватывает мышь; камера идёт за пальцем по тачпаду и без захвата */ /* noMouse: мышью управляет сама комната (модуль 2), отсюда только телефон */
   U.locked = function () { return document.pointerLockElement === cv; };
   U.unlock = function () { if (U.locked()) try { document.exitPointerLock(); } catch (e) {} };
   U.lock = function () { if (!canLock || U.locked() || (o.lockOk && !o.lockOk())) return; try { var r = cv.requestPointerLock(); if (r && r.catch) r.catch(function () {}); } catch (e) {} };
@@ -28,7 +28,7 @@ function create(o) {
   document.body.classList.toggle('fps-touch', TOUCH);
   document.addEventListener('pointerlockchange', function () { document.body.classList.toggle('fps-lock', U.locked()); });
   /* мышь в захвате: поворот как в игре */
-  if (!o.noMouse) addEventListener('mousemove', function (e) { if (!U.locked() || !o.walk()) return; var mx = e.movementX || 0, my = e.movementY || 0;
+  if (!o.noMouse) addEventListener('mousemove', function (e) { if (!o.walk() || TOUCH) return; if (!U.locked() && (e.buttons || e.target !== cv)) return; var mx = e.movementX || 0, my = e.movementY || 0;
     if (Math.abs(mx) > 250 || Math.abs(my) > 250) return; /* браузер иногда присылает ложный рывок */ o.look(-mx * .0022, -my * .0022); });
   /* следим, чтобы захват снимался, когда открыто окно задания или нельзя ходить */
   setInterval(function () { var w = o.walk(); document.body.classList.toggle('fps-walk', !!w); if (!o.noMouse && (!w || (o.lockOk && !o.lockOk()))) U.unlock(); }, 200);
