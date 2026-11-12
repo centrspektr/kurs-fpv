@@ -504,7 +504,7 @@ function make(cfg) {
 
   /* ---------- управление ---------- */
   var ray = new T.Raycaster(), mp = new T.Vector2(), drag = null, keys = {};
-  var MLOOK = PROBA && !MOB && !!document.documentElement.requestPointerLock, lockHint = false;
+  var MLOOK = false && PROBA && !MOB && !!document.documentElement.requestPointerLock, lockHint = false;
   function locked() { return document.pointerLockElement === cv; }
   function unlock() { if (locked()) try { document.exitPointerLock(); } catch (e) {} }
   function input() {
@@ -628,7 +628,10 @@ function make(cfg) {
     refreshAll(); if (fresh && tid) { celebrate(tid); toast('Задание пройдено! +' + K.lib[tid].pts + ' очков'); sel = null; card(null); if (NEXT) setTimeout(function () { hint('Дальше - задание ' + (mod.tasks.indexOf(NEXT) + 1) + ': иди за светящейся дорожкой', 5000); }, 1500); }
     else if (sel) card(sel);
   }
-  return { open: open, close: close, back: back };
+  /* 12.11: комната строится заранее, пока игрок в городе, - вход без подвисания перед дверями */
+  function prep() { if (built || on) return; try { I = window.VZ_KURS_INFO; K = window.VZ_KURS; build(); if (R.compile) R.compile(S, CAM); CAM.position.set(0, EYE, 0); if (GX) GX.render(.016); else R.render(S, CAM); } catch (e) {} } /* один кадр заранее: шейдеры, тени и свечение готовы к входу */
+  setTimeout(function () { var ri = window.requestIdleCallback || function (f) { setTimeout(f, 1); }; ri(prep, { timeout: 5000 }); }, 12000);
+  return { open: open, close: close, back: back, prep: prep };
 }
 
 window.KOMNATA = { make: make };
