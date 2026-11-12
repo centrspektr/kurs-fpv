@@ -509,7 +509,7 @@ function make(cfg) {
   function unlock() { if (locked()) try { document.exitPointerLock(); } catch (e) {} }
   function input() {
     cv.addEventListener('pointerdown', function (e) { if (anim) return; drag = { id: e.pointerId, x: e.clientX, y: e.clientY, yaw: yaw, pitch: pitch, moved: false }; });
-    addEventListener('pointermove', function (e) { if (!on) return; if (!drag || drag.id !== e.pointerId) { hover(e); return; } var dx = e.clientX - drag.x, dy = e.clientY - drag.y; if (Math.abs(dx) + Math.abs(dy) > 8) drag.moved = true; if (drag.moved) { yaw = drag.yaw + (PROBA ? -dx : dx) * .0055; pitch = Math.max(-1.1, Math.min(.85, drag.pitch + dy * .0045)); lookAt = null; } });
+    addEventListener('pointermove', function (e) { if (!on) return; if (!drag || drag.id !== e.pointerId) { hover(e); return; } var dx = e.clientX - drag.x, dy = e.clientY - drag.y; if (Math.abs(dx) + Math.abs(dy) > (PROBA ? 3 : 8)) drag.moved = true; if (drag.moved) { yaw = drag.yaw + (PROBA ? -dx : dx) * .0055; pitch = Math.max(-1.1, Math.min(.85, drag.pitch + dy * .0045)); lookAt = null; } });
     addEventListener('pointerup', function (e) { if (!on || !drag || drag.id !== e.pointerId) return; var d = drag; drag = null; if (d.moved || anim || paused) return;
       if (MLOOK && e.pointerType === 'mouse') { if (locked()) interact(); else { if (sel && arrived) tap(e.clientX, e.clientY); else { try { cv.requestPointerLock(); } catch (er) {} } } return; }
       tap(e.clientX, e.clientY); });
@@ -584,8 +584,8 @@ function make(cfg) {
     CAM.position.set(pos.x, (anim ? pos.y : EYE + jy) + (anim || jy > 0 ? 0 : Math.sin(bob * 2) * .022), pos.z); CAM.rotation.order = 'YXZ'; CAM.rotation.set(pitch, yaw, 0);
     if (GX) { GX.render(dt); fpsG(raw); } else R.render(S, CAM);
   }
-  var fN = 0, fT = 0, fW = /[?&]q=/.test(location.search) ? 1e9 : 5;
-  function fpsG(dt) { if (fW > 0) { fW -= dt; return; } fN++; fT += dt; if (fN >= 70) { if (fT / fN > 1 / 21 && document.visibilityState === 'visible' && !paused) { if (GX.lower() === 2) lsS('kursy_grafika', 'low'); fW = 3; } fN = 0; fT = 0; } }
+  var fL = 0, fN = 0, fT = 0, fW = /[?&]q=/.test(location.search) ? 1e9 : 5;
+  function fpsG(dt) { if (fW > 0) { fW -= dt; return; } fN++; fT += dt; if (fN >= 70) { if (fT / fN > (PROBA ? (fL ? 1 / 26 : 1 / 40) : 1 / 21) && document.visibilityState === 'visible' && !paused) { fL++; if (GX.lower() === 2) lsS('kursy_grafika', 'low'); fW = 3; } fN = 0; fT = 0; } }
 
   /* ---------- состояние заданий ---------- */
   function refreshAll() { nextTarget(); Object.keys(STANDS).forEach(function (k) { drawStand(STANDS[k]); }); hud(); }

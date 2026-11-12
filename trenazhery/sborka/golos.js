@@ -28,15 +28,28 @@ var G=window.GOLOS={ on:lsG(KEY)!=='off', vol:isNaN(V0)?1:Math.max(0,Math.min(1,
     /* голос устройства не меняет громкость на ходу: перечитываем фразу с того слова, где остановились, уже с новой громкостью (0 - молчим) */
     var sp=G.sp; if(sp&&syn){ clearTimeout(G.vt); G.vt=setTimeout(function(){ if(G.sp!==sp) return; sp.u=null; syn.cancel(); if(G.vol>0) speakFrom(sp); else sp.end(); },250); } },
   setOn:function(b){ G.on=!!b; lsS(KEY,b?'on':'off'); if(!b) G.stop(); },
-  stop:function(){ clearTimeout(G.tm); clearTimeout(G.vt); if(syn) syn.cancel(); if(G.au){ G.au.onended=G.au.onerror=null; G.au.pause(); G.au=null; } },
+  stop:function(){ G.zt=null; clearTimeout(G.tm); clearTimeout(G.vt); if(syn) syn.cancel(); if(G.au){ G.au.onended=G.au.onerror=null; G.au.pause(); G.au=null; } },
   play:function(file,o){ o=o||{}; G.stop(); if(!G.on){ o.onend&&o.onend(false); return false; }
     var au=G.au=new Audio((window.ZVUK_DIR||'zvuk/')+file), done=false; au.volume=G.vol;
     function end(ok){ if(done) return; done=true; if(G.au===au) G.au=null; o.onend&&o.onend(ok); }
     function back(){ if(done) return; if(G.au===au) G.au=null; done=true; if(o.text) G.say(o.text,o); else o.onend&&o.onend(false); } /* нет файла - голос устройства */
     au.onended=function(){ end(true); }; au.onerror=back; var pr=au.play(); if(pr&&pr.catch) pr.catch(back); return true; },
-  say:function(text,o){ o=o||{}; G.stop(); if(!G.on||!G.can()){ o.onend&&o.onend(false); return false; }
+  say:function(text,o){ o=o||{}; G.stop(); if(G.on&&zSay(text,o)) return true; return dev(text,o); },
+  dev:function(text,o){ if(!G.on||!G.can()){ o.onend&&o.onend(false); return false; }
     var f={s:text,back:function(i){ return i; }}, done=false, sp={s:f.s,back:f.back,o:o,pos:0};
     sp.end=function(){ if(done) return; done=true; if(G.sp===sp) G.sp=null; o.onend&&o.onend(true); };
     G.sp=sp; speakFrom(sp); return true; } };
+function dev(t,o){ return G.dev(t,o); }
+/* 12.11: записанный голос (Лера, Яндекс SpeechKit) - когда игра открыта внутри курса, где есть записи (golos-new.js главной страницы).
+   Фразы записаны по предложениям: текст режем на предложения, ключ каждого - parent.GOLOS.key(предложение). Есть все - играем подряд, нет хоть одного - голос устройства. */
+function zP(){ try{ var P=parent!==window&&parent.GOLOS; if(P&&P.key&&P.zmap&&P.zdir&&P.zmap()) return P; }catch(e){} return null; }
+function zSent(t){ return (String(t).match(/[^.!?…]+(?:[.!?…]+|$)\s*/g)||[]).map(function(x){ return x.trim(); }).filter(Boolean); }
+function zSay(text,o){ var P=zP(); if(!P) return false; var L=P.zmap(), dir=P.zdir(), parts=zSent(text), au=[];
+  for(var j=0;j<parts.length;j++){ var f=L[P.key(parts[j])]; if(!f) return false; var a=new Audio(dir+f); a.preload='auto'; au.push(a); }
+  if(!au.length) return false; var tok={}, i=0, done=false; G.zt=tok;
+  function end(ok){ if(done) return; done=true; if(G.zt===tok) G.zt=null; G.au=null; o.onend&&o.onend(ok); }
+  function bad(){ if(G.zt!==tok||done) return; done=true; G.zt=null; G.au=null; dev(parts.slice(Math.max(0,i-1)).join(' '),o); } /* файл не играет - остаток голосом устройства */
+  function next(){ if(G.zt!==tok) return; if(i>=au.length) return end(true); var a=G.au=au[i++]; a.volume=G.vol; a.onended=next; a.onerror=bad; var pr=a.play(); if(pr&&pr.catch) pr.catch(bad); }
+  next(); return true; }
 if(syn&&syn.getVoices) syn.getVoices(); /* Chrome загружает список голосов не сразу */
 })();
