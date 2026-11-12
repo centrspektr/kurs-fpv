@@ -87,7 +87,7 @@ body:has(.k-card:not([hidden])) #nextb,body.k-focus #nextb{display:none}
 <script>window.KURSY = window.KURSY || { store: 'kursy_fpv_gorod', meKey: 'kursy_fpv_me' };</script>
 <script>/* 10.11: в пробе курса (new.html) - голос с исправленным произношением (golos-new.js), на главной - как было */
 (function(){ var nw=/[?&]new\b/.test(location.search); try{ nw=nw||/(new|g)\.html$/.test(parent.location.pathname); }catch(e){} document.write('<script src="golos'+(nw?'-new':'')+'.js"><\/script>'); })();</script><script src="three.min.js"></script><script src="RoomEnvironment.js"></script>
-<script src="GLTFLoader.js"></script>
+<script src="GLTFLoader.js"></script><script src="fps-upr.js"></script>
 <script>/* проба 10.11: новая графика помещений (?g в адресе): inter.js + post.js, движок и этаж с зацепками */
 window.AKB_GRAF = /[?&]g\b/.test(location.search); try { if (parent !== window && /\/((g|new|index)\.html)?$/.test(parent.location.pathname)) AKB_GRAF = true;   /* 11.11: в курсе (и на главной) - новая графика; отдельно открытая страница - по ?g */ } catch (e) {}
 document.write(AKB_GRAF ? '<script src="post.js"><\/script><script src="inter.js"><\/script><script src="komnata-g.js"><\/script>' : '<script src="komnata.js"><\/script>');</script><script src="akb-teoriya.js"></script><script>/* проба new.html (09.11 ночью): в пробе курса - этаж с правками (akb-etazh-new.js), на главной - как было */
