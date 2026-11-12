@@ -10,9 +10,9 @@
 <meta name="theme-color" content="#0d1117">
 <link rel="icon" type="image/png" href="favicon.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
-<script src="config.js"></script>
-<script src="perenos.js"></script>
-<script src="rejting.js"></script>   <!-- проба 09.11: рейтинг курса по площадкам, очки th/sb на сервер -->
+<script src="config.js?v=1211b"></script>
+<script src="perenos.js?v=1211b"></script>
+<script src="rejting.js?v=1211b"></script>   <!-- проба 09.11: рейтинг курса по площадкам, очки th/sb на сервер -->
 <script>window.PLAIN_URL = 'prosto-new.html';   /* обычная страница курса (слабый телефон, окно педагога) */</script>
 <style>
   /* Вид как у портала "Иртыш": стекло, шрифты Unbounded и Manrope, рукописное название */
@@ -303,19 +303,21 @@
 const MODE = 'public';
 document.getElementById('hudC').textContent = (window.KURSY && KURSY.name) || 'Курс';
 </script>
-<script src="three.min.js" defer></script>   <!-- своя копия three r128 (09.11): чужие сайты не подключаем -->
-<script src="modeli.js" defer></script>
-<script src="zadaniya-new.js" defer></script>   <!-- проба 09.11: картинки карточек кодом вместо неподходящих эмодзи -->
-<script src="kartinki.js" defer></script>
-<script src="trenazhery.js" defer></script>   <!-- тренажёры (08.11): "Собери дрон" в задании 2.6 и окно "Тренажёры" -->
-<script src="RoomEnvironment.js" defer></script>
-<script src="komnata.js" defer></script>   <!-- проба 09.11: движок модуля-помещения (модуль 2) -->
-<script src="masterskaya.js" defer></script>   <!-- проба 09.11: модуль 2 "Мастерская" от первого лица -->
-<script src="moduli.js" defer></script>
-<script src="golos-new.js" defer></script>
-<script src="komnaty.js" defer></script>   <!-- проба 09.11: модули-помещения (модуль 3 - комната от первого лица) -->
-<script src="kryshi/bloom.js" defer></script>   <!-- проба 10.11: свечение огней на крышах (three.js r128, MIT) -->
-<script src="kryshi-new.js" defer></script>   <!-- проба 10.11: новые крыши модулей 1, 4, 6 (?kr=a|b|c) -->
-<script src="kosmos-kurs-new.js" defer></script>
+<script src="three-umd.js?v=1211b" defer></script><script src="three.min.js?v=1211" defer></script><script src="three-umd.js?v=1211b" defer></script><script src="three-zapas.js?v=1211b" defer></script>   <!-- 11.11: чужой загрузчик модулей (расширения браузера) не мешает three -->   <!-- своя копия three r128 (09.11): чужие сайты не подключаем -->
+<script src="modeli.js?v=1211b" defer></script>
+<script src="zadaniya-new.js?v=1211b" defer></script>   <!-- проба 09.11: картинки карточек кодом вместо неподходящих эмодзи -->
+<script src="kartinki.js?v=1211b" defer></script>
+<script src="trenazhery/sborka/scene-k.js?v=1211b" defer></script>   <!-- проба 11.11: верстак из игры "Собери дрон" стоит и в комнате мастерской -->
+<script src="trenazhery.js?v=1211b" defer></script>   <!-- тренажёры (08.11): "Собери дрон" в задании 2.6 и окно "Тренажёры" -->
+<script src="RoomEnvironment.js?v=1211b" defer></script>
+<script src="proba/modul3/post.js?v=1211b" defer></script><script src="proba/modul3/inter.js?v=1211b" defer></script>   <!-- проба 11.11: новая графика помещений (модули 2 и 3) -->
+<script src="fps-upr.js?v=1211b" defer></script><script src="komnata-new.js?v=1211b" defer></script>   <!-- проба 09.11: движок модуля-помещения (модуль 2) -->
+<script src="masterskaya.js?v=1211b" defer></script>   <!-- проба 09.11: модуль 2 "Мастерская" от первого лица -->
+<script src="moduli.js?v=1211b" defer></script>
+<script src="golos-new.js?v=1211b" defer></script>
+<script src="komnaty.js?v=1211b" defer></script>   <!-- проба 09.11: модули-помещения (модуль 3 - комната от первого лица) -->
+<script src="kryshi/bloom.js?v=1211b" defer></script>   <!-- проба 10.11: свечение огней на крышах (three.js r128, MIT) -->
+<script src="kryshi-new.js?v=1211b" defer></script>   <!-- проба 10.11: новые крыши модулей 1, 4, 6 (?kr=a|b|c) -->
+<script src="kosmos-kurs-new.js?v=1211b" defer></script>
 </body>
 </html>

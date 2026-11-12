@@ -10,10 +10,10 @@
 <meta name="theme-color" content="#0d1117">
 <link rel="icon" type="image/png" href="favicon.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
-<script src="config.js"></script>
-<script src="perenos.js"></script>
-<script src="rejting.js"></script>   <!-- проба 09.11: рейтинг курса по площадкам, очки th/sb на сервер -->
-<script>window.PLAIN_URL = 'prosto.html';   /* обычная страница курса (слабый телефон, окно педагога) */</script>
+<script src="config.js?v=1211b"></script>
+<script src="perenos.js?v=1211b"></script>
+<script src="rejting.js?v=1211b"></script>   <!-- проба 09.11: рейтинг курса по площадкам, очки th/sb на сервер -->
+<script>window.PLAIN_URL = 'prosto-new.html';   /* обычная страница курса (слабый телефон, окно педагога) */</script>
 <style>
   /* Вид как у портала "Иртыш": стекло, шрифты Unbounded и Manrope, рукописное название */
   :root{
@@ -227,6 +227,19 @@
   #osd .rec{color:#ff4d6d}
   @media (prefers-reduced-motion:reduce){#lvl.on{animation:none;opacity:0}}
   @media (prefers-reduced-motion:reduce){#nxB,.wbg,#ptr i,#goB b,#brief .bwave b,#brief .bh i,#intro .cur{animation:none}#ttl.on .t1{animation:tw-fill .3s forwards}}
+  /* свободный полёт (9.11) */
+  #flyB{position:fixed;top:calc(112px + env(safe-area-inset-top,0px));left:max(16px,env(safe-area-inset-left,0px));z-index:6;min-height:40px;padding:0 14px;border-radius:99px;border:1px solid #7cf3ff;background:var(--glass);color:var(--fg);font:700 13px var(--body);cursor:pointer;opacity:0;pointer-events:none;transition:opacity .3s;box-shadow:0 0 14px rgba(124,243,255,.35)}
+  #flyB.on{opacity:1;pointer-events:auto}
+  #fh{position:fixed;left:50%;bottom:max(14px,env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:8;display:none;flex-direction:column;align-items:center;gap:4px;padding:10px 16px;border-radius:14px;background:rgba(5,8,20,.72);border:1px solid rgba(124,243,255,.4);color:#dff;font:600 12.5px var(--body);text-align:center;max-width:min(560px,92vw)}
+  #fh b{color:#7cf3ff}#fhG{color:#9dff7c;font-weight:800}#fhPad{opacity:.75;font-size:11.5px}
+  #fhX{margin-top:4px;min-height:34px;padding:0 16px;border-radius:99px;border:1px solid #7cf3ff;background:transparent;color:#fff;font:700 13px var(--body);cursor:pointer}
+  .fs{position:fixed;bottom:calc(110px + env(safe-area-inset-bottom,0px));width:130px;height:130px;border-radius:50%;border:2px solid rgba(124,243,255,.5);background:rgba(5,8,20,.35);z-index:8;display:none;touch-action:none}
+  .fs i{position:absolute;left:50%;top:50%;width:54px;height:54px;margin:-27px 0 0 -27px;border-radius:50%;background:rgba(124,243,255,.55);box-shadow:0 0 14px rgba(124,243,255,.6)}
+  .fs small{position:absolute;left:0;right:0;top:-20px;text-align:center;color:#bff;font:600 11px var(--body)}
+  #fsL{left:max(18px,env(safe-area-inset-left,0px))}#fsR{right:max(18px,env(safe-area-inset-right,0px))}
+  body.free #fh{display:flex}
+  @media (pointer:coarse){ body.free .fs{display:block} body.free #fhKeys,body.free #fhPad{display:none} #fh{top:calc(14px + env(safe-area-inset-top,0px));bottom:auto;padding:6px 12px;max-width:62vw} #fhX{min-height:30px} }
+  body.free #labels,body.free #leads,body.free #guide,body.free #hud,body.free #arrow,body.free #ptr,body.free #cap,body.free #stars,body.free #mb{opacity:0!important;pointer-events:none!important}
 </style>
 </head>
 <body>
@@ -238,6 +251,9 @@
 
 <button id="back" type="button" aria-label="Назад">←</button>
 <button id="topB" type="button">☀ Сверху</button>
+<button id="flyB" type="button">🚁 Полетать самому</button>
+<div id="fh"><div><b>Свободный полёт</b> <span id="fhG"></span></div><div id="fhKeys">W/S - газ, A/D - поворот, стрелки - вперёд, назад, вбок. Esc - выход</div><div id="fhAlt"></div><div id="fhPad"></div><button id="fhX" type="button">Закончить полёт</button></div>
+<div class="fs" id="fsL"><small>газ / поворот</small><i></i></div><div class="fs" id="fsR"><small>наклон</small><i></i></div>
 <div id="hud"><small id="hudC"></small><div id="hudL"></div></div>
 <button id="cityG" type="button" aria-label="Настройки" aria-expanded="false">⚙</button>
 <button id="plainB" type="button">Обычный вид</button>
@@ -287,17 +303,19 @@
 const MODE = 'public';
 document.getElementById('hudC').textContent = (window.KURSY && KURSY.name) || 'Курс';
 </script>
-<script src="three.min.js" defer></script>   <!-- своя копия three r128 (09.11): чужие сайты не подключаем -->
-<script src="modeli.js" defer></script>
-<script src="zadaniya.js" defer></script>   <!-- проба 09.11: картинки карточек кодом вместо неподходящих эмодзи -->
-<script src="kartinki.js" defer></script>
-<script src="trenazhery.js" defer></script>   <!-- тренажёры (08.11): "Собери дрон" в задании 2.6 и окно "Тренажёры" -->
-<script src="RoomEnvironment.js" defer></script>
-<script src="komnata.js" defer></script>   <!-- проба 09.11: движок модуля-помещения (модуль 2) -->
-<script src="masterskaya.js" defer></script>   <!-- проба 09.11: модуль 2 "Мастерская" от первого лица -->
-<script src="moduli.js" defer></script>
-<script src="golos.js" defer></script>
-<script src="komnaty.js" defer></script>   <!-- проба 09.11: модули-помещения (модуль 3 - комната от первого лица) -->
-<script src="kosmos-kurs.js" defer></script>
+<script src="three-umd.js?v=1211b" defer></script><script src="three.min.js?v=1211" defer></script><script src="three-umd.js?v=1211b" defer></script><script src="three-zapas.js?v=1211b" defer></script>   <!-- 11.11: чужой загрузчик модулей (расширения браузера) не мешает three -->   <!-- своя копия three r128 (09.11): чужие сайты не подключаем -->
+<script src="modeli.js?v=1211b" defer></script>
+<script src="zadaniya-new.js?v=1211b" defer></script>   <!-- проба 09.11: картинки карточек кодом вместо неподходящих эмодзи -->
+<script src="kartinki.js?v=1211b" defer></script>
+<script src="trenazhery/sborka/scene-k.js?v=1211b" defer></script>   <!-- проба 11.11: верстак из игры "Собери дрон" стоит и в комнате мастерской -->
+<script src="trenazhery.js?v=1211b" defer></script>   <!-- тренажёры (08.11): "Собери дрон" в задании 2.6 и окно "Тренажёры" -->
+<script src="RoomEnvironment.js?v=1211b" defer></script>
+<script src="proba/modul3/post.js?v=1211b" defer></script><script src="proba/modul3/inter.js?v=1211b" defer></script>   <!-- проба 11.11: новая графика помещений (модули 2 и 3) -->
+<script src="fps-upr.js?v=1211b" defer></script><script src="komnata-new.js?v=1211b" defer></script>   <!-- проба 09.11: движок модуля-помещения (модуль 2) -->
+<script src="masterskaya.js?v=1211b" defer></script>   <!-- проба 09.11: модуль 2 "Мастерская" от первого лица -->
+<script src="moduli.js?v=1211b" defer></script>
+<script src="golos-new.js?v=1211b" defer></script>
+<script src="komnaty.js?v=1211b" defer></script>   <!-- проба 09.11: модули-помещения (модуль 3 - комната от первого лица) -->
+<script src="kosmos-kurs-new.js?v=1211b" defer></script>
 </body>
 </html>

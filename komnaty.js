@@ -5,7 +5,7 @@
    Подключать в new.html до kosmos-kurs-new.js. Комнаты лежат каждая в своей папке. */
 (function () {
 'use strict';
-var KOMNATY = { m3: 'proba/modul3/index.html' };
+var KOMNATY = { m3: 'proba/modul3/index.html', m5: 'proba/modul3/gonki.html' };   /* 11.11: модуль 5 - гоночный клуб от первого лица */
 var ov = null, cur = null;
 var css = document.createElement('style');
 css.textContent = '#komOv{position:fixed;inset:0;z-index:15;background:#05060d;opacity:0;transition:opacity .5s}#komOv.on{opacity:1}#komOv iframe{position:absolute;inset:0;width:100%;height:100%;border:0;display:block}';

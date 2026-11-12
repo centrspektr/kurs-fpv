@@ -1,0 +1,87 @@
+<!DOCTYPE html><html lang="ru"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#05060d"><title>Модуль 5. FPV-гонки - Взлёт</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}html,body{height:100%}
+body{background:#05060d;font-family:Manrope,"Segoe UI",Roboto,Arial,sans-serif;color:#f1f3ff;overflow:hidden;position:fixed;inset:0;--a:#ffd36e;touch-action:none;user-select:none;-webkit-user-select:none}
+canvas#c{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none}
+#ui{position:absolute;inset:0;pointer-events:none;z-index:3}#ui>*{pointer-events:auto}
+button{font:inherit;color:inherit;border:0;cursor:pointer;background:none}
+.top{position:absolute;left:0;right:0;top:0;padding:12px 14px 24px;display:flex;align-items:center;gap:10px;background:linear-gradient(#05060dcc,#05060d00);pointer-events:none!important;z-index:5}
+.top>*{pointer-events:auto}
+.ic{width:38px;height:38px;border-radius:50%;background:#ffffff14;border:1px solid #ffffff2a;display:grid;place-items:center;font-size:16px;backdrop-filter:blur(8px);flex:none}
+.ttl{flex:1;pointer-events:none}.ttl small{display:block;font-size:10px;letter-spacing:.16em;color:var(--a);font-weight:800}.ttl b{font-size:16px;font-weight:800}
+.k-tags{position:absolute;inset:0;pointer-events:none!important;overflow:hidden}
+.k-tag{position:absolute;left:0;top:0;display:none;padding:5px 11px 6px;border-radius:12px;background:#0b0d1ee0;border:1px solid #ffffff2a;white-space:nowrap;text-align:center;transform-origin:50% 100%;transition:border-color .2s}
+.k-tag b{display:block;font-size:13px;font-weight:800}.k-tag small{display:block;font-size:10.5px;color:#aab}
+.k-tag.hv{border-color:var(--a);box-shadow:0 0 14px #ffd36e66}.k-tag.done b::before{content:'✓ ';color:#9dff7c}
+.k-tag.nx{border-color:var(--a);background:#2a2110e8}.k-tag.nx::after{content:'сюда';display:block;font:800 10px/1 monospace;letter-spacing:.15em;color:var(--a);margin-top:3px}
+.k-card{position:absolute;left:50%;bottom:18px;transform:translateX(-50%);width:min(calc(100vw - 24px),440px);padding:14px 16px;border-radius:18px;background:#120f22e6;border:1px solid #ffd36e66;backdrop-filter:blur(12px);box-shadow:0 10px 30px #0008;animation:up .25s;z-index:6}
+.k-card small{font-size:10px;letter-spacing:.14em;color:var(--a);font-weight:800;text-transform:uppercase}.k-card b{display:block;font-size:18px;margin:2px 0 4px}
+.k-card p{font-size:14px;line-height:1.4;color:#cfd3ee;margin-bottom:12px}
+.k-go{width:100%;padding:13px;border-radius:14px;background:linear-gradient(90deg,#ffb84d,#ffd36e);color:#2a1a00;font-weight:900;font-size:16px;box-shadow:0 0 24px #ffd36e66}
+@keyframes up{from{opacity:0;transform:translate(-50%,14px)}}
+#nextb{position:absolute;left:14px;bottom:16px;display:flex;align-items:center;gap:10px;padding:8px 8px 8px 14px;border-radius:30px;background:#0b0d1ed8;border:1px solid #ffd36e55;max-width:calc(100vw - 28px);z-index:4}
+#nextb span{font-size:11px;color:var(--a);font-weight:800;letter-spacing:.1em}#nextb b{font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:52vw}
+#nextb button{padding:7px 14px;border-radius:20px;background:var(--a);color:#2a1a00;font-weight:900;font-size:13px;flex:none}
+body:has(.k-card:not([hidden])) #nextb,body.k-focus #nextb{display:none}
+#hint{position:absolute;left:50%;top:64px;transform:translateX(-50%);padding:8px 14px;border-radius:20px;background:#0b0d1ec0;border:1px solid #ffffff22;font-size:12.5px;color:#d7dbf5;width:max-content;max-width:calc(100vw - 28px);text-align:center;pointer-events:none!important;transition:opacity .6s}
+#hint.off{opacity:0}
+/* лекция */
+#lect{position:absolute;inset:0;display:flex;flex-direction:column;padding:62px 14px 14px;background:linear-gradient(#05060d55,#05060dee);z-index:7;animation:fade .35s}
+@keyframes fade{from{opacity:0}}
+#lect .lp-box{flex:1;display:flex;flex-direction:column;max-width:980px;width:100%;margin:0 auto;border-radius:22px;background:#0d0f24f2;border:1px solid #ffd36e55;box-shadow:0 0 50px #ffd36e22;overflow:hidden;min-height:0}
+.lp-head{display:flex;align-items:center;gap:10px;padding:12px 14px;border-bottom:1px solid #ffffff14}
+.lp-n{flex:1;font-size:12px;font-weight:800;color:var(--a);letter-spacing:.08em}
+.lp-ver{display:flex;background:#ffffff10;border-radius:20px;padding:3px}.lp-ver button{padding:6px 12px;border-radius:16px;font-size:12.5px;font-weight:800;color:#aab}
+.lp-ver button.on{background:var(--a);color:#2a1a00}
+.lp-body{flex:1;display:flex;gap:16px;padding:14px;min-height:0}
+.lp-body canvas{flex:1.2;min-width:0;width:100%;border-radius:14px;background:#0a0c1c;border:1px solid #ffffff10}
+.lp-txt{flex:1;display:flex;flex-direction:column;justify-content:center;min-height:0;overflow:auto}
+.lp-txt h2{font-size:clamp(20px,3.2vw,30px);line-height:1.15;margin-bottom:10px}.lp-txt p{font-size:clamp(15px,1.9vw,18px);line-height:1.5;color:#dfe3fa}
+.lp-foot{display:flex;align-items:center;gap:10px;padding:10px 14px 14px}
+.lp-dots{flex:1;display:flex;gap:4px}.lp-dots i{flex:1;height:4px;border-radius:2px;background:#ffffff22}.lp-dots i.d{background:#ffd36e88}.lp-dots i.on{background:var(--a);box-shadow:0 0 8px var(--a)}
+.lp-prev,.lp-next{width:52px;height:52px;border-radius:50%;font-size:24px;font-weight:900;flex:none}
+.lp-prev{background:#ffffff14;border:1px solid #ffffff2a}.lp-prev:disabled{opacity:.3}
+.lp-next{background:var(--a);color:#2a1a00;box-shadow:0 0 0 6px #ffd36e30,0 0 24px #ffd36e88}
+@media (max-width:720px),(orientation:portrait){.lp-body{flex-direction:column}.lp-body canvas{flex:none;height:38vh}.lp-txt{justify-content:flex-start}}
+/* игры на столе и зарядке */
+.g-bub{position:absolute;top:62px;left:50%;transform:translateX(-50%);width:min(calc(100vw - 24px),480px);padding:12px 15px;border-radius:16px;background:#120f22e6;border:1px solid #ffffff26;backdrop-filter:blur(12px);font-size:14.5px;line-height:1.42;z-index:6}
+.g-bub .chip{display:inline-block;font-size:10px;font-weight:900;letter-spacing:.12em;padding:2px 8px;border-radius:12px;background:#ffd36e26;color:var(--a);margin-bottom:5px}
+.g-bub b{color:var(--a)}.g-bub.ok{border-color:#9dff7c}.g-bub.ok .chip{background:#9dff7c26;color:#9dff7c}.g-bub.bad{border-color:#ff5d6c;background:#2a0f17ee}.g-bub.bad .chip{background:#ff5d6c33;color:#ff8a92}
+.g-bar{position:absolute;left:50%;bottom:16px;transform:translateX(-50%);display:flex;flex-wrap:wrap;justify-content:center;gap:8px;width:min(calc(100vw - 20px),640px);z-index:6}
+.g-bar button{padding:11px 15px;border-radius:24px;background:#120f22e0;border:1px solid #ffffff30;font-weight:800;font-size:14px;backdrop-filter:blur(10px)}
+.g-bar button.pri{background:var(--a);color:#2a1a00;border-color:var(--a);box-shadow:0 0 18px #ffd36e77}
+.g-bar button.ok{border-color:#9dff7c;color:#9dff7c}.g-bar button.no{border-color:#ff5d6c;color:#ff8a92;animation:sh .35s}
+.g-bar button:disabled{opacity:.35}
+@keyframes sh{25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
+.g-menu{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:min(calc(100vw - 24px),560px);max-height:calc(100% - 130px);overflow:auto;padding:16px;border-radius:20px;background:#0d0f24f0;border:1px solid #ffd36e55;z-index:6;animation:fade .3s}
+.g-menu h3{font-size:19px;margin-bottom:4px}.g-menu>p{font-size:13.5px;color:#aab;margin-bottom:12px}
+.g-st{display:flex;gap:12px;align-items:center;width:100%;text-align:left;padding:12px;border-radius:14px;background:#ffffff0a;border:1px solid #ffffff1c;margin-bottom:8px}
+.g-st:hover{border-color:var(--a)}.g-st i{font-style:normal;font-size:28px;width:44px;height:44px;border-radius:12px;background:#ffd36e18;display:grid;place-items:center;flex:none}
+.g-st b{display:block;font-size:15px}.g-st small{font-size:12.5px;color:#aab;line-height:1.35;display:block}.g-st.done b::after{content:' ✓';color:#9dff7c}
+.g-lcd{position:absolute;right:14px;top:62px;padding:8px 12px;border-radius:12px;background:#06140fe8;border:1px solid #9dff7c55;font:700 14px/1.4 ui-monospace,Menlo,monospace;color:#9dff7c;z-index:6;display:none}
+#demo{position:absolute;inset:0;display:grid;place-items:center;background:#05060dcc;z-index:9}
+#demo>div{width:min(calc(100vw - 32px),400px);padding:18px;border-radius:18px;background:#120f22;border:1px solid #ffd36e66;text-align:center}
+#demo b{display:block;font-size:18px;margin-bottom:8px}#demo p{font-size:14px;color:#cfd3ee;margin-bottom:14px;line-height:1.4}
+#demo button{padding:11px 16px;border-radius:14px;margin:3px;font-weight:800}.d-ok{background:var(--a);color:#2a1a00}.d-no{background:#ffffff14}
+.toast{position:fixed;left:50%;bottom:90px;transform:translateX(-50%);background:#0f2a26f0;border:1px solid #9dff7c;color:#9dff7c;font-weight:800;font-size:13px;padding:8px 16px;border-radius:30px;z-index:20;animation:fade .3s;pointer-events:none;white-space:nowrap}
+#load{position:fixed;inset:0;display:grid;place-items:center;background:#05060d;z-index:30;transition:opacity .6s;font-weight:800;color:var(--a);letter-spacing:.2em;font-size:13px}
+[hidden]{display:none!important}
+#vol{flex:none;width:84px;height:24px;accent-color:#7cf3ff;pointer-events:auto}@media (max-width:420px){#vol{width:60px}}
+</style></head><body>
+<canvas id="c"></canvas>
+<div id="ui">
+  <div class="top"><button class="ic" id="back" title="Назад">←</button><div class="ttl"><small>МОДУЛЬ 5</small><b>Гоночный клуб</b></div><button class="ic" id="snd" title="Звук">🔊</button><input id="vol" type="range" min="0" max="100" step="5" title="Громкость" aria-label="Громкость"></div>
+  <div id="hint">Проведи пальцем - осмотрись · нажми на пол - иди · нажми на предмет - подойди</div>
+  <script>if (matchMedia("(pointer:fine)").matches) document.getElementById("hint").textContent = "W A S D - идти · Shift - бегом · пробел - прыжок · мышь или тачпад - осмотреться · E или Enter - подойти и открыть";</script>
+  <div id="nextb" hidden><span>ДАЛЬШЕ</span><b></b><button>Идти</button></div>
+  <div id="demo" hidden><div><b></b><p>На пробной странице задания курса не открываются. В курсе здесь откроется само задание.</p><button class="d-ok">Засчитать (проба)</button><button class="d-no">Закрыть</button></div></div>
+</div>
+<div id="load">ЗАГРУЗКА</div>
+<!-- gonki.html - модуль 5 "Гоночный клуб" (проба 11.11.2026). Лежит рядом с модулем 3, чтобы брать те же three.js, inter.js, модели и фактуры без копий. Собирается скриптом m5.py. -->
+<script>window.KURSY = window.KURSY || { store: 'kursy_fpv_gorod', meKey: 'kursy_fpv_me' };</script>
+<script src="golos-new.js"></script><script src="three.min.js?v=1211"></script><script src="three-zapas.js"></script><script src="RoomEnvironment.js"></script><script src="GLTFLoader.js"></script><script src="fps-upr.js"></script>
+<script src="post.js"></script><script src="inter.js"></script><script src="komnata-g.js"></script><script src="gonki-etazh.js"></script>
+<script>setTimeout(function(){ var l=document.getElementById('load'); l.style.opacity=0; setTimeout(function(){ l.remove(); },700); },400);</script>
+</body></html>

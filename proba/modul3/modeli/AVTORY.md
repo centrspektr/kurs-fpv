@@ -14,3 +14,7 @@
 
 ## Фото села Иртыш (proba/modul3/foto-selo/)
 Снимки Alexandr (центр "Спектр"), даны для курса 09.11.2026. На фото класса (09) ребята со спины, лиц не видно (по решению Alexandr не размываем), грамоты на стене размыты. Люди и табличка с телефоном обрезаны, EXIF (в т.ч. место съёмки) удалён, сжато до 1024 px.
+
+## Новая графика помещений (10.11.2026, папка proba/modul3/tex/)
+Текстуры Poly Haven, https://polyhaven.com (CC0), уменьшены до 1024 точек: smooth_concrete_floor (тёмный пол), laminate_floor_02 (дерево: пол и стена), brick_wall_001 (кирпичная стена), white_plaster_02 (рельеф штукатурки).
+Эффекты (post.js): свои копии файлов three.js r128 из examples/js (EffectComposer, RenderPass, ShaderPass, UnrealBloomPass, шейдеры), лицензия MIT, авторы three.js.

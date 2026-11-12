@@ -28,13 +28,13 @@ var G=window.GOLOS={ on:lsG(KEY)!=='off', vol:isNaN(V0)?1:Math.max(0,Math.min(1,
     /* голос устройства не меняет громкость на ходу: перечитываем фразу с того слова, где остановились, уже с новой громкостью (0 - молчим) */
     var sp=G.sp; if(sp&&syn){ clearTimeout(G.vt); G.vt=setTimeout(function(){ if(G.sp!==sp) return; sp.u=null; syn.cancel(); if(G.vol>0) speakFrom(sp); else sp.end(); },250); } },
   setOn:function(b){ G.on=!!b; lsS(KEY,b?'on':'off'); if(!b) G.stop(); },
-  stop:function(){ clearTimeout(G.tm); clearTimeout(G.vt); if(syn) syn.cancel(); if(G.au){ G.au.onended=G.au.onerror=null; G.au.pause(); G.au=null; } },
+  stop:function(){ G.zt=null; clearTimeout(G.tm); clearTimeout(G.vt); if(syn) syn.cancel(); if(G.au){ G.au.onended=G.au.onerror=null; G.au.pause(); G.au=null; } },
   play:function(file,o){ o=o||{}; G.stop(); if(!G.on){ o.onend&&o.onend(false); return false; }
     var au=G.au=new Audio((window.ZVUK_DIR||'zvuk/')+file), done=false; au.volume=G.vol;
     function end(ok){ if(done) return; done=true; if(G.au===au) G.au=null; o.onend&&o.onend(ok); }
     function back(){ if(done) return; if(G.au===au) G.au=null; done=true; if(o.text) G.say(o.text,o); else o.onend&&o.onend(false); } /* нет файла - голос устройства */
     au.onended=function(){ end(true); }; au.onerror=back; var pr=au.play(); if(pr&&pr.catch) pr.catch(back); return true; },
-  say:function(text,o){ o=o||{}; G.stop(); if(!G.on||!G.can()){ o.onend&&o.onend(false); return false; }
+  say:function(text,o){ o=o||{}; G.stop(); if(G.on&&zSay(text,o)) return true; if(!G.on||!G.can()){ o.onend&&o.onend(false); return false; }
     var f=G.fix(text), done=false, sp={s:f.s,back:f.back,o:o,pos:0};
     sp.end=function(){ if(done) return; done=true; if(G.sp===sp) G.sp=null; o.onend&&o.onend(true); };
     G.sp=sp; speakFrom(sp); return true; } };
@@ -81,5 +81,32 @@ G.fix=function(text){ text=String(text==null?'':text); var out='', seg=[], last=
     if(!/^\s/.test(w)) prev=lw; }
   if(last<text.length) put(last,text.length-last,text.slice(last));
   return { s:out, back:function(i){ for(var j=seg.length-1;j>=0;j--){ var g=seg[j]; if(i>=g[2]) return g[0]+Math.min(g[1],Math.round((i-g[2])*g[1]/Math.max(1,g[3]))); } return 0; } }; };
+/* Записанный голос (11.11.2026, Яндекс SpeechKit): одинаково хороший голос во всех браузерах и на телефонах.
+   zvuk/spisok.json = { "ключ": "файл.mp3" }; ключ = G.key(текст) - число из прочитанного текста (после G.fix). Есть файл - играет файл, нет - голос устройства.
+   Окна модулей и тренажёров (iframe) берут список и папку у главной страницы. Список и файлы делает скрипт озвучки (interier-grafika/kod/ozvuchka.py). */
+var ZL=null, ZLwait=null;
+G.key=function(text){ var t=G.fix(text).s.replace(/\s+/g,' ').trim().toLowerCase(), h=0x811c9dc5; for(var i=0;i<t.length;i++){ h^=t.charCodeAt(i); h=Math.imul(h,16777619)>>>0; } return ('0000000'+h.toString(16)).slice(-8); };
+G.zdir=function(){ if(window.ZVUK_DIR) return window.ZVUK_DIR; try{ if(parent!==window&&parent.GOLOS&&parent.GOLOS.zdir) return parent.GOLOS.zdir(); }catch(e){} return new URL('zvuk/',location.href).href; };
+G.zlist=function(){ if(ZL||ZLwait) return; try{ if(parent!==window&&parent.GOLOS&&parent.GOLOS.zmap){ ZL=parent.GOLOS.zmap(); if(ZL) return; } }catch(e){}
+  if(!window.fetch) return; ZLwait=fetch(G.zdir()+'spisok.json',{cache:'no-store'}).then(function(r){ return r.ok?r.json():{}; }).then(function(j){ ZL=j||{}; },function(){ ZL={}; }); };
+G.zmap=function(){ return ZL; };
+/* 12.11: целой фразы нет - режем на предложения и играем записи подряд (так записаны игры и длинные тексты).
+   "Привет, Имя!" записать нельзя - вместо него звучит записанное "Привет!", на экране имя остаётся. Нет хоть одного предложения - голос устройства. */
+function zSent(t){ return (String(t).match(/[^.!?…]+(?:[.!?…]+|$)\s*/g)||[]).map(function(x){ return x.trim(); }).filter(Boolean); }
+function zFiles(text){ var f=ZL[G.key(text)]; if(f) return [f]; var p=zSent(text), r=[]; if(p.length<2&&!/^Привет, /.test(text)) return null;
+  for(var i=0;i<p.length;i++){ var x=ZL[G.key(p[i])]; if(!x&&/^Привет, [^.!?]{1,40}!$/.test(p[i])) x=ZL[G.key('Привет!')]; if(!x) return null; r.push(x); } return r.length?r:null; }
+G.zhas=function(t){ return !!(ZL&&zFiles(t)); };
+var ZWAIT=null; /* браузер не дал играть до первого нажатия - ждём нажатия и играем */
+function zGesture(fn){ ZWAIT=fn; if(zGesture.on) return; zGesture.on=1; var go=function(){ var f=ZWAIT; ZWAIT=null; if(f) f(); };
+  ['pointerdown','keydown','touchstart'].forEach(function(e){ addEventListener(e,go,true); }); }
+function zSay(text,o){ if(!ZL) return false; var files=zFiles(text); if(!files) return false;
+  var f=G.fix(text), i=0, done=false, tok={}, au=files.map(function(x){ var a=new Audio(G.zdir()+x); a.preload='auto'; return a; }); G.zt=tok;
+  function end(ok){ if(done) return; done=true; if(G.zt===tok) G.zt=null; G.au=null; o.onend&&o.onend(ok); }
+  function back(){ if(done||G.zt!==tok) return; done=true; G.zt=null; G.au=null; if(G.can()){ var sp={s:f.s,back:f.back,o:o,pos:0}, d2=false; sp.end=function(){ if(d2) return; d2=true; if(G.sp===sp) G.sp=null; o.onend&&o.onend(true); }; G.sp=sp; speakFrom(sp); } else o.onend&&o.onend(false); }
+  function prog(a){ if(!o.onb||!a.duration) return; var u=(i-1+a.currentTime/a.duration)/au.length; o.onb(f.back(Math.min(f.s.length,Math.round(f.s.length*u)))); }
+  function play(a){ var pr=a.play(); if(pr&&pr.catch) pr.catch(function(e){ if(G.zt!==tok) return; if(e&&e.name==='NotAllowedError') zGesture(function(){ if(G.zt===tok&&G.au===a) play(a); }); else back(); }); }
+  function next(){ if(G.zt!==tok) return; if(i>=au.length){ if(o.onb) o.onb(f.back(f.s.length)); return end(true); } var a=G.au=au[i++]; a.volume=G.vol; a.ontimeupdate=function(){ prog(a); }; a.onended=next; a.onerror=back; play(a); }
+  next(); return true; }
+G.zlist();
 if(syn&&syn.getVoices) syn.getVoices(); /* Chrome загружает список голосов не сразу */
 })();
