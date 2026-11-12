@@ -1,6 +1,6 @@
 /* fps-upr.js - управление в помещениях от первого лица "как в игре SCP: Побег" (проба 12.11.2026, просьба Alexandr).
-   Компьютер: щелчок по сцене захватывает мышь, мышь смотрит по сторонам и вверх-вниз, W A S D - ходить, Shift - бегом, пробел - прыжок,
-     E или щелчок - действие с тем, что в прицеле, Esc - вернуть стрелку. Без захвата можно смотреть, зажав кнопку мыши и водя.
+   Компьютер (как в "Побеге", 12.11): два пальца по тачпаду или колесо - смотреть, можно и тянуть мышью; W A S D - ходить, Shift - бегом, пробел - прыжок,
+     E - действие. Захват мыши выключен (включается lock: true).
    Телефон: слева джойстик - ходить, справа води пальцем - смотреть, кнопки БЕГ, ПРЫЖОК и E (действие). Касание предмета - подойти, как раньше.
    Подключение: FPSUPR.create({ canvas, root, walk(): можно ли ходить, look(dx, dy): повернуть (в радианах), act(): действие,
      jump(), lockOk(): можно ли захватывать мышь, noMouse: мышь не трогать }) -> { joy: {f, s, run}, locked(), unlock() }.
@@ -10,7 +10,7 @@
 var TOUCH = matchMedia('(pointer:coarse)').matches && 'ontouchstart' in window;
 function create(o) {
   var cv = o.canvas, root = o.root || document.body, U = { joy: { f: 0, s: 0, run: false }, touch: TOUCH };
-  var canLock = !TOUCH && !o.noMouse && !!cv.requestPointerLock; /* noMouse: мышью управляет сама комната (модуль 2), отсюда только телефон */
+  var canLock = !!o.lock && !TOUCH && !o.noMouse && !!cv.requestPointerLock; /* 12.11: как в "Побеге" камеру крутят тачпадом, мышь не захватываем (включить - lock: true) */ /* noMouse: мышью управляет сама комната (модуль 2), отсюда только телефон */
   U.locked = function () { return document.pointerLockElement === cv; };
   U.unlock = function () { if (U.locked()) try { document.exitPointerLock(); } catch (e) {} };
   U.lock = function () { if (!canLock || U.locked() || (o.lockOk && !o.lockOk())) return; try { var r = cv.requestPointerLock(); if (r && r.catch) r.catch(function () {}); } catch (e) {} };
