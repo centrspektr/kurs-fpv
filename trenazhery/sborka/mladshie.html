@@ -49,6 +49,6 @@ a.ic{color:inherit;text-decoration:none}#err{font-weight:800;font-size:14px;colo
 @media (min-width:760px){.bub{font-size:14.5px;width:470px}}
 </style><script>/* 11.11: в пробе курса (new.html, g.html или адрес с ?new / ?g) - новый вид окон и шрифты (../okna.css); на главной - как было */
 (function(){ var gr=/[?&](new|g)\b/.test(location.search); try{ gr=gr||/\/((new|g|index)\.html)?$/.test(parent.location.pathname); }catch(e){} if(gr) document.write('<link rel="stylesheet" href="../okna.css">'); })();</script></head><body><canvas id="c"></canvas><div id="ui"></div>
-<script>window.KURSY={store:"kursy_fpv_gorod"};</script><script src="golos.js"></script><script src="three.min.js"></script><script src="RoomEnvironment.js"></script><script>/* 11.11: в пробе курса сцена с добавками (scene-k.js): фон игры - комната мастерской; на главной - как было */
+<script>window.KURSY={store:"kursy_fpv_gorod"};</script><script src="golos.js"></script><script src="three.min.js?v=1211"></script><script src="three-zapas.js"></script><script src="RoomEnvironment.js"></script><script>/* 11.11: в пробе курса сцена с добавками (scene-k.js): фон игры - комната мастерской; на главной - как было */
 (function(){ var gr=/[?&](new|g)\b/.test(location.search); try{ gr=gr||/\/((new|g|index)\.html)?$/.test(parent.location.pathname); }catch(e){} document.write('<script src="scene'+(gr?'-k':'')+'.js"><\/script>'); })();</script><script src="stage.js"></script><script>window.SB_LV=1;</script><script src="game.js"></script>
 </body></html>
