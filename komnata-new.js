@@ -282,7 +282,7 @@ function make(cfg) {
   var SPEAK = false; /* приветствие говорит - монитор ждёт */
 
   /* ---------- стол с мини-игрой ---------- */
-  var PROBA = /\/(new|g)\.html$/.test(location.pathname);   /* правки 11.11 сначала в пробе курса */
+  var PROBA = /\/((new|g|index)\.html)?$/.test(location.pathname);   /* правки 11.11 сначала в пробе курса */
   var TABLE = null;
   function table(o) {
     var g = grp(o.x, 0, o.z, o.ry || 0);
