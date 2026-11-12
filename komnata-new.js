@@ -509,7 +509,7 @@ function make(cfg) {
   function unlock() { if (locked()) try { document.exitPointerLock(); } catch (e) {} }
   function input() {
     cv.addEventListener('pointerdown', function (e) { if (anim) return; drag = { id: e.pointerId, x: e.clientX, y: e.clientY, yaw: yaw, pitch: pitch, moved: false }; });
-    addEventListener('pointermove', function (e) { if (!on) return; if (!drag || drag.id !== e.pointerId) { hover(e); return; } var dx = e.clientX - drag.x, dy = e.clientY - drag.y; if (Math.abs(dx) + Math.abs(dy) > 8) drag.moved = true; if (drag.moved) { yaw = drag.yaw + dx * .0055; pitch = Math.max(-1.1, Math.min(.85, drag.pitch + dy * .0045)); lookAt = null; } });
+    addEventListener('pointermove', function (e) { if (!on) return; if (!drag || drag.id !== e.pointerId) { hover(e); return; } var dx = e.clientX - drag.x, dy = e.clientY - drag.y; if (Math.abs(dx) + Math.abs(dy) > 8) drag.moved = true; if (drag.moved) { yaw = drag.yaw + (PROBA ? -dx : dx) * .0055; pitch = Math.max(-1.1, Math.min(.85, drag.pitch + dy * .0045)); lookAt = null; } });
     addEventListener('pointerup', function (e) { if (!on || !drag || drag.id !== e.pointerId) return; var d = drag; drag = null; if (d.moved || anim || paused) return;
       if (MLOOK && e.pointerType === 'mouse') { if (locked()) interact(); else { if (sel && arrived) tap(e.clientX, e.clientY); else { try { cv.requestPointerLock(); } catch (er) {} } } return; }
       tap(e.clientX, e.clientY); });
@@ -524,7 +524,10 @@ function make(cfg) {
       if (e.code === 'Space') { e.preventDefault(); if (!anim && jy <= 0) jv = 3.6; }
       if ((e.code === 'Enter' || e.code === 'NumpadEnter' || e.code === 'KeyE') && !e.repeat && !anim) { e.preventDefault(); interact(); } });
     addEventListener('keyup', function (e) { keys[e.code] = 0; });
+    if (PROBA && window.FPSUPR) FU = FPSUPR.create({ canvas: cv, root: root, noMouse: true, walk: function () { return on && !paused && !anim; }, act: function () { if (!anim) interact(); }, jump: function () { if (!anim && jy <= 0) jv = 3.6; },
+      look: function (dx, dy) { yaw += dx; pitch = Math.max(-1.1, Math.min(.85, pitch + dy)); lookAt = null; } });
   }
+  var FU = null;
   /* Enter / E: если уже подошли - главное действие карточки (начать задание, собрать дрон, слушать); если нет - подойти к тому, что в центре взгляда или ближе всего впереди */
   var jy = 0, jv = 0;
   function interact() {
@@ -564,8 +567,9 @@ function make(cfg) {
     else {
       /* WASD / стрелки */
       var kx = (keys.KeyD || 0) - (keys.KeyA || 0), kz = (keys.KeyW || keys.ArrowUp || 0) - (keys.KeyS || keys.ArrowDown || 0);
+      if (FU) { kx = Math.max(-1, Math.min(1, kx + FU.joy.s)); kz = Math.max(-1, Math.min(1, kz + FU.joy.f)); }
       if (keys.ArrowLeft) yaw += dt * 1.8; if (keys.ArrowRight) yaw -= dt * 1.8;
-      var run = keys.ShiftLeft || keys.ShiftRight, st = run ? 1.5 : .6;
+      var run = keys.ShiftLeft || keys.ShiftRight || (FU && FU.joy.run), st = run ? 1.5 : .6;
       if (kx || kz) { var f = new T.Vector3(-Math.sin(yaw), 0, -Math.cos(yaw)), r = new T.Vector3(-f.z, 0, f.x); target = pos.clone().addScaledVector(f, kz * st).addScaledVector(r, kx * st); clampP(target); target.y = EYE; lookAt = null; if (sel) { sel = null; card(null); } }
       /* ходьба к цели: плавный разгон и торможение, обход препятствий скольжением */
       if (target) { var d = target.clone().sub(pos); d.y = 0; var L = d.length();

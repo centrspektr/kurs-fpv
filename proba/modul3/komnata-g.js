@@ -1,4 +1,4 @@
-/* komnata-g.js - копия komnata.js с двумя зацепками для новой графики (R.renderFn, R.onResize), проба 10.11.2026.
+/* komnata-g.js - копия komnata.js с зацепками для новой графики (R.renderFn, R.onResize), проба 10.11.2026; 12.11 - управление как в SCP (fps-upr.js, только проба).
    komnata.js - движок помещения от первого лица (модули-локации курса FPV, проба 09.11.2026).
    Ходим по комнате, смотрим вокруг, подходим к предметам и "проваливаемся" в них (стол с заданиями, монитор, зарядка).
    Управление:
@@ -135,10 +135,11 @@ function create(o) {
     if (!down) { if (e.pointerType === 'mouse' && R.mode === 'walk') hover(e.clientX, e.clientY); return; }
     var dx = e.clientX - down.x, dy = e.clientY - down.y; if (Math.abs(dx) + Math.abs(dy) > 7) down.moved = true;
     if (down.moved && R.mode === 'walk') { var k = (e.pointerType === 'touch' ? 0.0062 : 0.0042);
-      yaw = down.y0 + dx * k; pitch = Math.max(-1.2, Math.min(1.0, down.p0 + dy * k * 0.9)); turn = null; }
+      yaw = down.y0 + (FPSP ? -dx : dx) * k; pitch = Math.max(-1.2, Math.min(1.0, down.p0 + dy * k * 0.9)); turn = null; }
     if (R.onDrag && R.mode === 'focus') R.onDrag(dx, dy, e); });
   cv.addEventListener('pointerup', function (e) { var d = down; down = null; if (!d) return;
     if (d.moved) { if (R.onDragEnd) R.onDragEnd(); return; }
+    if (FU && R.mode === 'walk' && e.pointerType === 'mouse') { if (FU.locked()) { interact(); return; } var h0 = pick(e.clientX, e.clientY); if (!h0 || !h0.item) { FU.lock(); return; } }
     if (R.mode === 'focus') { if (R.onTap) R.onTap(e.clientX, e.clientY); return; }
     if (R.mode !== 'walk') return;
     var h = pick(e.clientX, e.clientY); if (!h) return;
@@ -168,6 +169,11 @@ function create(o) {
     if (e.code === 'Space') { e.preventDefault(); if (jy <= 0) jv = 3.6; }
     if ((e.code === 'Enter' || e.code === 'NumpadEnter' || e.code === 'KeyE') && !e.repeat) { e.preventDefault(); interact(); } });
   addEventListener('keyup', function (e) { keys[e.code] = 0; });
+  var FPSP = false; try { FPSP = /[?&]new\b/.test(location.search) || (parent !== window && /\/(new|g)\.html$/.test(parent.location.pathname)); } catch (e) {}
+  function canWalk() { return R.mode === 'walk' && !(R.busy && R.busy()); }
+  var FU = FPSP && window.FPSUPR ? FPSUPR.create({ canvas: cv, root: document.body, walk: canWalk, lockOk: canWalk, act: function () { interact(); }, jump: function () { if (jy <= 0) jv = 3.6; },
+    look: function (dx, dy) { yaw += dx; pitch = Math.max(-1.2, Math.min(1.0, pitch + dy)); turn = null; } }) : null;
+  R.fpsU = FU;
   addEventListener('blur', function () { keys = {}; });
 
   R.frame = function (fn) { R.frames.push(fn); };
@@ -177,8 +183,9 @@ function create(o) {
   function loop() { requestAnimationFrame(loop); var rdt = Math.min(clock.getDelta(), 0.12), dt = Math.min(rdt, 0.05), t = clock.elapsedTime;
     if (R.mode === 'walk') {
       var f = (keys.KeyW || keys.ArrowUp ? 1 : 0) - (keys.KeyS || keys.ArrowDown ? 1 : 0), s = (keys.KeyD ? 1 : 0) - (keys.KeyA ? 1 : 0);
+      if (FU) { f = Math.max(-1, Math.min(1, f + FU.joy.f)); s = Math.max(-1, Math.min(1, s + FU.joy.s)); }
       if (keys.ArrowLeft) yaw += dt * 1.8; if (keys.ArrowRight) yaw -= dt * 1.8;
-      if (f || s) { walk = null; hideMarker(); showCard(null); var sp = (keys.ShiftLeft || keys.ShiftRight ? 5.2 : 2.6) * dt;
+      if (f || s) { walk = null; hideMarker(); showCard(null); var sp = (keys.ShiftLeft || keys.ShiftRight || (FU && FU.joy.run) ? 5.2 : 2.6) * dt;
         moveBy((-Math.sin(yaw) * f + Math.cos(yaw) * s) * sp, (-Math.cos(yaw) * f - Math.sin(yaw) * s) * sp); }
       if (walk) { var dx = walk.x - cam.position.x, dz = walk.z - cam.position.z, dist = Math.hypot(dx, dz), sp2 = Math.min(dist, 3.4 * dt);
         if (dist < 0.05) { if (walk.q && walk.q.length) { var nx = walk.q.shift(); walk.x = nx[0]; walk.z = nx[1]; } else arrive(); } else {
