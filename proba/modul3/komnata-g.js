@@ -139,7 +139,7 @@ function create(o) {
     if (R.onDrag && R.mode === 'focus') R.onDrag(dx, dy, e); });
   cv.addEventListener('pointerup', function (e) { var d = down; down = null; if (!d) return;
     if (d.moved) { if (R.onDragEnd) R.onDragEnd(); return; }
-    if (FU && R.mode === 'walk' && e.pointerType === 'mouse' && FU.locked()) { interact(); return; }
+    if (FU && R.mode === 'walk' && e.pointerType === 'mouse') { if (FU.locked()) { interact(); return; } var h0 = pick(e.clientX, e.clientY); if (!h0 || !h0.item) { FU.lock(); return; } }
     if (R.mode === 'focus') { if (R.onTap) R.onTap(e.clientX, e.clientY); return; }
     if (R.mode !== 'walk') return;
     var h = pick(e.clientX, e.clientY); if (!h) return;

@@ -504,7 +504,7 @@ function make(cfg) {
 
   /* ---------- управление ---------- */
   var ray = new T.Raycaster(), mp = new T.Vector2(), drag = null, keys = {};
-  var MLOOK = false && PROBA && !MOB && !!document.documentElement.requestPointerLock, lockHint = false;
+  var MLOOK = PROBA && !MOB && !!document.documentElement.requestPointerLock, lockHint = false;
   function locked() { return document.pointerLockElement === cv; }
   function unlock() { if (locked()) try { document.exitPointerLock(); } catch (e) {} }
   function input() {
@@ -513,7 +513,7 @@ function make(cfg) {
     addEventListener('pointerup', function (e) { if (!on || !drag || drag.id !== e.pointerId) return; var d = drag; drag = null; if (d.moved || anim || paused) return;
       if (MLOOK && e.pointerType === 'mouse') { if (locked()) interact(); else { if (sel && arrived) tap(e.clientX, e.clientY); else { try { cv.requestPointerLock(); } catch (er) {} } } return; }
       tap(e.clientX, e.clientY); });
-    if (MLOOK) { addEventListener('mousemove', function (e) { if (!on || !locked() || anim || paused) return; var mx = e.movementX || 0, my = e.movementY || 0; if (Math.abs(mx) > 250 || Math.abs(my) > 250) return; /* браузер иногда присылает ложный рывок */ yaw -= mx * .0023; pitch = Math.max(-1.1, Math.min(.85, pitch - my * .0023)); lookAt = null; });
+    if (MLOOK) { addEventListener('mousemove', function (e) { if (!on || anim || paused) return; if (!locked() && (e.buttons || e.target !== cv)) return; /* 12.11: как в "Побеге" - камера идёт за пальцем по тачпаду и без нажатия */ var mx = e.movementX || 0, my = e.movementY || 0; if (Math.abs(mx) > 250 || Math.abs(my) > 250) return; /* браузер иногда присылает ложный рывок */ yaw -= mx * .0023; pitch = Math.max(-1.1, Math.min(.85, pitch - my * .0023)); lookAt = null; });
       document.addEventListener('pointerlockchange', function () { var L = locked(); document.body.classList.toggle('kmn-lock', L); if (L && !lockHint) { lockHint = true; hint('Мышь поворачивает камеру. Щелчок или E - подойти и открыть. Esc - вернуть стрелку.', 6000); } }); }
     /* тачпад и колесо мыши: два пальца по тачпаду (или колесо) - поворот камеры вверх-вниз и влево-вправо; щипок (Ctrl + колесо) - шаг вперёд-назад */
     cv.addEventListener('wheel', function (e) { if (anim || paused) return; e.preventDefault(); var k = e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? 400 : 1, dx = e.deltaX * k, dy = e.deltaY * k;
@@ -630,7 +630,9 @@ function make(cfg) {
   }
   /* 12.11: комната строится заранее, пока игрок в городе, - вход без подвисания перед дверями */
   function prep() { if (built || on) return; try { I = window.VZ_KURS_INFO; K = window.VZ_KURS; build(); if (R.compile) R.compile(S, CAM); CAM.position.set(0, EYE, 0); if (GX) GX.render(.016); else R.render(S, CAM); } catch (e) {} } /* один кадр заранее: шейдеры, тени и свечение готовы к входу */
-  setTimeout(function () { var ri = window.requestIdleCallback || function (f) { setTimeout(f, 1); }; ri(prep, { timeout: 5000 }); }, 12000);
+  /* строим, пока на экране заставка "Начать обучение" или город стоит; во время подлёта к городу не трогаем - иначе рывок */
+  (function wait(n) { setTimeout(function () { if (built || on) return; var B = document.body.classList; if (B.contains('intro') || (window.KURS_BUSY && KURS_BUSY())) return wait(1500);
+    var ri = window.requestIdleCallback || function (f) { setTimeout(f, 1); }; ri(prep, { timeout: 3000 }); }, n); })(2500);
   return { open: open, close: close, back: back, prep: prep };
 }
 
