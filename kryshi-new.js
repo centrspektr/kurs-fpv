@@ -73,6 +73,9 @@ K.floor=function(i,len){ var kd=KIND[i], md=MOOD[kd], t, n=null, an=E.R.capabili
 /* путь заданий: у арены аса - широкая змейка трассы, у школы и аэродрома - как в движке */
 K.pt=function(i,k){ if(KIND[i]==='arena') return [Math.sin(k*.95+.5)*34,-58-k*26]; return null; };
 K.kind=function(i){ return KIND[i]; };
+/* проба 13.11: модули 4 и 6 тоже с экраном и ответами (посадка на площадку, гонка на время) - пока только на new.html */
+var PROBA=/new\.html/.test(location.pathname)||/[?&]proba\b/.test(location.search);
+K.kviz=function(i){ return KIND[i]==='shkola'||(PROBA&&!!KIND[i]); };
 /* лента дороги: у каждой крыши своя */
 function roadTex(kd){ var t=ctex(function(x,w,h){
   if(kd==='shkola'){ x.fillStyle='#e9eef3'; x.fillRect(0,0,w,h); x.fillStyle='#35d6e6'; x.fillRect(0,0,5,h); x.fillRect(w-5,0,5,h); x.fillStyle='rgba(20,40,60,.22)'; x.fillRect(w/2-1,0,2,h); x.fillStyle='#2bb673'; x.beginPath(); x.moveTo(w/2,h*.2); x.lineTo(w/2+9,h*.45); x.lineTo(w/2-9,h*.45); x.fill(); }
@@ -208,11 +211,14 @@ function droneHQ(col,sc){ var g=new T.Group(), b=new T.Group(); g.add(b); b.scal
 K.flyDrone=function(){ var d=droneHQ('#7cf3ff',1.45); if(SHD) d.g.traverse(function(o){ if(o.isMesh&&o.castShadow) o.receiveShadow=false; }); return d; };
 /* --- арена: экран, ворота, разметка --- */
 var KV=null; /* всё про арену и текущий полёт */
-var GZ=-104, GX=[-20,0,20], GW=14, GH=9.5, LINE=-58, LET=['А','Б','В'], GCOL=['#ff8fd8','#7cf3ff','#ffd36e'];
-function arenaKviz(L,G,c,B){ var fr=std(0x12151e,{r:.3,m:.8}), dk=B.dark, i;
+var GZ=-104, GX=[-20,0,20], GW=14, GH=9.5, LINE=-58, PR=7.6, LET=['А','Б','В'], GCOL=['#ff8fd8','#7cf3ff','#ffd36e'];
+function arenaKviz(L,G,c,B,o){ o=o||{}; var MODE=o.mode||'gate', AC=o.col||'#7cf3ff'; GZ=o.GZ||-104; GX=o.GX||[-20,0,20]; LINE=o.LINE||-58; var fr=std(0x12151e,{r:.3,m:.8}), dk=B.dark, i;
+  if(MODE==='gate'){
   /* разметка поля */
   decal(G,ctex(function(x,w,h){ x.strokeStyle='#ffffff'; x.lineWidth=7; rrect(x,6,6,w-12,h-12,30); x.stroke(); x.lineWidth=5; x.setLineDash([20,14]); var ly=h*((LINE+150)/118); x.beginPath(); x.moveTo(10,ly); x.lineTo(w-10,ly); x.stroke(); x.setLineDash([]); font(x,h*.022); x.fillStyle='#ffffff'; x.textAlign='center'; x.fillText('ЛИНИЯ СТАРТА - ЗДЕСЬ СЛУШАЕМ ВОПРОС',w/2,ly+h*.032); },512,944),64,118,0,-91,0,.85,.035);
-  GX.forEach(function(gx,k){ decal(G,ctex(function(x,w,h){ var g2=x.createLinearGradient(0,0,0,h); g2.addColorStop(0,GCOL[k]); g2.addColorStop(1,'rgba(0,0,0,0)'); x.globalAlpha=.5; x.fillStyle=g2; x.fillRect(0,0,w,h); x.globalAlpha=1; font(x,w*.6); x.fillStyle='#ffffff'; x.textAlign='center'; x.textBaseline='middle'; x.fillText(LET[k],w/2,h*.22); x.fillStyle='rgba(255,255,255,.7)'; for(var j=0;j<3;j++){ x.beginPath(); x.moveTo(w/2,h*(.44+j*.16)); x.lineTo(w*.72,h*(.54+j*.16)); x.lineTo(w*.28,h*(.54+j*.16)); x.fill(); } },128,384),GW-2,36,gx,GZ+21,0,.85,.04); });
+  }
+  if(MODE!=='land') GX.forEach(function(gx,k){ decal(G,ctex(function(x,w,h){ var g2=x.createLinearGradient(0,0,0,h); g2.addColorStop(0,GCOL[k]); g2.addColorStop(1,'rgba(0,0,0,0)'); x.globalAlpha=.5; x.fillStyle=g2; x.fillRect(0,0,w,h); x.globalAlpha=1; font(x,w*.6); x.fillStyle='#ffffff'; x.textAlign='center'; x.textBaseline='middle'; x.fillText(LET[k],w/2,h*.22); x.fillStyle='rgba(255,255,255,.7)'; for(var j=0;j<3;j++){ x.beginPath(); x.moveTo(w/2,h*(.44+j*.16)); x.lineTo(w*.72,h*(.54+j*.16)); x.lineTo(w*.28,h*(.54+j*.16)); x.fill(); } },128,384),GW-2,36,gx,GZ+21,0,.85,.04); });
+  if(MODE==='gate'){
   /* оформление поля: бортики с огнями и надписями, огни по краю, взлётная площадка, конусы у линии, осевые огни */
   var eL=[], cL=[], z; for(z=-34;z>=-148;z-=6){ eL.push([-32,.18,z],[32,.18,z]); } for(z=-40;z>=GZ+8;z-=8) if(Math.abs(z-LINE)>3) cL.push([0,.1,z]); lights(G,eL,'#7cf3ff',.2); lights(G,cL,'#ffffff',.14);
   var bm=std(0x161b2a,{r:.35,m:.7}), BT=['ШКОЛА FPV','ВЗЛЁТ','ЛЕТАЙ БЕЗОПАСНО','СЛУШАЙ ВОПРОС','ВЫБИРАЙ ВОРОТА'];
@@ -220,17 +226,29 @@ function arenaKviz(L,G,c,B){ var fr=std(0x12151e,{r:.3,m:.8}), dk=B.dark, i;
   var padG=new T.Group(); padG.position.set(0,0,-30); G.add(padG); M(padG,cyl(4.2,4.6,.3,6),std(0x1a2030,{r:.45,m:.6}),0,0,0); M(padG,new T.TorusGeometry(3.6,.1,6,48),neon('#ffd36e'),0,.37,0,{rx:Math.PI/2}); M(padG,new T.TorusGeometry(2.1,.07,6,40),neon('#7cf3ff'),0,.37,0,{rx:Math.PI/2}); for(i=0;i<6;i++){ var pa=i*Math.PI/3+Math.PI/6; M(padG,cyl(.18,.26,.4,8),bm,Math.cos(pa)*4.4,.1,Math.sin(pa)*4.4); glow(padG,'#ffd36e',.7,Math.cos(pa)*4.4,.6,Math.sin(pa)*4.4,.6); }
   var cn0=[]; for(i=-30;i<=30;i+=6) if(i) cn0.push([i,0,LINE,0,1]); inst(G,cyl(.08,.5,1.3,10),std(0xff6a2a,{r:.6,m:0}),cn0.map(function(q){ return [q[0],.65,q[2]]; })); inst(G,cyl(.22,.28,.14,10),std(0xf4f6fa,{r:.6,m:0}),cn0.map(function(q){ return [q[0],.78,q[2]]; }),false);
   [[-36.5,-30],[36.5,-30],[-36.5,-152],[36.5,-152]].forEach(function(q){ mast(L,G,q[0],q[1],17,'#fff3d6',q[0]<0?.7:-.7); });
+  }
+  if(MODE==='race'){ var rl=[], rc=[]; for(var rz=(o.SZ||-43)-6;rz>=GZ-10;rz-=6){ rl.push([-32,.18,rz],[32,.18,rz]); if(rz>GZ+40) rc.push([0,.1,rz]); } lights(G,rl,AC,.2); lights(G,rc,'#ffffff',.14);
+    [-1,1].forEach(function(sx){ for(var j=0;j<3;j++){ var bz=-62-j*22, bx=sx*36.5; M(G,rr(.7,2.3,18,.3),fr,bx,0,bz); M(G,box(.12,.12,18),neon(GCOL[j%3]),bx-sx*.42,2.32,bz); sign(G,['ВРЕМЯ ИДЁТ','АРЕНА АСА','ОШИБКА +5 СЕК'][(j+(sx>0?1:0))%3],{w:16.4,h:1.7,x:bx-sx*.44,y:1.2,z:bz,ry:-sx*Math.PI/2,col:GCOL[j%3]}); } }); }
   /* большой экран на двух опорах, по бокам колонки */
-  var TW=64, TH=28, TY=33, TZ=-152, tvG=new T.Group(); tvG.position.set(0,TY,TZ); G.add(tvG);
+  var TW=o.TW||64, TH=TW*28/64, TY=o.TY||33, TZ=o.TZ||-152, tvG=new T.Group(); tvG.position.set(0,TY,TZ); G.add(tvG);
   var cn=document.createElement('canvas'); cn.width=1280; cn.height=556; var tx=new T.CanvasTexture(cn); tx.anisotropy=8;
   M(tvG,rr(TW+2.4,TH+2.4,1.8,.6),fr,0,-TH/2-1.2,-1.1); var sp=new T.Mesh(new T.PlaneGeometry(TW,TH),new T.MeshBasicMaterial({map:tx,toneMapped:false})); sp.position.z=.06; tvG.add(sp);
-  M(tvG,box(TW+2.6,.22,.22),neon('#7cf3ff'),0,-TH/2-1.05,.1); M(tvG,box(TW+2.6,.22,.22),neon('#7cf3ff'),0,TH/2+1.05,.1);
+  M(tvG,box(TW+2.6,.22,.22),neon(AC),0,-TH/2-1.05,.1); M(tvG,box(TW+2.6,.22,.22),neon(AC),0,TH/2+1.05,.1);
   [-1,1].forEach(function(sx){ var cx=sx*(TW/2+3.4); M(tvG,rr(3.4,TH,1.8,.5),fr,cx,-TH/2,-1); for(var j=0;j<5;j++){ M(tvG,cyl(1.1,1.1,.3,24),std(0x2a2f3d,{r:.5,m:.4}),cx,-TH/2+2.4+j*(TH-4.8)/4,-.02,{rx:Math.PI/2}); M(tvG,new T.TorusGeometry(1.12,.07,6,28),neon(GCOL[(j+1)%3]),cx,-TH/2+2.4+j*(TH-4.8)/4,.14); M(tvG,cyl(.45,.45,.34,16),std(0x0c0d11,{r:.3,m:.6}),cx,-TH/2+2.4+j*(TH-4.8)/4,.0,{rx:Math.PI/2}); }
-    M(G,rr(2.6,TY-TH/2-.8,2.6,.5),fr,sx*22,0,TZ-1.4); M(G,box(.2,TY-TH/2-1.6,.2),neon('#7cf3ff'),sx*22,(TY-TH/2-.8)/2,TZ-.02); M(G,rr(8,.7,8,.8),dk,sx*22,0,TZ-1.4); M(G,box(1.2,TY*.9,1.2),fr,sx*22,TY*.36,TZ-7.4,{rx:.42}); });
-  for(i=0;i<9;i++){ M(tvG,rr(1.6,.9,1.3,.25),fr,-28+i*7,TH/2+1.5,.3); M(tvG,box(1.1,.5,.06),neon('#fff3d6'),-28+i*7,TH/2+1.95,1); }
-  glow(tvG,'#7cf3ff',70,0,0,4,.14); sign(G,'ШКОЛА FPV',{w:20,h:3.6,x:0,y:TY+TH/2+6,z:TZ+.4,col:'#ffd36e'});
+    M(G,rr(2.6,TY-TH/2-.8,2.6,.5),fr,sx*22,0,TZ-1.4); M(G,box(.2,TY-TH/2-1.6,.2),neon(AC),sx*22,(TY-TH/2-.8)/2,TZ-.02); M(G,rr(8,.7,8,.8),dk,sx*22,0,TZ-1.4); M(G,box(1.2,TY*.9,1.2),fr,sx*22,TY*.36,TZ-7.4,{rx:.42}); });
+  for(i=0;i<9;i++){ M(tvG,rr(1.6,.9,1.3,.25),fr,(-28+i*7)*TW/64,TH/2+1.5,.3); M(tvG,box(1.1,.5,.06),neon('#fff3d6'),(-28+i*7)*TW/64,TH/2+1.95,1); }
+  glow(tvG,AC,70,0,0,4,.14); sign(G,o.name||'ШКОЛА FPV',{w:20,h:3.6,x:0,y:TY+TH/2+6,z:TZ+.4,col:'#ffd36e'});
+  /* посадочные площадки с табло ответа (модуль 4) */
+  var gates=MODE==='land'?GX.map(function(gx,k){ var g=new T.Group(); g.position.set(gx,0,GZ); G.add(g); var nm=neon(GCOL[k]);
+    decal(g,ctex(function(x,w){ var cc=w/2; x.fillStyle='rgba(12,16,26,.96)'; x.beginPath(); x.arc(cc,cc,w*.49,0,6.283); x.fill(); x.strokeStyle=GCOL[k]; x.lineWidth=w*.035; x.beginPath(); x.arc(cc,cc,w*.45,0,6.283); x.stroke(); x.strokeStyle='#ffffff'; x.lineWidth=w*.012; x.setLineDash([w*.05,w*.035]); x.beginPath(); x.arc(cc,cc,w*.36,0,6.283); x.stroke(); x.setLineDash([]); font(x,w*.42); x.fillStyle='#ffffff'; x.textAlign='center'; x.textBaseline='middle'; x.fillText(LET[k],cc,cc*1.06); },256),PR*2+1.4,PR*2+1.4,0,0,0,1,.14).renderOrder=3;
+    var port=new T.Mesh(new T.CircleGeometry(PR,40),new T.MeshBasicMaterial({color:GCOL[k],transparent:true,opacity:.12,depthWrite:false,toneMapped:false,blending:T.AdditiveBlending})); port.rotation.x=-Math.PI/2; port.position.y=.2; port.renderOrder=4; g.add(port);
+    var pl=[]; for(var j=0;j<12;j++){ var a2=j/12*6.283; pl.push([Math.cos(a2)*(PR+.5),.2,Math.sin(a2)*(PR+.5)]); } lights(g,pl,GCOL[k],.2);
+    var lc=document.createElement('canvas'); lc.width=768; lc.height=Math.round(768*3.9/(GW+2.2)); var lt=new T.CanvasTexture(lc); lt.anisotropy=8;
+    var bd=new T.Group(); bd.position.set(0,7.4,-PR-4); bd.rotation.x=.12; g.add(bd); M(bd,rr(GW+3,4.6,.8,.3),fr,0,-2.3,-.5); var lp=new T.Mesh(new T.PlaneGeometry(GW+2.2,3.9),new T.MeshBasicMaterial({map:lt,toneMapped:false})); lp.position.z=.42; bd.add(lp); M(bd,box(GW+3,.14,.14),nm,0,2.36,.4);
+    [-1,1].forEach(function(sx){ M(g,cyl(.22,.3,6,10),fr,sx*(GW/2-1),3,-PR-4.6); M(g,rr(2,.4,2,.4),dk,sx*(GW/2-1),0,-PR-4.6); });
+    return {g:g,port:port,pt:{offset:{y:0}},cv:lc,tex:lt,col:GCOL[k],fx:0,fc:null,o0:.12}; }):
   /* трое ворот с табло ответа */
-  var gates=GX.map(function(gx,k){ var g=new T.Group(); g.position.set(gx,0,GZ); G.add(g); var nm=neon(GCOL[k]);
+  GX.map(function(gx,k){ var g=new T.Group(); g.position.set(gx,0,GZ); G.add(g); var nm=neon(GCOL[k]);
     [-1,1].forEach(function(sx){ M(g,rr(1.3,GH+.9,1.3,.4),fr,sx*(GW/2+.65),0,0); M(g,rr(3.2,.45,3.2,.5),dk,sx*(GW/2+.65),0,0); [-1,1].forEach(function(sz){ M(g,box(.14,GH,.14),nm,sx*(GW/2-.12),GH/2+.1,sz*.75,{ns:1}); }); glow(g,GCOL[k],3.4,sx*(GW/2+.65),GH+5.3,0,.9); M(g,cyl(.12,.16,.6,8),fr,sx*(GW/2+.65),GH+4.9,0); });
     M(g,rr(GW+2.6,4.4,1.5,.4),fr,0,GH+.3,0); [-1,1].forEach(function(sz){ M(g,box(GW,.14,.14),nm,0,GH+.12,sz*.75,{ns:1}); });
     var pt=ctex(function(x,w,h){ x.clearRect(0,0,w,h); for(var y=0;y<h;y+=8){ x.fillStyle='rgba(255,255,255,'+(.18+.5*(y%32===0))+')'; x.fillRect(0,y,w,2); } },8,64); pt.wrapT=T.RepeatWrapping; pt.repeat.set(1,3);
@@ -238,9 +256,11 @@ function arenaKviz(L,G,c,B){ var fr=std(0x12151e,{r:.3,m:.8}), dk=B.dark, i;
     var lc=document.createElement('canvas'); lc.width=768; lc.height=Math.round(768*3.9/(GW+2.2)); var lt=new T.CanvasTexture(lc); lt.anisotropy=8;
     [1,-1].forEach(function(sz){ var p=new T.Mesh(new T.PlaneGeometry(GW+2.2,3.9),new T.MeshBasicMaterial({map:lt,toneMapped:false})); p.position.set(0,GH+2.5,sz*1.0); if(sz<0) p.rotation.y=Math.PI; g.add(p); });
     return {g:g,port:port,pt:pt,cv:lc,tex:lt,col:GCOL[k],fx:0,fc:null}; });
-  L.tick.push(function(t,dt){ gates.forEach(function(q,k){ q.pt.offset.y=-t*.25; if(q.fx>0){ q.fx-=dt; q.port.material.color.set(q.fc); q.port.material.opacity=.25+.55*Math.max(0,q.fx/1.4); if(q.fx<=0){ q.port.material.color.set(q.col); q.port.material.opacity=.22; } } }); });
-  KV={L:L,cn:cn,tx:tx,gates:gates,s:null}; tvDraw({head:'ШКОЛА FPV',title:'Привет, пилот!',text:'Выбери задание слева или нажми "Лететь". Экран расскажет материал и задаст вопросы, а ты влетай в ворота с правильным ответом.',foot:'Клавиатура, пульт RadioMaster по USB или стики на телефоне'}); gateText(['','',''],null); L.kviz=1; }
-function tvDraw(o){ if(!KV) return; var c=KV.cn.getContext('2d'), w=KV.cn.width, h=KV.cn.height, col=o.col||'#7cf3ff', gr=c.createLinearGradient(0,0,0,h); gr.addColorStop(0,'#0c1d40'); gr.addColorStop(1,'#060d1f'); c.fillStyle=gr; c.fillRect(0,0,w,h);
+  L.tick.push(function(t,dt){ gates.forEach(function(q,k){ q.pt.offset.y=-t*.25; if(q.fx>0){ q.fx-=dt; q.port.material.color.set(q.fc); q.port.material.opacity=.25+.55*Math.max(0,q.fx/1.4); if(q.fx<=0){ q.port.material.color.set(q.col); q.port.material.opacity=q.o0||.22; } } }); });
+  var W=MODE==='land'?{how:'садись на площадку с правильным ответом',foot:'Сядь на площадку с правильным ответом',back:'Взлетай и вернись на старт',nm:'Площадка ',miss:'Мимо площадки'}:MODE==='race'?{how:'пролетай стартовую арку и влетай в ворота с правильным ответом. Время идёт!',foot:'Через арку - и в ворота с правильным ответом. Время идёт!',back:'Вернись за стартовую арку',nm:'Ворота ',miss:'Мимо ворот'}:{how:'влетай в ворота с правильным ответом.',foot:'Лети в ворота с правильным ответом',back:'Развернись и вернись за линию старта',nm:'Ворота ',miss:'Мимо ворот'};
+  if(o.start) L.freeP=new T.Vector3(o.start[0],PY+1.4,o.start[1]);
+  KV=L.kv={L:L,cn:cn,tx:tx,gates:gates,s:null,mode:MODE,GZ:GZ,GX:GX,LINE:LINE,SZ:o.SZ,W:W,col:AC,name:o.name||'ШКОЛА FPV'}; tvDraw({head:KV.name,title:'Привет, пилот!',text:'Выбери задание слева или нажми "Лететь". Экран расскажет материал и задаст вопросы, а ты '+W.how,foot:'Клавиатура, пульт RadioMaster по USB или стики на телефоне'}); gateText(['','',''],null); L.kviz=1; }
+function tvDraw(o){ if(!KV) return; var c=KV.cn.getContext('2d'), w=KV.cn.width, h=KV.cn.height, col=o.col||KV.col||'#7cf3ff', gr=c.createLinearGradient(0,0,0,h); gr.addColorStop(0,'#0c1d40'); gr.addColorStop(1,'#060d1f'); c.fillStyle=gr; c.fillRect(0,0,w,h);
   c.fillStyle=col; c.fillRect(0,0,w,h*.14); font(c,h*.075); c.fillStyle='#061022'; c.textBaseline='middle'; c.textAlign='left'; var hd=o.head||'', mx=w*.93-(o.right?c.measureText(o.right).width:0); if(c.measureText(hd).width>mx){ while(hd.length>4&&c.measureText(hd+'...').width>mx) hd=hd.slice(0,-1); hd=hd.replace(/[\s·-]+$/,'')+'...'; } c.fillText(hd,w*.025,h*.075); c.textAlign='right'; c.fillText(o.right||'',w*.975,h*.075);
   c.textAlign='center'; var top=h*.18, bot=h*(o.foot?.86:.96); if(o.title){ c.fillStyle='#ffd36e'; var fs=fitText(c,o.title,w/2,top+h*.075,w*.92,h*.15,h*.105,h*.06); top+=h*.16; }
   c.fillStyle='#ffffff'; if(o.text) fitText(c,o.text,w/2,(top+bot)/2,w*.92,bot-top-h*.02,o.title?h*.1:h*.145,h*.05,o.title?'700':'900');
@@ -275,13 +295,13 @@ function kvUI(){ if($('kvList')) return; var st=document.createElement('style');
   document.head.appendChild(st); var d=document.createElement('div'); d.id='kvList'; document.body.appendChild(d); var nb=document.createElement('button'); nb.id='kvNext'; nb.type='button'; nb.textContent='Дальше ▶'; document.body.appendChild(nb); nb.onclick=function(){ kvKey(); }; var qe=document.createElement('div'); qe.id='kvQ'; document.body.appendChild(qe);
   addEventListener('keydown',function(e){ if(KV&&KV.s&&(e.code==='Enter'||e.code==='Space')){ e.preventDefault(); kvKey(); } },true); }
 function kvList(){ var d=$('kvList'); if(!d||!KV) return; var ts=modTasks(), nx=pickTask(); d.innerHTML='<h3>Задания модуля</h3>'; ts.forEach(function(tid,k){ var b=document.createElement('button'), dn=taskDone(tid); b.className=dn?'d':tid===nx?'n':''; b.innerHTML='<b>'+(dn?'✓':(k+1))+'</b><span></span>'; b.lastChild.textContent=E.K.lib[tid].t+(tid===nx&&!dn?' - лететь':''); b.onclick=function(){ KV.want=tid; E.free.start(); }; d.appendChild(b); }); }
-function kvLevel(L){ if(!KV) return; var on=!!(L&&L.kviz); document.body.classList.toggle('kviz',on); if(!on) return; kvUI(); kvList(); var fb=$('flyB'); if(fb) fb.textContent='🚁 Лететь отвечать';
+function kvLevel(L){ if(L&&L.kv){ KV=L.kv; GZ=KV.GZ; GX=KV.GX; LINE=KV.LINE; } if(!KV) return; var on=!!(L&&L.kviz); document.body.classList.toggle('kviz',on); if(!on) return; kvUI(); kvList(); var fb=$('flyB'); if(fb) fb.textContent='🚁 Лететь отвечать';
   if(!L.kvHid){ L.kvHid=1; L.threads.forEach(function(q){ q.ln.visible=false; }); L.pulses.forEach(function(q){ q.sx=q.sy=0; q.sp.scale.set(0,0,0); }); if(L.gd) L.gd.g.visible=false; L.tick.push(function(){ for(var i=0;i<L.nodes.length;i++){ var n=L.nodes[i]; if(n.g.visible){ for(var k in n){ var o=n[k]; if(o&&o.isObject3D&&o!==L.g) o.visible=false; } } } }); } }
 /* --- ход полёта --- */
 function kvHud(t){ var e=$('fhG'); if(e) e.textContent=t||''; }
 function kvNextBtn(on,txt){ var b=$('kvNext'); if(!b) return; b.classList.toggle('on',!!on); if(txt) b.textContent=txt; }
 K.flyStart=function(L,f){ if(!L||!L.kviz||!KV) return; var tid=KV.want||pickTask(); KV.want=null; KV.s={tid:tid,i:-1,z0:f.p.z,ph:''}; var h=document.querySelector('#fh b'); if(h){ KV.h0=h.textContent; h.textContent='Полёт с вопросами'; } kvStep(); };
-K.flyStop=function(L){ if(!KV||!KV.s) return; KV.s=null; hush(); kvNextBtn(false); kvHud(''); var h=document.querySelector('#fh b'); if(h&&KV.h0) h.textContent=KV.h0; gateText(['','',''],null); tvDraw({head:'ШКОЛА FPV',title:'Отдохни и возвращайся',text:'Выбери задание слева или нажми "Лететь отвечать".'}); try{ E.refresh(); }catch(e){} kvList(); if(KV.after){ var a=KV.after; KV.after=null; setTimeout(a,900); } };
+K.flyStop=function(L){ if(!KV||!KV.s) return; KV.s=null; hush(); kvNextBtn(false); kvHud(''); var h=document.querySelector('#fh b'); if(h&&KV.h0) h.textContent=KV.h0; gateText(['','',''],null); tvDraw({head:KV.name,title:'Отдохни и возвращайся',text:'Выбери задание слева или нажми "Лететь отвечать".'}); try{ E.refresh(); }catch(e){} kvList(); if(KV.after){ var a=KV.after; KV.after=null; setTimeout(a,900); } };
 /* следующий шаг задания */
 function kvStep(){ var s=KV.s; if(!s) return; var T0=E.K.lib[s.tid], n=modTasks().indexOf(s.tid)+1; s.i++; while(s.i<T0.steps.length&&stepDone(s.tid,s.i)&&!s.again) s.i++;
   if(s.i>=T0.steps.length){ kvTaskEnd(); return; } var st=T0.steps[s.i], lv=lvl(KV.L.mid); s.head='ЗАДАНИЕ '+n+' · '+T0.t; s.st=st; s.q=null; s.armed=false; s.wait=false; kvNextBtn(false);
@@ -293,20 +313,24 @@ function kvStep(){ var s=KV.s; if(!s) return; var T0=E.K.lib[s.tid], n=modTasks(
 function kvCard(){ var s=KV.s, cs=s.st.cards, cd=cs[s.c], lv=lvl(KV.L.mid), p=lvT(cd.p,lv); s.wait=true; tvDraw({head:s.head,right:'Материал '+(s.c+1)+' из '+cs.length,title:cd.h,text:p,foot:'Послушай. Дальше - кнопка "Дальше" или Enter. Пока можно полетать'}); kvHud('Материал '+(s.c+1)+' из '+cs.length); kvNextBtn(true,s.c<cs.length-1?'Дальше ▶':'Понятно, к вопросам ▶'); var c0=s.c, tid=s.tid; say(cd.h+'. '+p,function(){}); }
 function kvKey(){ var s=KV&&KV.s; if(!s) return; if(s.ph==='cards'){ hush(); s.c++; if(s.c>=s.st.cards.length){ E.I.step(s.tid,s.i,{}); kvStep(); } else kvCard(); } else if(s.ph==='end'&&s.nextT){ var t=s.nextT; KV.s={tid:t,i:-1,ph:''}; kvStep(); } }
 function kvAsk(){ var s=KV.s; if(!s) return; if(!s.items.length){ E.I.step(s.tid,s.i,{lv:lvl(KV.L.mid)}); beep(true); kvStep(); return; } var q=s.items[0]; s.q=q; s.armed=false; s.ready=true; kvHud((s.ph==='sort'?'Тренажёр ':'Вопрос ')+(s.n-s.items.length+1)+' из '+s.n);
-  tvDraw({head:s.head,right:(s.ph==='sort'?'Тренажёр ':'Вопрос ')+(s.n-s.items.length+1)+' из '+s.n,title:s.ph==='sort'?(s.st.h||'Куда это?'):'',text:q.q,foot:'Лети в ворота с правильным ответом'}); gateText(q.o.map(function(o){ return o?o.a:''; }),q.o.map(function(o){ return o?null:'off'; }));
-  var txt=q.q+' '+q.o.map(function(o,k){ return o?'Ворота '+LET[k]+': '+o.a.replace(/^[^\wа-яё]+/i,'')+'.':''; }).join(' '); hush(); say(txt,function(){}); }
+  tvDraw({head:s.head,right:(s.ph==='sort'?'Тренажёр ':'Вопрос ')+(s.n-s.items.length+1)+' из '+s.n,title:s.ph==='sort'?(s.st.h||'Куда это?'):'',text:q.q,foot:KV.W.foot}); gateText(q.o.map(function(o){ return o?o.a:''; }),q.o.map(function(o){ return o?null:'off'; }));
+  var txt=q.q+' '+q.o.map(function(o,k){ return o?KV.W.nm+LET[k]+': '+o.a.replace(/^[^\wа-яё]+/i,'')+'.':''; }).join(' '); hush(); say(txt,function(){}); }
 function kvAnswer(k){ var s=KV.s, q=s.q, o=q.o[k]; if(!o) return; hush(); s.armed=false; s.ready=false; s.back=true; var g=KV.gates[k], st=q.o.map(function(x,j){ return !x?'off':x.ok?'ok':j===k?'bad':null; });
+  var tm=''; if(KV.mode==='race'&&s.t0){ var sec=(performance.now()-s.t0)/1000+(o.ok?0:5); s.time=(s.time||0)+sec; s.t0=null; tm=' Время: '+sec.toFixed(1).replace('.',',')+' с'+(o.ok?'.':' (штраф 5 с).'); }
   g.fx=1.4; g.fc=o.ok?'#39ff8a':'#ff4d4d'; beep(o.ok); gateText(q.o.map(function(x){ return x?x.a:''; }),st); s.items.shift();
-  if(o.ok){ s.ok++; tvDraw({head:s.head,col:'#39ff8a',title:'Верно!',text:q.e||'Так держать.',foot:'Развернись и вернись за линию старта',footCol:'#b9ffd6'}); say('Верно! '+(q.e||''),function(){}); }
-  else { q.tr++; s.items.push(q); q.o=q.sort?q.o:shuf(q.o); tvDraw({head:s.head,col:'#ff6b6b',title:'Не так',text:q.e||'Правильные ворота горят зелёным.',foot:'Развернись и вернись за линию старта - вопрос будет ещё раз',footCol:'#ffd0d0'}); say('Не так. '+(q.e||''),function(){}); } }
+  if(o.ok){ s.ok++; tvDraw({head:s.head,col:'#39ff8a',title:'Верно!',text:(q.e||'Так держать.')+tm,foot:KV.W.back,footCol:'#b9ffd6'}); say('Верно! '+(q.e||''),function(){}); }
+  else { q.tr++; s.items.push(q); q.o=q.sort?q.o:shuf(q.o); tvDraw({head:s.head,col:'#ff6b6b',title:'Не так',text:(q.e||'Правильный ответ горит зелёным.')+tm,foot:KV.W.back+' - вопрос будет ещё раз',footCol:'#ffd0d0'}); say('Не так. '+(q.e||''),function(){}); } }
 function kvTaskEnd(){ var s=KV.s, ts=modTasks(), nx=null; try{ E.refresh(); }catch(e){} kvList(); for(var i=0;i<ts.length;i++) if(!taskDone(ts[i])&&ts[i]!==s.tid){ nx=ts[i]; break; } s.ph='end'; s.nextT=nx; gateText(['','',''],null); beep(true);
-  var dn=taskDone(s.tid); tvDraw({head:s.head,col:'#ffd36e',title:dn?'Задание пройдено! ★':'Шаг пройден',text:nx?'Следующее: '+E.K.lib[nx].t:'Все задания модуля пройдены. Ты молодец!',foot:nx?'Кнопка "Следующее задание" или Enter':'Esc - выйти из полёта'}); kvHud(dn?'Задание пройдено':''); kvNextBtn(!!nx,'Следующее задание ▶'); say(dn?'Задание пройдено! Отлично.':'Шаг пройден.',function(){}); }
+  var rc=''; if(KV.mode==='race'&&s.time){ var bk='kursy_fpv_krug_'+s.tid, best=0; try{ best=+localStorage.getItem(bk)||0; if(!best||s.time<best){ localStorage.setItem(bk,String(s.time)); rc=' Новый рекорд!'; } }catch(e){} rc='Твоё время: '+s.time.toFixed(1).replace('.',',')+' с.'+(best&&!rc?' Рекорд: '+best.toFixed(1).replace('.',',')+' с.':rc)+' '; }
+  var dn=taskDone(s.tid); tvDraw({head:s.head,col:'#ffd36e',title:dn?'Задание пройдено! ★':'Шаг пройден',text:rc+(nx?'Следующее: '+E.K.lib[nx].t:'Все задания модуля пройдены. Ты молодец!'),foot:nx?'Кнопка "Следующее задание" или Enter':'Esc - выйти из полёта'}); kvHud(dn?'Задание пройдено':''); kvNextBtn(!!nx,'Следующее задание ▶'); say(dn?'Задание пройдено! Отлично.':'Шаг пройден.',function(){}); }
 /* каждый кадр полёта: пересёк ли дрон ворота, вернулся ли за линию */
 K.flyStep=function(L,f,dt){ var s=KV&&KV.s; if(!s||L!==KV.L) return; var z=f.p.z, z0=s.z0==null?z:s.z0; s.z0=z;
   if(s.ph!=='quiz'&&s.ph!=='sort') return;
   if(s.back){ if(z>LINE){ s.back=false; kvAsk(); } return; }
+  if(KV.mode==='land'){ if(!s.ready) return; var yl=f.p.y-PY, hp=-1; for(var k2=0;k2<3;k2++) if(Math.hypot(f.p.x-GX[k2],z-GZ)<PR) hp=k2; if(hp>=0&&yl<.8&&f.v.length()<3){ s.lt=(s.lt||0)+dt; if(s.lt>.35){ s.lt=0; if(s.q.o[hp]) kvAnswer(hp); } } else s.lt=0; return; }
+  if(KV.mode==='race'){ if(s.ready&&!s.t0&&z0>KV.SZ&&z<=KV.SZ) s.t0=performance.now(); if(s.t0&&s.ready){ s.hud=(s.hud||0)+dt; if(s.hud>.1){ s.hud=0; kvHud('Время: '+((performance.now()-s.t0)/1000).toFixed(1).replace('.',',')+' с'); } } }
   if(s.ready&&!s.armed&&z>GZ+3) s.armed=true;
-  if(s.armed&&z0>GZ&&z<=GZ){ var y=f.p.y-PY, hit=-1; for(var k=0;k<3;k++) if(Math.abs(f.p.x-GX[k])<GW/2+.2&&y<GH+.6) hit=k; if(hit>=0&&s.q.o[hit]) kvAnswer(hit); else { s.armed=false; s.back=true; tvDraw({head:s.head,col:'#ffd36e',title:'Мимо ворот',text:s.q.q,foot:'Вернись за линию старта и попробуй ещё раз'}); } } };
+  if(s.armed&&z0>GZ&&z<=GZ){ var y=f.p.y-PY, hit=-1; for(var k=0;k<3;k++) if(Math.abs(f.p.x-GX[k])<GW/2+.2&&y<GH+.6) hit=k; if(hit>=0&&s.q.o[hit]) kvAnswer(hit); else { s.armed=false; s.back=true; s.t0=null; tvDraw({head:s.head,col:'#ffd36e',title:KV.W.miss,text:s.q.q,foot:KV.W.back+' и попробуй ещё раз'}); } } };
 
 /* ================= модуль 4: "Аэродром" ================= */
 function aero(L,G,c,B){ var AZ=-112, AR=40, zMin=B.zMin, i, a, dk=B.dark, wh=std(0xeef1f6,{r:.45,m:.15}), met=std(0x9aa3b5,{r:.3,m:.85});
@@ -364,8 +388,10 @@ function aero(L,G,c,B){ var AZ=-112, AR=40, zMin=B.zMin, i, a, dk=B.dark, wh=std
     M(g,box(4.3,1.7,.5),dk,0,1.45,0); var p=new T.Mesh(new T.PlaneGeometry(4,1.4),new T.MeshBasicMaterial({map:tx,toneMapped:false})); p.position.set(0,1.45,.26); g.add(p); [-1.4,1.4].forEach(function(lx){ M(g,box(.2,.6,.2),dk,lx,.3,0); }); }
   tsign('A →',16,-58,-.35,0); tsign('04-22',RX-RWd/2-5,AZ+6,-Math.PI/2,1); tsign('← B',-48,AZ+7,Math.PI/2,0); tsign('H',30,-70,-.9,0); tsign('04',RX-RWd/2-4,rz0-12,-Math.PI/2+.3,1);
   /* ворота и флажки на поле для своего полёта */
-  L.aerGates=[]; flyGate(L,-12,4,AZ-8,.5,.0); flyGate(L,12,5.5,AZ+6,-.9,.22); flyGate(L,0,7,AZ+16,0,.44); flyGate(L,-6,4.5,AZ-18,1.2,.66);
+  L.aerGates=[]; if(!PROBA){
+  flyGate(L,-12,4,AZ-8,.5,.0); flyGate(L,12,5.5,AZ+6,-.9,.22); flyGate(L,0,7,AZ+16,0,.44); flyGate(L,-6,4.5,AZ-18,1.2,.66);
   var fl=[]; [[-20,AZ+12],[20,AZ-14],[-18,AZ-20],[18,AZ+18]].forEach(function(q){ fl.push([q[0],2.6,q[1]]); }); inst(G,cyl(.07,.09,5.2,6),met,fl); fl.forEach(function(p,k){ var f=new T.Mesh(new T.PlaneGeometry(1,3.6),new T.MeshBasicMaterial({color:['#ff8fd8','#ffd36e','#7cf3ff','#9dff7c'][k],side:T.DoubleSide,toneMapped:false})); f.position.set(p[0]+.55,3.3,p[2]); G.add(f); L.tick.push(function(t){ f.rotation.y=Math.sin(t*2.2+k)*.35; }); });
+  }
   L.freeP=new T.Vector3(0,PY+1.2,AZ+20);
   windsock(L,G,22,-46);
   /* зарядная станция */
@@ -376,6 +402,7 @@ function aero(L,G,c,B){ var AZ=-112, AR=40, zMin=B.zMin, i, a, dk=B.dark, wh=std
   ['01-selo-sverhu','05-zakat','07-hram'].forEach(function(f,k){ photo(G,f,-28+k*20-(k===0?10:0)+(k===2?10:0),zMin+7,0,c); });
   photo(G,'08-gorodok',-82,-10,Math.PI/2,c); photo(G,'02-spektr',-82,12,Math.PI/2,c);
   L.aer=1;
+  if(PROBA) arenaKviz(L,G,c,B,{mode:'land',GZ:AZ,GX:[-21,0,21],LINE:-74,start:[0,-56],TZ:-174,TW:56,TY:32,name:'ДИСПЕТЧЕР',col:'#8fd3ff'});
 }
 
 /* ================= модуль 6: "Арена аса" ================= */
@@ -431,9 +458,10 @@ function arena(L,G,c,B){ var zMin=B.zMin, i, dk=std(0x14121f,{r:.3,m:.8}), carbo
   [[-60,22],[60,22]].forEach(function(q,k){ var bx=new T.Group(); bx.position.set(q[0],0,q[1]); G.add(bx); M(bx,rr(22,.4,11,.5),carbon,0,6.5,0); M(bx,box(22.2,.12,11.2),neon(COL[k?2:0]),0,6.46,0); [[-10,-4.5],[10,-4.5],[-10,4.5],[10,4.5]].forEach(function(p){ M(bx,cyl(.22,.22,6.5,8),carbon,p[0],3.25,p[1]); });
     [-6,0,6].forEach(function(x,j){ M(bx,rr(4.4,2.2,2,.3),std(0x2a2740,{r:.4,m:.6}),x,0,-2.5); var d=drone(COL[(j+k)%3],2); d.position.set(x,2.3,-2.5); d.rotation.y=j; bx.add(d); }); sign(bx,k?'БОКС 2':'БОКС 1',{w:7,h:1.7,x:0,y:7.9,z:5.5,col:COL[k?2:0]}); });
   /* ворота для своего полёта у старта */
-  L.aerGates=[]; flyGate(L,-14,5,-40,.6,.86); flyGate(L,14,7,-62,-.5,.13); flyGate(L,-6,9,-92,.2,.52); flyGate(L,10,5,-118,-.9,.75);
+  L.aerGates=[]; if(!PROBA){ flyGate(L,-14,5,-40,.6,.86); flyGate(L,14,7,-62,-.5,.13); flyGate(L,-6,9,-92,.2,.52); flyGate(L,10,5,-118,-.9,.75); }
   L.freeP=new T.Vector3(0,PY+1.2,6);
   photo(G,'05-zakat',-30,zMin+7,0,c); photo(G,'07-hram',10,zMin+7,0,c);
+  if(PROBA) arenaKviz(L,G,c,B,{mode:'race',GZ:-124,LINE:-34,SZ:-43,start:[0,-14],TZ:-182,TW:64,TY:34,name:'АРЕНА АСА',col:'#ff3dc8'});
 }
 /* ---------- вход из движка ---------- */
 K.build=function(e,L,i,pts,c){ E=e; PY=e.PY; mob=e.mob; var kd=KIND[i]; if(!kd) return; var zMin=Math.min.apply(0,pts.map(function(q){ return q[1]; }))-55;

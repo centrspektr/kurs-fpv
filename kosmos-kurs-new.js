@@ -689,7 +689,7 @@ mods.forEach(function(m,i){ var c=MC[i%MC.length], T=THEME[i%THEME.length], open
   L=mkLevel(m.id,{mid:m.id,mi:i,open:open,pz:-80,name:'Модуль '+m.n+'. '+m.t,mix:0,c:c,loc:1,me:V(0,PY+2,0),fog:new THREE.Fog(open?new THREE.Color('#0a0d24').lerp(new THREE.Color(c),.08):new THREE.Color(T.sky[0]).lerp(new THREE.Color(c),.12),open?260:90,open?1700:420)});
   var pts=[[0,-28]]; m.tasks.forEach(function(tid,k){ if(i===AER_I){ var a=(k+.5)/m.tasks.length*Math.PI*2; pts.push([-Math.sin(a)*AER_R,AER_Z+Math.cos(a)*AER_R]); } else pts.push(KRY&&open&&KRY.pt(i,k)||[Math.sin(k*1.25+.6)*20,-58-k*30]); }); L.pts=pts; /* модуль 4 (9.11): задания по кругу рулёжки аэродрома, в центре лётное поле */
   var gt=tex(T.gr,256); gt.wrapS=gt.wrapT=THREE.RepeatWrapping;
-  var KR=open&&KRY&&KRY.kind(i), KZ=KR==='shkola'; L.kviz=KZ; /* модуль 1 (12.11): вместо дорожки экранов - большой экран и ворота с ответами, см. kryshi-new.js */
+  var KR=open&&KRY&&KRY.kind(i), KZ=!!KR&&(KRY.kviz?KRY.kviz(i):KR==='shkola'); L.kviz=KZ; /* модуль 1 (12.11): вместо дорожки экранов - большой экран и ворота с ответами, см. kryshi-new.js */
   if(open){ roof(L,pts,c,gt,T,i,KR); cityRoof(LK.by[m.id],pts,T); } /* открытый модуль: мы на крыше здания модуля, вокруг космос, внизу город */
   else { gt.repeat.set(36,36); L.g.add(skyDome(T));
     var gr=new THREE.Mesh(new THREE.PlaneGeometry(700,700),new LM({map:gt,emissive:0xffffff,emissiveMap:gt,emissiveIntensity:T.day?.55:.35})); gr.rotation.x=-Math.PI/2; gr.position.set(0,PY-.02,-120); L.g.add(gr); }
