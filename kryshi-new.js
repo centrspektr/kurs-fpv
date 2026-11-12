@@ -73,8 +73,8 @@ K.floor=function(i,len){ var kd=KIND[i], md=MOOD[kd], t, n=null, an=E.R.capabili
 /* путь заданий: у арены аса - широкая змейка трассы, у школы и аэродрома - как в движке */
 K.pt=function(i,k){ if(KIND[i]==='arena') return [Math.sin(k*.95+.5)*34,-58-k*26]; return null; };
 K.kind=function(i){ return KIND[i]; };
-/* проба 13.11: модули 4 и 6 тоже с экраном и ответами (посадка на площадку, гонка на время) - пока только на new.html */
-var PROBA=/new\.html/.test(location.pathname)||/[?&]proba\b/.test(location.search);
+/* 13.11: модули 4 и 6 тоже с экраном и ответами (посадка на площадку, гонка на время) */
+var PROBA=!/[?&]kviz=0\b/.test(location.search); /* с 13.11 по "ставь" включено везде; ?kviz=0 - прежние дорожки в модулях 4 и 6 */
 K.kviz=function(i){ return KIND[i]==='shkola'||(PROBA&&!!KIND[i]); };
 /* лента дороги: у каждой крыши своя */
 function roadTex(kd){ var t=ctex(function(x,w,h){
