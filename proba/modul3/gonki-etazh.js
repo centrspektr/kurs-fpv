@@ -90,7 +90,7 @@ function autoQ() { var mob = matchMedia('(pointer:coarse)').matches || Math.min(
 var QUAL = (/[?&]q=(high|mid|low)/.exec(location.search) || [])[1] || lsG('kursy_grafika') || autoQ();
 var G = INTER.create({ renderer: R.renderer, scene: sc, camera: R.camera, style: STYLE, accent: STYLE === 'B' ? PK : STYLE === 'A' ? '#e0409a' : A, quality: QUAL, tex: 'tex/' }), GS = G.S;
 window.AKB_G = G;
-var FPRB = (function () { try { return /(new|g)\.html$/.test(parent.location.pathname) || /[?&](new|g)\b/.test(location.search); } catch (e) { return false; } })(), fpsL = 0; /* 12.11: в пробе графика легчает уже при 40 кадрах (сначала резкость), чтобы поворот был плавным */
+var FPRB = (function () { try { return /\/((new|g|index)\.html)?$/.test(parent.location.pathname) || /[?&](new|g)\b/.test(location.search); } catch (e) { return false; } })(), fpsL = 0; /* 12.11: в пробе графика легчает уже при 40 кадрах (сначала резкость), чтобы поворот был плавным */
 var fpsN = 0, fpsT = 0, fpsWait = /[?&]q=/.test(location.search) ? 1e9 : 4;
 R.renderFn = function (dt) { G.render(dt); if (fpsWait > 0) { fpsWait -= dt; return; } fpsN++; fpsT += dt;
   if (fpsN >= 70) { if (fpsT / fpsN > (FPRB ? (fpsL ? 1 / 26 : 1 / 40) : 1 / 21) && document.visibilityState === 'visible') { fpsL++; var st = G.lower(); if (st === 2) lsS('kursy_grafika', 'low'); fpsWait = 3; } fpsN = 0; fpsT = 0; } };

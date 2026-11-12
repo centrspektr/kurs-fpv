@@ -169,7 +169,7 @@ function create(o) {
     if (e.code === 'Space') { e.preventDefault(); if (jy <= 0) jv = 3.6; }
     if ((e.code === 'Enter' || e.code === 'NumpadEnter' || e.code === 'KeyE') && !e.repeat) { e.preventDefault(); interact(); } });
   addEventListener('keyup', function (e) { keys[e.code] = 0; });
-  var FPSP = false; try { FPSP = /[?&]new\b/.test(location.search) || (parent !== window && /\/(new|g)\.html$/.test(parent.location.pathname)); } catch (e) {}
+  var FPSP = false; try { FPSP = /[?&]new\b/.test(location.search) || (parent !== window && /\/((new|g|index)\.html)?$/.test(parent.location.pathname)); } catch (e) {}
   function canWalk() { return R.mode === 'walk' && !(R.busy && R.busy()); }
   var FU = FPSP && window.FPSUPR ? FPSUPR.create({ canvas: cv, root: document.body, walk: canWalk, lockOk: canWalk, act: function () { interact(); }, jump: function () { if (jy <= 0) jv = 3.6; },
     look: function (dx, dy) { yaw += dx; pitch = Math.max(-1.2, Math.min(1.0, pitch + dy)); turn = null; } }) : null;
