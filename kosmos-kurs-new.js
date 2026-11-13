@@ -295,7 +295,7 @@ function m5var(o,V5,M,w,add,R){ var c=new THREE.Color(o.c), dark=new THREE.MeshS
     var tr=add(new THREE.TorusGeometry(R*.6,.1,8,64),neon('#3de8ff'),0,5,0); tr.rotation.x=Math.PI/2; tr.scale.set(1.2,.75,1);
     for(var g=0;g<4;g++){ var an=g*Math.PI/2+.5; ring(.9,.1,COL[g],Math.cos(an)*R*.72,5.9,Math.sin(an)*R*.45,-an); }
     ring(1.7,.16,'#ffd23d',0,2.7,R*1.1,0); add(rBox(2.6,.5,2.9,.1,.05),new THREE.MeshStandardMaterial({color:0x05060c,roughness:.3}),0,1,R*1.06);
-    vyv('FPV-ГОНКИ',R*1.1,0,5.3,R*1.1,0); }
+    vyv('FPV-ГОНКИ',R*.72,0,5.75,R*1.02,0); [-1,1].forEach(function(sx){ add(new THREE.CylinderGeometry(.06,.06,.9,8),M.steel,sx*R*.3,5.1,R*1.0); }); }
   else if(V5==='b'){ /* открытая трасса: тёмная чаша с цветными трибунами, петля трассы с неоном, стартовая арка в клетку, шесть ворот разной формы */
     add(lathe([[R*.84,0],[R*.88,0],[R*1.04,2.9],[R*1.1,3.3],[R*1.14,3.3],[R*1.14,0],[R*.84,0]],64),dark,0,1,0);
     [0,1,2].forEach(function(j){ var st=add(lathe([[R*(.89+j*.05),.15+j*.9],[R*(.93+j*.05),.95+j*.9]],64),new THREE.MeshStandardMaterial({color:[0x3b4cc0,0x8a3fc0,0xc03f7a][j],roughness:.6,side:THREE.DoubleSide}),0,1.02,0); });
@@ -369,7 +369,7 @@ var NB={
     add(new THREE.TubeGeometry(new THREE.QuadraticBezierCurve3(a,mid,b),24,.13,8,false),cab[i%2],0,0,0); } },
  5:function(o){ /* стадион: гладкая чаша трибун, поле, ворота-кольца, мачты со светом */
   var M=nbm(), w=o.w, add=o.add, R=w*1.65;
-  var V5=(/[?&]m5=([abv])/.exec(location.search)||[])[1]; if(V5){ m5var(o,V5,M,w,add,R); return; } /* 13.11: варианты здания модуля 5 для выбора: ?m5=a, b, v */
+  var V5=(/[?&]m5=([abv0])/.exec(location.search)||[])[1]||'a'; if(V5!=='0'){ m5var(o,V5,M,w,add,R); return; } /* 13.11: Alexandr выбрал вариант А (клуб под куполом); ?m5=b, v - другие варианты, ?m5=0 - прежний стадион */
   add(lathe([[R*.86,0],[R*.9,0],[R*1.02,2.6],[R*1.06,3.1],[R*1.1,3.1],[R*1.1,0],[R*.86,0]],64),new THREE.MeshStandardMaterial({color:0xdfe3f2,metalness:.3,roughness:.35,side:THREE.DoubleSide}),0,1,0);
   var seats=new THREE.MeshStandardMaterial({color:0x2c3466,roughness:.6,side:THREE.DoubleSide}); add(lathe([[R*.9,.05],[R*1.02,2.62]],64),seats,0,1.01,0);
   var nm=o.mat(new THREE.MeshStandardMaterial({color:0x101322,emissive:o.c,emissiveIntensity:1.5,toneMapped:false})); var rim=add(new THREE.TorusGeometry(R*1.08,.09,8,96),nm,0,4.15,0); rim.rotation.x=Math.PI/2;
