@@ -29,7 +29,9 @@ function create(o) {
   document.addEventListener('pointerlockchange', function () { document.body.classList.toggle('fps-lock', U.locked()); });
   /* мышь в захвате: поворот как в игре */
   if (!o.noMouse) addEventListener('mousemove', function (e) { if (!o.walk() || TOUCH) return; if (!U.locked() && (e.buttons || e.target !== cv)) return; var mx = e.movementX || 0, my = e.movementY || 0;
-    if (Math.abs(mx) > 250 || Math.abs(my) > 250) return; /* браузер иногда присылает ложный рывок */ o.look(-mx * .0022, -my * .0022); });
+    if (Math.abs(mx) > 250 || Math.abs(my) > 250) return; /* браузер иногда присылает ложный рывок */ U.ax -= mx * .0022; U.ay -= my * .0022; });
+  /* 13.11: тачпад присылает движение неровно - копим и отдаём камере плавно, по кадрам (без заиканий) */
+  U.ax = 0; U.ay = 0; var smT = 0; (function sm(t) { requestAnimationFrame(sm); var dt = smT ? Math.min(.1, (t - smT) / 1000) : .016; smT = t; if (Math.abs(U.ax) + Math.abs(U.ay) < 1e-5) { U.ax = U.ay = 0; return; } var k = 1 - Math.exp(-dt * 22), x = U.ax * k, y = U.ay * k; U.ax -= x; U.ay -= y; if (o.walk()) o.look(x, y); else U.ax = U.ay = 0; })(0);
   /* следим, чтобы захват снимался, когда открыто окно задания или нельзя ходить */
   setInterval(function () { var w = o.walk(); document.body.classList.toggle('fps-walk', !!w); if (!o.noMouse && (!w || (o.lockOk && !o.lockOk()))) U.unlock(); }, 200);
   if (TOUCH) {
