@@ -1,0 +1,30 @@
+# Курс FPV: своя публикация GitVerse Pages (13.11.2026, по "ставь" Alexandr).
+# Зачем: встроенная сборка Pages хранит копию сайта (артефакт 50-70 МБ) долго, и место под артефакты кончилось
+# ("maximum allowed artifact storage quota exceeded"). Здесь копия хранится 1 день.
+# Сайт статический (.nojekyll), поэтому Jekyll не нужен: публикуем файлы как есть.
+# Включается в GitVerse: Настройки -> Страницы -> Источник: публикация из workflow (вместо "Ветка").
+# Откат: Источник обратно "Ветка", main, / (root) - этот файл тогда можно удалить.
+name: Pages (хранение 1 день)
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Upload artifact
+        uses: gitverse/upload-pages-artifact@v1.0.0
+        with:
+          path: .
+          retention-days: 1
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy
+        uses: gitverse/deploy-pages@v1.0.0
