@@ -255,14 +255,16 @@ foto('01-selo-sverhu', 'Село Иртыш с высоты', 2.7, 2.02, W - .00
 
 /* ---------- голос: приветствие этажа и название комнаты при входе ---------- */
 var HELLO = 'Модуль третий. Аккумуляторная. Это этаж с восемью комнатами. В холле - большой экран с теорией и план этажа. Задания можно делать в любом порядке: заходи в любую комнату.';
+/* 13.11: голос говорит записью (mp3), а не голосом устройства - speechSynthesis.speaking тогда false, и приветствие повторялось на каждое нажатие клавиши */
+function talking() { var g = window.GOLOS; return !!(g && (g.zt || g.sp || g.au)) || !!(window.speechSynthesis && speechSynthesis.speaking); }
 var heard = {}, helloDone = false;
 function sayOk() { return window.GOLOS && GOLOS.on && GOLOS.can && GOLOS.can() && !lect.on; }
-function hello() { if (helloDone || !sayOk()) return; helloDone = true; GOLOS.say(HELLO); setTimeout(function () { if (!window.speechSynthesis || !speechSynthesis.speaking) helloDone = false; }, 900); }
+function hello() { if (helloDone || !sayOk()) return; helloDone = true; GOLOS.say(HELLO); setTimeout(function () { if (!talking()) helloDone = false; }, 900); }
 /* браузер разрешает голос только после нажатия: пробуем сразу, а если молчит - при первом касании или клавише */
 setTimeout(hello, 1200);
 ['pointerdown', 'keydown', 'touchstart'].forEach(function (ev) { addEventListener(ev, function () { if (!helloDone) hello(); }, { passive: true }); });
 /* 10.11: название комнаты не обрывает приветствие на полуслове - ждёт, пока голос договорит (если ученик ещё в комнате) */
-R.frame(function () { var r = roomById(curReg); if (!r || heard[r.id] || !sayOk() || (helloDone && window.speechSynthesis && speechSynthesis.speaking)) return; heard[r.id] = true; helloDone = true;
+R.frame(function () { var r = roomById(curReg); if (!r || heard[r.id] || !sayOk() || (helloDone && talking())) return; heard[r.id] = true; helloDone = true;
   GOLOS.say('Комната ' + r.no + '. ' + r.n + '. ' + (r.tasks.length > 1 ? r.tasks.length + ' задания.' : 'Одно задание.')); });
 
 /* ---------- терминал задания (стойка с экраном) ---------- */

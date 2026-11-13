@@ -153,8 +153,8 @@ function make(cfg) {
     var sc = key.shadow.camera; sc.left = -W / 2 - 2; sc.right = W / 2 + 2; sc.top = D / 2 + 2; sc.bottom = -D / 2 - 2; sc.far = 40; key.shadow.bias = -.0005; S.add(key);
     [[-W / 3.4, -D / 5], [W / 3.4, -D / 5], [0, D / 4]].forEach(function (p) { var l = new T.PointLight('#c7d2ff', .45, 16, 2); l.position.set(p[0], H - .6, p[1]); S.add(l); });
     block(0, -D / 2 - 1, W, 1); block(0, D / 2 + 1, W, 1); block(-W / 2 - 1, 0, 1, D); block(W / 2 + 1, 0, 1, D);
-    /* пылинки в свете */
-    if (!MOB) { var n = 260, g2 = new T.BufferGeometry(), P = new Float32Array(n * 3); for (i = 0; i < n; i++) { P[i * 3] = (Math.random() - .5) * W; P[i * 3 + 1] = Math.random() * H; P[i * 3 + 2] = (Math.random() - .5) * D; }
+    /* пылинки в свете - выключены 13.11: вблизи камеры точка выглядела белым квадратом, летящим вверх */
+    if (false) { var n = 260, g2 = new T.BufferGeometry(), P = new Float32Array(n * 3); for (i = 0; i < n; i++) { P[i * 3] = (Math.random() - .5) * W; P[i * 3 + 1] = Math.random() * H; P[i * 3 + 2] = (Math.random() - .5) * D; }
       g2.setAttribute('position', new T.BufferAttribute(P, 3)); var dust = new T.Points(g2, new T.PointsMaterial({ color: '#cfd8ff', size: .03, transparent: true, opacity: .45, depthWrite: false })); S.add(dust);
       TICK.push(function (t, dt) { for (var j = 0; j < n; j++) { P[j * 3 + 1] += dt * .05; if (P[j * 3 + 1] > H) P[j * 3 + 1] = 0; P[j * 3] += Math.sin(t * .3 + j) * dt * .02; } g2.attributes.position.needsUpdate = true; }); }
   }
