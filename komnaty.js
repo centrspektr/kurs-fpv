@@ -19,7 +19,8 @@ function open(mid, ready) {
   try { history.pushState({ komnata: mid }, ''); } catch (e) {}
   return true;
 }
-function close(silent) { if (!ov) return; var o = ov; ov = null; cur = null;
+function close(silent) { if (!ov) return; var o = ov, m = cur; ov = null; cur = null;
+  if (!silent && window.KURS_KOMNATA_OUT) try { KURS_KOMNATA_OUT(m); } catch (e) {}
   try { var w = o.querySelector('iframe').contentWindow; if (w.GOLOS) w.GOLOS.stop(); } catch (e) {}
   o.classList.remove('on'); setTimeout(function () { o.remove(); }, silent ? 0 : 500);
   if (window.GOLOS && GOLOS.stop) try { GOLOS.stop(); } catch (e) {} }

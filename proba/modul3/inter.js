@@ -394,7 +394,7 @@ function create(o) {
     [-1, 1].forEach(function (k) { g.add(G.box(fw, hh + fw * 2, dep, M.frame, k * (len / 2 + fw / 2), 0, dep / 2 - .05)); });
     var n = Math.max(1, Math.round(len / 1.5)); for (var i = 1; i < n; i++) g.add(G.box(.045, hh, .06, M.frame, -len / 2 + i * len / n, 0, dep / 2));
     var gl = G.box(len, hh, .012, M.glass, 0, 0, dep / 2); gl.userData.noShadow = true; g.add(gl);
-    var sky = new T.Mesh(new T.PlaneGeometry(150, 60), new T.MeshBasicMaterial({ map: cityMap(), color: new T.Color(1.5, 1.5, 1.5), fog: false })); sky.position.set(0, 14, 46); sky.rotation.y = Math.PI; sky.userData.noShadow = true; g.add(sky);
+    var sky = new T.Mesh(new T.PlaneGeometry(150, 60), new T.MeshBasicMaterial({ map: cityMap(), color: new T.Color(1.5, 1.5, 1.5), fog: false })); sky.position.set(0, 14, 46); sky.rotation.y = Math.PI; sky.userData.noShadow = true; sky.userData.noMirror = true; g.add(sky); /* 13.11: без отражения - перевёрнутая копия неба вставала в то же окно, и при повороте здания мигали */
     G.add(g, { shadow: false }); return g; };
 
   /* ---------- большая цифра на стене у двери ---------- */

@@ -1100,6 +1100,8 @@ function modIn(n,col){ if(window.KURS_KOMNATY&&KURS_KOMNATY[n.mid]){ roomIn(n,co
 /* проба 09.11: открыть задание по id из комнаты-модуля (окно задания встаёт поверх комнаты) */
 window.KURS_OPEN_TASK=function(tid){ var mm=mods.find(function(m){ return m.tasks.indexOf(tid)>=0; }), L=mm&&LBY[mm.id]; if(!L) return false; if(L!==curL) setLevel(L);
   var n=L.by[tid]; if(!n) return false; if(winOn) closeWin(function(){}); openWin('task',n); return true; };
+/* 13.11: выход из модуля-помещения (m3, m5) - назад в город к зданию модуля, а не на старый уровень модуля под комнатой */
+window.KURS_KOMNATA_OUT=function(mid){ var n=LK.by[mid]; if(!n) return; if(winOn){ win.classList.remove('on'); winOn=false; } fly=null; refresh(); lvlStars(); setLevel(LK); var B=viewOf(n); camP.copy(B.p); camL.copy(B.l); hud.classList.add('on'); backB.classList.add('on'); arrive(n); };
 /* правка 22.10: после входа в модуль - пролёт над крышей (дорогой заданий) от старта до финиша, как с FPV-дрона, разворот и обратно к старту. Нажатие ускоряет */
 function roadTour(L){ if(red||!L.pts||L.kviz){ flyOver(L,true); return; }
   var P=L.pts.map(function(q){ return V(q[0],PY+5,q[1]); }); P.unshift(V(0,PY+5,6)); /* камера идёт выше зданий зон (fly.up) и смотрит на дорогу впереди */ var cv=new THREE.CatmullRomCurve3(P), e=P[P.length-1], tg=cv.getTangent(1).setY(0).normalize();

@@ -35,7 +35,8 @@ var VIEW = {
   stationUp: function () { return fit(V(20.6, 5.2, -9), V(-.56, .22, .83), 15, 11, 40); },
   check: function () { return fit(V(0, 2, 2), V(.45, .75, 1), 8.5, 7, 40, 1); },
   props: function () { return fit(V(0, 1, 6), V(0, 1, .5), 12.5, 12.5, 40, 1); },
-  done: function () { return fit(V(0, 7.5, 2), V(.3, .5, 1), 12, 10, 36); }
+  done: function () { return fit(V(0, 7.5, 2), V(.3, .5, 1), 12, 10, 36); },
+  launch: function () { return fit(V(3.5, 2, 5), V(.3, .62, 1), 14, 10.5, 38); }
 };
 
 /* ---------- цикл ---------- */
@@ -718,22 +719,45 @@ function lipoStep(cb) { var st = LIPO.userData.strap; go(function () { return fi
         var led = A.glow('#5effc4', 1.2, .95); led.position.copy(W(V(.9, 2.15, -1.2))); FX.add(led);
         say(K('Дрон пискнул - он <b>проснулся</b> и готов к полёту! Отходим подальше от пропеллеров.', 'Регуляторы пропищали мелодию, на полётнике загорелся огонёк - <b>всё работает</b>. Дрон на землю, сами отходим подальше от пропеллеров.'));
         setTimeout(function () { FX.remove(led); cb(); }, 2800); }); }; } }
+/* пульт (13.11): корпус, два стика, тумблер ARM со светодиодом, экранчик, антенна */
+function sayQ(t) { var x = $('#sayT'); if (x) x.innerHTML = t; speak(t); }
+function remote() { var g = new THREE.Group(), mb = A.M.wireK, mk = A.M.chip;
+  function bx(w, h, d, m, x, y, z, par) { var o = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m); o.position.set(x, y, z); o.castShadow = true; (par || g).add(o); return o; }
+  bx(7.2, 3.6, .9, mb, 0, 0, 0); bx(1.6, 4.2, 1.1, mb, -3.6, -.9, .1); bx(1.6, 4.2, 1.1, mb, 3.6, -.9, .1);
+  var scr = bx(2.2, 1.3, .1, new THREE.MeshBasicMaterial({ color: '#2b8cff' }), 0, .55, .48);
+  function stick(x) { [0, 1].forEach(function (k) { var r = new THREE.Mesh(new THREE.CylinderGeometry(.95, .95, .1, 24), mk); r.rotation.x = Math.PI / 2; r.position.set(x, -.5, .47); g.add(r); });
+    var piv = new THREE.Group(); piv.position.set(x, -.5, .5); g.add(piv); var st = new THREE.Mesh(new THREE.CylinderGeometry(.09, .09, 1.1, 10), mk); st.rotation.x = Math.PI / 2; st.position.z = .55; piv.add(st);
+    var cap = new THREE.Mesh(new THREE.CylinderGeometry(.28, .28, .3, 16), mb); cap.rotation.x = Math.PI / 2; cap.position.z = 1.1; piv.add(cap); return piv; }
+  var thr = stick(-2.1); stick(2.1); thr.rotation.x = .5;
+  var arm = new THREE.Group(); arm.position.set(-2.8, 1.8, .2); g.add(arm); var lev = new THREE.Mesh(new THREE.CylinderGeometry(.08, .08, .8, 8), new THREE.MeshStandardMaterial({ color: '#c9ced8', metalness: .8, roughness: .3 })); lev.position.y = .4; arm.add(lev); arm.rotation.x = .6;
+  var led = bx(.22, .22, .1, new THREE.MeshBasicMaterial({ color: '#ff3b3b' }), -2.0, 1.45, .48);
+  var ant = new THREE.Mesh(new THREE.CylinderGeometry(.12, .16, 2.4, 10), mk); ant.position.set(2.8, 2.9, -.1); ant.rotation.z = -.25; g.add(ant);
+  g.scale.setScalar(.72); g.userData = { thr: thr, arm: arm, led: led, scr: scr }; return g; }
 function done() { step = TOTAL; stage = 'done'; H = {}; clr(MK); clr(ARW); hintOff();
   PK.forEach(function (pk) { if (pk.state !== 'inst') pk.o.visible = false; });
   for (var j = 0; j < 4; j++) { P.motors[j] = motorAt[j]; P.props[j] = propAt[j]; }
-  A.G.visible = true; A.G.position.set(-9, 14, -5); go(VIEW.done, 1.6); spinOn = true;
-  tween(1.8, function (e) { D.position.y = e * 9; D.rotation.set(.08 * e, .5 * e, -.06 * e); }, function () {
-    D.updateMatrixWorld(true); propAt.forEach(function (p) { p.visible = false; }); SCR.children.forEach(function (s) { if (s.position.y > 2.6) s.visible = false; });
-    motorAt.forEach(function (m, i) { var w = V(0, 0, 0); m.localToWorld(w.set(0, 2.0, 0)); X.blur(w, i % 2 ? '#ff4fd8' : '#3ee6ff'); }); X.sparks(V(0, 10, 2), 40, 16); });
-  ticks.push(function (dt, t) { if (D.position.y > 8.9) D.position.y = 9 + Math.sin(t * 2.2) * .35; });
+  /* 13.11: без взлёта - как на самом деле: появляется пульт, тумблер ARM, плавно газ, и винты раскручиваются прямо на столе */
+  A.G.visible = true; A.G.position.set(-9, 14, -5); go(VIEW.launch, 1.6); spinOn = false; D.position.y = 0;
+  var RC = remote(); RC.position.set(11, -6, 10.5); RC.rotation.set(-.95, -.3, 0); S.add(RC);
+  var rpm = 0, tgt = 0, blurOn = false;
+  ticks.push(function (dt, t) { rpm += (tgt - rpm) * Math.min(1, dt * 1.6); if (rpm < .01) return;
+    propAt.forEach(function (p, j) { if (p) p.rotateY(dt * rpm * 60 * needDir(j)); });
+    motorAt.forEach(function (m, j) { var b = m && m.userData.bell; if (b) b.rotation.y += dt * rpm * 60 * needDir(j); });
+    D.position.y = rpm > .3 ? Math.sin(t * 90) * .012 * rpm : 0; /* лёгкая дрожь рамы от моторов */
+    if (rpm > .82 && !blurOn) { blurOn = true; D.updateMatrixWorld(true); propAt.forEach(function (p) { if (p) p.visible = false; });
+      motorAt.forEach(function (m, i) { if (!m) return; var w = V(0, 0, 0); m.localToWorld(w.set(0, 2.0, 0)); X.blur(w, i % 2 ? '#ff4fd8' : '#3ee6ff'); }); X.sparks(V(0, 4, 2), 30, 10); } });
+  tween(1.1, function (e) { RC.position.y = -6 + 8.4 * e; }, function () { sayQ('Включаем пульт.');
+    wait(1.2, function () { tween(.35, function (e) { RC.userData.arm.rotation.x = .6 - 1.2 * e; }, function () { RC.userData.led.material.color.set('#3dff7a'); SFX.beeps(); sayQ('Тумблер <b>ARM</b> - моторы на взводе.'); tgt = .12;
+      wait(1.6, function () { sayQ('Плавно добавляем газ.'); SFX.motor(3.4); tween(2.4, function (e) { RC.userData.thr.rotation.x = .5 - .9 * e; tgt = .12 + .9 * e; }, final); }); }); }); });
   var pts = Math.max(30, 100 - err * 4), best = +(localStorage.getItem('kursy_fpv_sborka') || 0); if (pts > best) localStorage.setItem('kursy_fpv_sborka', pts);
   ui.innerHTML = top('МАСТЕРСКАЯ', 'Сборка завершена') + '<div class="big"><b>ДРОН СОБРАН!</b><span>' + K('Ты собрал дрон: детали, винты, разъёмы и аккумулятор', 'Гоночный 3 дюйма · 14 паек · 30 винтов · 6 разъёмов') + '</span><br><div class="stats"><span>ошибок: ' + err + '</span><span style="color:#5effc4">+' + pts + ' "Сборка"</span></div></div>' +
     '<div class="bub glass end" id="say"><div id="sayT"></div></div><button class="next" id="again" title="Ещё раз">↻</button>';
-  say(err ? 'Дрон летает! Ошибок было: ' + err + '. Попробуй ещё раз без ошибок - очков будет больше.' : 'Без единой ошибки! <b>Ты собрал гоночный дрон</b> как настоящий техник.'); $('#again').onclick = function () { location.reload(); }; }
+  function final() { say(err ? 'Винты крутятся - дрон готов к полёту! Ошибок было: ' + err + '. Попробуй ещё раз без ошибок - очков будет больше.' : 'Без единой ошибки! <b>Ты собрал гоночный дрон</b> как настоящий техник.'); }
+  $('#again').onclick = function () { location.reload(); }; }
 
 intro(); requestAnimationFrame(loop);
 /* для проверки в браузере */
-window.SBG = { iron: function () { return IRON; }, A: A, PK: PK, byId: byId, scr: scr, W: W, DW: DW, MP: MP, openSlots: openSlots, padM: padM, PADV: PADV, GR: GR, heat: heat, SOCK: SOCK, SCR: SCR,
+window.SBG = { done: function () { done(); }, iron: function () { return IRON; }, A: A, PK: PK, byId: byId, scr: scr, W: W, DW: DW, MP: MP, openSlots: openSlots, padM: padM, PADV: PADV, GR: GR, heat: heat, SOCK: SOCK, SCR: SCR,
   scrl: function () { return SCRL; }, scrn: function () { return SCRN; }, conn: function () { return CONN; }, DW2: DW,
   st: function () { return { stage: stage, phase: phase, err: err, step: step, ready: !!H.down, cam: !!camTw, cur: cur && { st: cur.st, gi: gi, dragW: !!cur.dragW, freed: cur.freed } }; },
   jump: function (n) { /* только для проверки: сразу к этапу */

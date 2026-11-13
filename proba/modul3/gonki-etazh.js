@@ -219,12 +219,14 @@ foto('08-gorodok', 'Детский городок', 1.6, 1.2, 16, 1.65, cS, Math
 
 /* ---------- голос ---------- */
 var HELLO = 'Модуль пятый. Гонки. Это гоночный клуб: шесть боксов с заданиями и зал с трассой в конце коридора. Задания можно делать в любом порядке. В зале можно пролететь заезд на время.';
+/* 13.11: голос говорит записью (mp3), а не голосом устройства - speechSynthesis.speaking тогда false, и приветствие повторялось на каждое нажатие клавиши */
+function talking() { var g = window.GOLOS; return !!(g && (g.zt || g.sp || g.au)) || !!(window.speechSynthesis && speechSynthesis.speaking); }
 var heard = {}, helloDone = false;
 function sayOk() { return window.GOLOS && GOLOS.on && GOLOS.can && GOLOS.can() && !RC.on; }
-function hello() { if (helloDone || !sayOk()) return; helloDone = true; GOLOS.say(HELLO); setTimeout(function () { if (!window.speechSynthesis || !speechSynthesis.speaking) helloDone = false; }, 900); }
+function hello() { if (helloDone || !sayOk()) return; helloDone = true; GOLOS.say(HELLO); setTimeout(function () { if (!talking()) helloDone = false; }, 900); }
 setTimeout(hello, 1200);
 ['pointerdown', 'keydown', 'touchstart'].forEach(function (ev) { addEventListener(ev, function () { if (!helloDone) hello(); }, { passive: true }); });
-R.frame(function () { var r = roomById(curReg); if (!r || heard[r.id] || !sayOk() || (helloDone && window.speechSynthesis && speechSynthesis.speaking)) return; heard[r.id] = true; helloDone = true;
+R.frame(function () { var r = roomById(curReg); if (!r || heard[r.id] || !sayOk() || (helloDone && talking())) return; heard[r.id] = true; helloDone = true;
   GOLOS.say((r.zal ? '' : 'Бокс ' + r.no + '. ') + r.n + '. ' + (r.tasks.length > 1 ? r.tasks.length + ' задания.' : 'Одно задание.')); });
 
 /* ---------- стойка задания ---------- */
