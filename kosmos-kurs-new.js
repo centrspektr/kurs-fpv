@@ -280,6 +280,45 @@ var NBM=null; function nbm(){ if(NBM) return NBM; NBM={
   glass:new THREE.MeshPhysicalMaterial({color:0x1a2a55,metalness:.2,roughness:.05,clearcoat:1,clearcoatRoughness:.05,transparent:true,opacity:.82}),
   rubber:new THREE.MeshStandardMaterial({color:0x15161c,roughness:.7}),
   grass:new THREE.MeshStandardMaterial({color:0x1f6b3e,roughness:.85})}; return NBM; }
+/* 13.11: варианты здания модуля 5 "FPV-гонки" в городе (выбирает Alexandr): a - гоночный клуб под куполом, b - открытая трасса с трибунами, v - клуб с большим кольцом-въездом */
+function m5var(o,V5,M,w,add,R){ var c=new THREE.Color(o.c), dark=new THREE.MeshStandardMaterial({color:0x161a2e,metalness:.35,roughness:.4,side:THREE.DoubleSide});
+  function neon(col,k){ return o.mat(new THREE.MeshStandardMaterial({color:0x0b0e18,emissive:new THREE.Color(col||o.c),emissiveIntensity:k||1.6,toneMapped:false})); }
+  function ring(r,t,col,x,y,z,ry){ var g=add(new THREE.TorusGeometry(r,t,10,48),neon(col),x,y,z); g.rotation.y=ry||0; return g; }
+  function vyv(txt,wd,x,y,z,ry){ var m=add(new THREE.PlaneGeometry(wd,wd*.29),new THREE.MeshBasicMaterial({map:vyvTex('#'+new THREE.Color(o.c).getHexString(),txt),transparent:true,toneMapped:false,side:THREE.DoubleSide}),x,y,z); m.rotation.y=ry||0; return m; }
+  var COL=['#ff4fd8','#3de8ff','#ffd23d','#7dff6a'];
+  if(V5==='a'){ /* клуб под куполом: тёмный барабан с неоновыми поясами, стеклянный купол, внутри видна трасса, у входа кольцо */
+    add(lathe([[0,0],[R*1.05,0],[R*1.08,.3],[R*1.08,3.4],[R*1.02,3.9],[R*.96,3.9]],64),dark,0,1,0);
+    [1.1,2.2,3.3].forEach(function(y,j){ var t=add(new THREE.TorusGeometry(R*1.09,.07,8,96),neon(j===1?'#ffffff':o.c,j===1?1.1:1.7),0,1+y,0); t.rotation.x=Math.PI/2; });
+    var gl=new THREE.MeshPhysicalMaterial({color:0x8fb8ff,metalness:.1,roughness:.08,transparent:true,opacity:.28,side:THREE.DoubleSide,depthWrite:false}); var dome=add(new THREE.SphereGeometry(R*.98,48,20,0,Math.PI*2,0,Math.PI/2),gl,0,4.9,0); dome.scale.y=.42;
+    for(var k=0;k<8;k++){ var rb=add(new THREE.TorusGeometry(R*.98,.05,6,32,Math.PI),M.steel,0,4.9,0); rb.rotation.y=k*Math.PI/8; rb.scale.y=.42; }
+    var fl=add(new THREE.CircleGeometry(R*.96,64),new THREE.MeshStandardMaterial({color:0x0e1020,roughness:.5}),0,4.92,0); fl.rotation.x=-Math.PI/2;
+    var tr=add(new THREE.TorusGeometry(R*.6,.1,8,64),neon('#3de8ff'),0,5,0); tr.rotation.x=Math.PI/2; tr.scale.set(1.2,.75,1);
+    for(var g=0;g<4;g++){ var an=g*Math.PI/2+.5; ring(.9,.1,COL[g],Math.cos(an)*R*.72,5.9,Math.sin(an)*R*.45,-an); }
+    ring(1.7,.16,'#ffd23d',0,2.7,R*1.1,0); add(rBox(2.6,.5,2.9,.1,.05),new THREE.MeshStandardMaterial({color:0x05060c,roughness:.3}),0,1,R*1.06);
+    vyv('FPV-ГОНКИ',R*1.1,0,5.3,R*1.1,0); }
+  else if(V5==='b'){ /* открытая трасса: тёмная чаша с цветными трибунами, петля трассы с неоном, стартовая арка в клетку, шесть ворот разной формы */
+    add(lathe([[R*.84,0],[R*.88,0],[R*1.04,2.9],[R*1.1,3.3],[R*1.14,3.3],[R*1.14,0],[R*.84,0]],64),dark,0,1,0);
+    [0,1,2].forEach(function(j){ var st=add(lathe([[R*(.89+j*.05),.15+j*.9],[R*(.93+j*.05),.95+j*.9]],64),new THREE.MeshStandardMaterial({color:[0x3b4cc0,0x8a3fc0,0xc03f7a][j],roughness:.6,side:THREE.DoubleSide}),0,1.02,0); });
+    var rim=add(new THREE.TorusGeometry(R*1.12,.09,8,96),neon(),0,4.35,0); rim.rotation.x=Math.PI/2;
+    var fld=add(new THREE.CircleGeometry(R*.86,64),new THREE.MeshStandardMaterial({color:0x14182c,roughness:.7}),0,1.06,0); fld.rotation.x=-Math.PI/2;
+    var pts=[]; for(var i=0;i<=80;i++){ var a=i/80*Math.PI*2; pts.push(new THREE.Vector3(Math.sin(a)*R*.68,1.14,Math.sin(a*2)*R*.36+Math.cos(a)*R*.3)); }
+    add(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts,true),120,.11,6,true),neon('#3de8ff',1.4),0,0,0);
+    for(var g=0;g<6;g++){ var q=pts[Math.round(g*80/6)+4], q2=pts[Math.round(g*80/6)+6], ry=Math.atan2(q2.x-q.x,q2.z-q.z);
+      if(g%2) ring(1.05,.11,COL[g%4],q.x,2.6,q.z,ry); else { var sq=add(new THREE.TorusGeometry(1.25,.11,8,4),neon(COL[g%4]),q.x,2.6,q.z); sq.rotation.set(0,ry,Math.PI/4,'YXZ'); }
+      add(new THREE.CylinderGeometry(.07,.07,.5,8),M.steel,q.x,1.3,q.z); }
+    [-1,1].forEach(function(sx){ add(new THREE.CylinderGeometry(.14,.14,3.4,10),M.steel,sx*1.9,2.7,R*.3); });
+    add(new THREE.BoxGeometry(4.2,.8,.2),new THREE.MeshBasicMaterial({map:tex(function(x,w2,h2){ for(var i=0;i<16;i++) for(var j=0;j<3;j++){ x.fillStyle=(i+j)%2?'#fff':'#111'; x.fillRect(i*w2/16,j*h2/3,w2/16+1,h2/3+1); } },128,24),toneMapped:false}),0,4.5,R*.3);
+    vyv('FPV-ГОНКИ',R*.9,0,5.6,R*1.14,0); }
+  else { /* клуб с большим кольцом: низкий тёмный зал с неоновой кромкой, трасса вылетает из зала через три больших кольца над крышей */
+    add(rBox(R*2,R*1.5,3.2,.9),dark,0,1,0); add(rBox(R*2.06,R*1.56,.22,.9,.05),neon(o.c,1.5),0,4.15,0);
+    add(rBox(R*1.9,R*1.4,.12,.8,.04),new THREE.MeshStandardMaterial({color:0x0c0e1c,roughness:.5}),0,4.3,0);
+    var st2=neon('#ffffff',1); for(var k=0;k<7;k++) add(new THREE.BoxGeometry(.12,2.2,.06),st2,-R*.84+k*R*.28,2.4,R*.755);
+    [[-R*.5,2.2,'#ff4fd8'],[0,3.1,'#3de8ff'],[R*.5,2.2,'#ffd23d']].forEach(function(q){ ring(q[1],.17,q[2],q[0],4.3+q[1]*.75,0,Math.PI/2); });
+    var pp=[]; for(var i=0;i<=40;i++){ var u=i/40; pp.push(new THREE.Vector3(-R*1.1+u*R*2.2,4.6+Math.sin(u*Math.PI)*2.6+Math.sin(u*Math.PI*3)*.5,Math.sin(u*Math.PI*2)*.9)); }
+    add(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pp),80,.07,6,false),neon('#7dff6a',1.3),0,0,0);
+    add(rBox(2.8,.4,2.6,.1,.05),new THREE.MeshStandardMaterial({color:0x05060c,roughness:.3}),0,1,R*.74); add(rBox(3,.3,.14,.05,.03),neon('#ffd23d'),0,3.6,R*.76);
+    vyv('FPV-ГОНКИ',R*1.1,0,3.3,R*.76+.05,0); }
+}
 var NB={
  2:function(o){ /* мастерская: ангар с рёбрами, ворота-рулонка со светом, пристройка, кран, пропеллер на моторе */
   var M=nbm(), w=o.w, add=o.add, L=w*2.2, R=w*.95;
@@ -297,7 +336,7 @@ var NB={
   var gl=o.mat(new THREE.MeshStandardMaterial({color:0x0b0e18,emissive:o.c,emissiveIntensity:1.2,toneMapped:false})); add(rBox(dw+.5,.25,.3,.1,.05),gl,0,dh,.05,door);
   add(rBox(w*.9,w*1.1,w*.8,.35),M.white,w*1.25,1,-L*.15); add(rBox(w*.95,w*1.15,.18,.2,.05),M.dark,w*1.25,1+w*.8,-L*.15);
   var wins=o.mat(new THREE.MeshStandardMaterial({color:0x10131f,emissive:new THREE.Color('#ffe7b0'),emissiveIntensity:1.1,toneMapped:false,roughness:.2})); for(var j=0;j<2;j++) add(rBox(.08,.6,.45,.05,.02),wins,w*1.25+w*.45,1+w*.35,-L*.15-.4+j*.8);
-  var vs=add(new THREE.PlaneGeometry(w*.84,w*.245),new THREE.MeshBasicMaterial({map:vyvTex(o.c,'МАСТЕРСКАЯ'),transparent:true,toneMapped:false}),w*1.25,1+w*.62,-L*.15+w*.4+.06); /* 13.11: вывеска на пристройке */
+  var vs=add(new THREE.PlaneGeometry(w*.84,w*.245),new THREE.MeshBasicMaterial({map:vyvTex('#'+new THREE.Color(o.c).getHexString(),'МАСТЕРСКАЯ'),transparent:true,toneMapped:false}),w*1.25,1+w*.62,-L*.15+w*.4+.06); /* 13.11: вывеска на пристройке */
   /* 13.11: кран убран (Alexandr: "какая-то палка кружится, непонятно зачем") */
   /* 12.11: вместо шестерни - настоящий пропеллер дрона на моторе над воротами (Alexandr: "ворота с пропеллером реалистичнее") */
   var prop=new THREE.Group(); prop.position.set(0,1+R+1.5,L/2-.3); o.b.add(prop);
@@ -330,6 +369,7 @@ var NB={
     add(new THREE.TubeGeometry(new THREE.QuadraticBezierCurve3(a,mid,b),24,.13,8,false),cab[i%2],0,0,0); } },
  5:function(o){ /* стадион: гладкая чаша трибун, поле, ворота-кольца, мачты со светом */
   var M=nbm(), w=o.w, add=o.add, R=w*1.65;
+  var V5=(/[?&]m5=([abv])/.exec(location.search)||[])[1]; if(V5){ m5var(o,V5,M,w,add,R); return; } /* 13.11: варианты здания модуля 5 для выбора: ?m5=a, b, v */
   add(lathe([[R*.86,0],[R*.9,0],[R*1.02,2.6],[R*1.06,3.1],[R*1.1,3.1],[R*1.1,0],[R*.86,0]],64),new THREE.MeshStandardMaterial({color:0xdfe3f2,metalness:.3,roughness:.35,side:THREE.DoubleSide}),0,1,0);
   var seats=new THREE.MeshStandardMaterial({color:0x2c3466,roughness:.6,side:THREE.DoubleSide}); add(lathe([[R*.9,.05],[R*1.02,2.62]],64),seats,0,1.01,0);
   var nm=o.mat(new THREE.MeshStandardMaterial({color:0x101322,emissive:o.c,emissiveIntensity:1.5,toneMapped:false})); var rim=add(new THREE.TorusGeometry(R*1.08,.09,8,96),nm,0,4.15,0); rim.rotation.x=Math.PI/2;
