@@ -1346,7 +1346,7 @@ function freeStep(dt){ var f=FREE, b=freeBox(), gp=padIn(), k=function(c){ retur
   f.p.addScaledVector(f.v,dt); if(f.p.x<-b.x||f.p.x>b.x){ f.p.x=Math.max(-b.x,Math.min(b.x,f.p.x)); f.v.x*=-.3; } if(f.p.z>b.z0||f.p.z<b.z1){ f.p.z=Math.max(b.z1,Math.min(b.z0,f.p.z)); f.v.z*=-.3; }
   if(f.p.y<b.y0){ f.p.y=b.y0; if(f.v.y<0) f.v.y=0; f.v.x*=.9; f.v.z*=.9; } if(f.p.y>b.y1){ f.p.y=b.y1; f.v.y=Math.min(0,f.v.y); }
   f.tilt[0]+=(pit*.45-f.tilt[0])*Math.min(1,dt*6); f.tilt[1]+=(rol*.45-f.tilt[1])*Math.min(1,dt*6);
-  var g=f.d.g; g.position.copy(f.p); g.rotation.set(0,f.h,0); g.rotateX(f.tilt[0]); g.rotateZ(-f.tilt[1]);
+  var g=f.d.g; g.position.copy(f.p); g.rotation.set(0,f.h,0); g.rotateX(f.tilt[0]); g.rotateZ(f.tilt[1]); /* 13.11: крен в ту же сторону, куда летим */
   var spd=f.v.length(); for(var pj=1;pj<f.d.props.length;pj+=2) f.d.props[pj].rotation.y+=dt*(30+spd*2+thr*15); speed=spd*2;
   /* камера за дроном, чуть выше */
   var cp=V(f.p.x-fx*8,f.p.y+3,f.p.z-fz*8); camP.lerp(cp,Math.min(1,dt*4)); camL.lerp(V(f.p.x+fx*6,f.p.y+.6,f.p.z+fz*6),Math.min(1,dt*6)); yaw=0;
@@ -1361,10 +1361,10 @@ addEventListener('keydown',function(e){ if(st!=='free') return; fk[e.code]=1; if
 addEventListener('keyup',function(e){ fk[e.code]=0; });
 addEventListener('blur',function(){ fk={}; });
 /* экранные стики (телефон, планшет) */
-['fsL','fsR'].forEach(function(id){ var el=$(id); if(!el) return; var kn=el.firstElementChild, pid=null, o=null;
+['fsL','fsR'].forEach(function(id){ var el=$(id); if(!el) return; var kn=el.querySelector('i')||el.firstElementChild, pid=null, o=null; /* 13.11: двигаем сам кружок, а не подпись */
   var up=function(){ pid=null; kn.style.transform=''; fT[id==='fsL'?'l':'r']=[0,0]; };
   el.addEventListener('pointerdown',function(e){ pid=e.pointerId; var r=el.getBoundingClientRect(); o=[r.left+r.width/2,r.top+r.height/2,r.width/2]; try{ el.setPointerCapture(pid); }catch(er){} mv(e); e.preventDefault(); });
-  var mv=function(e){ if(e.pointerId!==pid) return; var dx=(e.clientX-o[0])/o[2], dy=(e.clientY-o[1])/o[2], l=Math.hypot(dx,dy); if(l>1){ dx/=l; dy/=l; } kn.style.transform='translate('+dx*o[2]*.6+'px,'+dy*o[2]*.6+'px)'; fT[id==='fsL'?'l':'r']=[dx,dy]; };
+  var mv=function(e){ if(e.pointerId!==pid) return; var dx=(e.clientX-o[0])/o[2], dy=(e.clientY-o[1])/o[2], l=Math.hypot(dx,dy); if(l>1){ dx/=l; dy/=l; } kn.style.transform='translate('+dx*o[2]*.8+'px,'+dy*o[2]*.8+'px)'; fT[id==='fsL'?'l':'r']=[dx,dy]; };
   el.addEventListener('pointermove',mv); el.addEventListener('pointerup',up); el.addEventListener('pointercancel',up); });
 if($('flyB')) $('flyB').onclick=freeStart; if($('fhX')) $('fhX').onclick=freeStop;
 addEventListener('keydown',function(e){ if(winOn||st==='free') return; if(e.key==='ArrowDown'||e.key===' '){ e.preventDefault(); scrollBy(300); } if(e.key==='ArrowUp') scrollBy(-300); if(curL&&(e.key==='ArrowLeft'||e.key==='ArrowRight')) turnCity(e.key==='ArrowLeft'?.25:-.25); if(e.key==='Escape'||e.key==='Backspace') goBack(); if(e.key==='Enter'&&st==='gate') fall(); else if(e.key==='Enter'&&cur) tapNode(cur.id); });
