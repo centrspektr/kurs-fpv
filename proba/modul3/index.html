@@ -25,8 +25,9 @@ button{font:inherit;color:inherit;border:0;cursor:pointer;background:none}
 #nextb span{font-size:11px;color:var(--a);font-weight:800;letter-spacing:.1em}#nextb b{font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:52vw}
 #nextb button{padding:7px 14px;border-radius:20px;background:var(--a);color:#2a1a00;font-weight:900;font-size:13px;flex:none}
 body:has(.k-card:not([hidden])) #nextb,body.k-focus #nextb{display:none}
-#hint{position:absolute;left:50%;top:64px;transform:translateX(-50%);padding:8px 14px;border-radius:20px;background:#0b0d1ec0;border:1px solid #ffffff22;font-size:12.5px;color:#d7dbf5;width:max-content;max-width:calc(100vw - 28px);text-align:center;pointer-events:none!important;transition:opacity .6s}
-#hint.off{opacity:0}
+#hint{position:absolute;left:50%;top:64px;transform:translateX(-50%);padding:8px 14px;border-radius:20px;background:#0b0d1ec0;border:1px solid #ffffff22;font-size:12.5px;color:#d7dbf5;width:max-content;max-width:calc(100vw - 28px);text-align:center;cursor:pointer;transition:opacity .6s}
+#hint.off{opacity:0;pointer-events:none!important}
+#hintB{font-weight:900}#hintB.on{background:var(--a);color:#14120a;border-color:transparent}
 /* лекция */
 #lect{position:absolute;inset:0;display:flex;flex-direction:column;padding:62px 14px 14px;background:linear-gradient(#05060d55,#05060dee);z-index:7;animation:fade .35s}
 @keyframes fade{from{opacity:0}}
@@ -90,8 +91,8 @@ body:has(.k-card:not([hidden])) #nextb,body.k-focus #nextb{display:none}
 <script src="GLTFLoader.js?v=1211d"></script><script src="fps-upr.js?v=1311m"></script>
 <script>/* проба 10.11: новая графика помещений (?g в адресе): inter.js + post.js, движок и этаж с зацепками */
 window.AKB_GRAF = /[?&]g\b/.test(location.search); try { if (parent !== window && /\/((g|new|index)\.html)?$/.test(parent.location.pathname)) AKB_GRAF = true;   /* 11.11: в курсе (и на главной) - новая графика; отдельно открытая страница - по ?g */ } catch (e) {}
-document.write(AKB_GRAF ? '<script src="post.js?v=1211d"><\/script><script src="inter.js?v=1311n"><\/script><script src="komnata-g.js?v=1211d"><\/script>' : '<script src="komnata.js?v=1211d"><\/script>');</script><script src="akb-teoriya.js?v=1211d"></script><script>/* проба new.html (09.11 ночью): в пробе курса - этаж с правками (akb-etazh-new.js), на главной - как было */
-(function(){ var nw=/[?&]new\b/.test(location.search); try{ nw=nw||/\/((new|g|index)\.html)?$/.test(parent.location.pathname); }catch(e){} document.write('<script src="akb-etazh'+(window.AKB_GRAF?'-g':nw?'-new':'')+'.js?v=1311n"><\/script>'); })();</script>
+document.write(AKB_GRAF ? '<script src="post.js?v=1211d"><\/script><script src="inter.js?v=1411b"><\/script><script src="komnata-g.js?v=1211d"><\/script>' : '<script src="komnata.js?v=1211d"><\/script>');</script><script src="akb-teoriya.js?v=1211d"></script><script>/* проба new.html (09.11 ночью): в пробе курса - этаж с правками (akb-etazh-new.js), на главной - как было */
+(function(){ var nw=/[?&]new\b/.test(location.search); try{ nw=nw||/\/((new|g|index)\.html)?$/.test(parent.location.pathname); }catch(e){} document.write('<script src="akb-etazh'+(window.AKB_GRAF?'-g':nw?'-new':'')+'.js?v=1411b"><\/script>'); })();</script>
 <script src="akb-stol.js?v=1211d"></script><script src="akb-zaryadka.js?v=1211d"></script>
 <script>setTimeout(function(){ var l=document.getElementById('load'); l.style.opacity=0; setTimeout(function(){ l.remove(); },700); },400);</script>
 </body></html>

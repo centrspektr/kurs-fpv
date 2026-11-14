@@ -482,8 +482,14 @@ var envDone = false; function finish() { adoptAll(); if (!envDone) { envDone = t
 document.addEventListener('akb-loaded', function () { setTimeout(finish, 150); }); setTimeout(finish, 6000);
 var lastSt = '';
 setInterval(function () { if (!HOST) return; var s2 = TASKS.map(function (t) { return taskState(t[0]); }).join(); if (s2 !== lastSt) { lastSt = s2; refreshAll(); } }, 1500);
-var hintEl = document.getElementById('hint'); setTimeout(function () { hintEl.classList.add('off'); }, 7000);
-R.frame(function () { if (R.mode !== 'walk') hintEl.classList.add('off'); });
+var hintEl = document.getElementById('hint'); hintEl.classList.add('off'); /* 14.11: подсказка управления - по кнопке "?": нажал - открылась, нажал ещё раз (или на неё) - закрылась */
+var hintB = document.createElement('button'); hintB.className = 'ic'; hintB.id = 'hintB'; hintB.title = 'Управление'; hintB.setAttribute('aria-label', 'Управление'); hintB.textContent = '?';
+(function () { var sb = document.getElementById('snd'); if (sb && sb.parentNode) sb.parentNode.insertBefore(hintB, sb); else document.body.appendChild(hintB); })();
+function hintT(on) { hintEl.classList.toggle('off', !on); hintB.classList.toggle('on', !!on); }
+hintB.addEventListener('pointerdown', function (e) { e.stopPropagation(); });
+hintB.addEventListener('click', function (e) { e.stopPropagation(); hintT(hintEl.classList.contains('off')); hintB.blur(); });
+hintEl.addEventListener('pointerdown', function (e) { e.stopPropagation(); hintT(false); });
+R.frame(function () { if (R.mode !== 'walk' && !hintEl.classList.contains('off')) hintT(false); });
 /* для проверки: AKB.go('S0') - перейти в бокс, AKB.go('Z') - в зал */
 function go(id) { var r = roomById(id), p = r ? r.inP : id === 'C' ? [20, CZM] : [3.2, CZM]; R.camera.position.x = p[0]; R.camera.position.z = p[1]; if (r) R.lookAt([r.cx, 1.4, (r.z0 + r.z1) / 2]); }
 window.AKB = { R: R, stands: stands, rooms: ROOMS, refresh: refreshAll, back: function () { refreshAll(); }, go: go, region: region, race: { start: raceStart, stop: raceStop, s: RC, gates: GATES } };

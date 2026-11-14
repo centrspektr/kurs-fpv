@@ -25,6 +25,7 @@ css.textContent = [
 'body.kmn-win #kmn canvas{filter:blur(3px) brightness(.62)}body.kmn-win .wbg{opacity:0!important}body.kmn-win #c{visibility:hidden}',
 '#kmn .k-top{position:absolute;left:0;right:0;top:0;padding:calc(12px + env(safe-area-inset-top,0px)) max(14px,env(safe-area-inset-right,0px)) 26px max(14px,env(safe-area-inset-left,0px));display:flex;align-items:center;gap:10px;background:linear-gradient(#05060fd0,#05060f00);pointer-events:none}',
 '#kmn .k-top>*{pointer-events:auto}',
+'#kmn .k-ic.on{background:var(--kc);color:#14120a;border-color:transparent}',
 '#kmn .k-vol{flex:none;width:84px;height:24px;accent-color:var(--kc);cursor:pointer}@media (max-width:420px){#kmn .k-vol{width:60px}}',
 '#kmn .k-ic{flex:none;width:44px;height:44px;border-radius:50%;border:1px solid rgba(255,255,255,.18);background:rgba(10,14,32,.6);color:#fff;font-size:19px;display:grid;place-items:center;cursor:pointer;backdrop-filter:blur(10px)}',
 '#kmn .k-ttl{flex:1;min-width:0}#kmn .k-ttl small{display:block;font:800 10.5px ' + FONT + ';letter-spacing:.18em;color:var(--kc)}#kmn .k-ttl b{display:block;font:700 16px ' + DISP + ';color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
@@ -36,7 +37,7 @@ css.textContent = [
 '#kmn .k-b{min-height:44px;padding:0 18px;border-radius:99px;border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.07);color:#fff;font:800 14.5px ' + FONT + ';cursor:pointer}',
 '#kmn .k-b.pri{border-color:transparent;background:linear-gradient(90deg,rgb(var(--kr)),#a78bfa);color:#12061c;box-shadow:0 0 22px rgba(var(--kr),.55)}#kmn .k-b.dis{opacity:.5}',
 '#kmn .k-card.shake{animation:kshk .4s}@keyframes kshk{25%{transform:translate(calc(-50% - 8px),0)}75%{transform:translate(calc(-50% + 8px),0)}}',
-'#kmn .k-hint{position:absolute;left:50%;bottom:calc(18px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);padding:9px 16px;border-radius:99px;background:rgba(8,11,28,.8);border:1px solid rgba(255,255,255,.14);color:#cfd6ff;font:600 13px ' + FONT + ';white-space:nowrap;max-width:calc(100vw - 24px);overflow:hidden;text-overflow:ellipsis;transition:opacity .6s;pointer-events:none}',
+'#kmn .k-hint{position:absolute;left:50%;bottom:calc(18px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);padding:9px 16px;border-radius:99px;background:rgba(8,11,28,.8);border:1px solid rgba(255,255,255,.14);color:#cfd6ff;font:600 13px ' + FONT + ';white-space:nowrap;max-width:calc(100vw - 24px);overflow:hidden;text-overflow:ellipsis;transition:opacity .6s;pointer-events:none;opacity:0}',
 '#kmn .k-hello{position:absolute;left:50%;top:38%;transform:translate(-50%,-50%);text-align:center;pointer-events:none;opacity:0;transition:opacity .8s}#kmn .k-hello.on{opacity:1}',
 '#kmn .k-hello small{display:block;font:800 13px ' + MONO + ';letter-spacing:.3em;color:var(--kc);text-shadow:0 0 14px var(--kc)}#kmn .k-hello b{display:block;margin-top:8px;font:800 clamp(30px,7vw,60px) ' + DISP + ';color:#fff;text-shadow:0 0 30px var(--kc)}#kmn .k-hello span{display:block;margin-top:6px;font:600 16px ' + FONT + ';color:#cfd6ff}',
 '#kmn .k-fade{position:absolute;inset:0;background:#05060f;opacity:1;pointer-events:none;transition:opacity .9s}',
@@ -348,22 +349,27 @@ function make(cfg) {
   /* ---------- оверлей ---------- */
   function buildUI() {
     root = document.createElement('div'); root.id = 'kmn'; root.style.setProperty('--kc', MC); root.style.setProperty('--kr', MCr);
-    root.innerHTML = '<div class="k-top"><button class="k-ic" data-k="exit" title="В город" aria-label="В город">←</button><div class="k-ttl"><small></small><b></b></div><div class="k-st"></div><button class="k-ic" data-k="snd" title="Голос"></button><input class="k-vol" type="range" min="0" max="100" step="5" title="Громкость" aria-label="Громкость"></div>' +
+    root.innerHTML = '<div class="k-top"><button class="k-ic" data-k="exit" title="В город" aria-label="В город">←</button><div class="k-ttl"><small></small><b></b></div><div class="k-st"></div><button class="k-ic" data-k="help" title="Управление" aria-label="Управление">?</button><button class="k-ic" data-k="snd" title="Голос"></button><input class="k-vol" type="range" min="0" max="100" step="5" title="Громкость" aria-label="Громкость"></div>' +
       '<div class="k-hello"><small></small><b></b><span></span></div><div class="k-hint"></div><div class="k-card"><small></small><h3></h3><p></p><div class="k-acts"></div></div><div class="k-toast"></div><div class="k-fade"></div>';
     document.body.appendChild(root);
     ['top', 'hello', 'hint', 'card', 'toast', 'fade', 'st'].forEach(function (k) { ui[k] = root.querySelector('.k-' + k); });
-    ui.ttlS = root.querySelector('.k-ttl small'); ui.ttlB = root.querySelector('.k-ttl b'); ui.snd = root.querySelector('[data-k="snd"]'); ui.vol = root.querySelector('.k-vol');
+    ui.ttlS = root.querySelector('.k-ttl small'); ui.ttlB = root.querySelector('.k-ttl b'); ui.snd = root.querySelector('[data-k="snd"]'); ui.help = root.querySelector('[data-k="help"]'); ui.vol = root.querySelector('.k-vol');
     ui.vol.addEventListener('pointerdown', function (e) { e.stopPropagation(); });
     ui.vol.addEventListener('input', function () { var G = window.GOLOS; if (!G || !G.setVol) return; G.setVol(ui.vol.value / 100); if (G.vol > 0 && !G.on) { G.setOn(true); sndUI(); } });
     root.querySelector('[data-k="exit"]').onclick = function () { if (anim) return; leave(); };
     ui.snd.onclick = function () { var G = window.GOLOS; if (!G) return; G.setOn(!G.on); sndUI(); if (!G.on && MON) { MON.talk = false; } else if (MON) MON.said = -1; };
     ui.card.addEventListener('pointerdown', function (e) { e.stopPropagation(); });
+    ui.help.addEventListener('pointerdown', function (e) { e.stopPropagation(); }); ui.help.onclick = function () { helpT(!helpOn); ui.help.blur(); };
+    ui.hint.addEventListener('pointerdown', function (e) { if (!helpOn) return; e.stopPropagation(); helpT(false); });
     ui.card.addEventListener('click', function (e) { var b = e.target.closest('[data-a]'); if (b) doAct(b.dataset.a); });
   }
   function sndUI() { var G = window.GOLOS; ui.snd.textContent = G && G.on ? '🔊' : '🔇'; ui.snd.hidden = !G; ui.vol.hidden = !G || !G.setVol; if (G && G.vol != null) ui.vol.value = Math.round(G.vol * 100); }
   function hud() { var d = 0; mod.tasks.forEach(function (t) { if (api && api.state(t) === 'done') d++; }); ui.st.textContent = '★ ' + d + ' / ' + mod.tasks.length; }
   var hintT = 0;
-  function hint(s, ms) { ui.hint.textContent = s; ui.hint.style.opacity = 1; clearTimeout(hintT); hintT = setTimeout(function () { ui.hint.style.opacity = 0; }, ms || 6000); }
+  var helpOn = false; /* 14.11: подсказка управления - по кнопке "?": нажал - открылась, нажал ещё раз (или на неё) - закрылась */
+  function helpT(on) { clearTimeout(hintT); helpOn = !!on; ui.help.classList.toggle('on', helpOn); ui.hint.style.pointerEvents = helpOn ? 'auto' : ''; ui.hint.style.whiteSpace = helpOn ? 'normal' : ''; ui.hint.style.textAlign = helpOn ? 'center' : '';
+    if (helpOn) { ui.hint.textContent = MOB ? 'Нажми на пол - иди. Нажми на стенд или стол - подойди. Тяни пальцем - осмотрись.' : 'W A S D - идти, Shift - бегом, пробел - прыжок. Мышь или тачпад - осмотреться, стрелки ← → - повернуться (если тачпад залипает). E или Enter - подойти и открыть.'; ui.hint.style.opacity = 1; } else ui.hint.style.opacity = 0; }
+  function hint(s, ms) { if (helpOn) { helpOn = false; ui.help.classList.remove('on'); ui.hint.style.pointerEvents = ''; ui.hint.style.whiteSpace = ''; ui.hint.style.textAlign = ''; } ui.hint.textContent = s; ui.hint.style.opacity = 1; clearTimeout(hintT); hintT = setTimeout(function () { ui.hint.style.opacity = 0; }, ms || 6000); }
   function toast(s) { ui.toast.textContent = s; ui.toast.classList.add('on'); setTimeout(function () { ui.toast.classList.remove('on'); }, 2600); }
 
   /* карточка внизу: что выбрано и что можно сделать */
@@ -540,7 +546,7 @@ function make(cfg) {
         var w = ease(Math.max(0, (u - .25) / .75)); pos.lerpVectors(from, to, w); bob = w * 8; },
       end: function () { var first = !lsG('kmn_hi_' + cfg.mid); lsS('kmn_hi_' + cfg.mid, '1');
         doorAnim(0);
-        hint(MOB ? 'Нажми на пол - иди. Нажми на стенд или стол - подойди. Тяни пальцем - осмотрись.' : 'W A S D - идти, Shift - бегом, пробел - прыжок. Мышь или тачпад - осмотреться, стрелки ← → - повернуться. E или Enter - подойти и открыть.', 7000);
+        /* подсказка управления больше не всплывает сама - кнопка "?" вверху */
         var G = window.GOLOS; if (first && cfg.hello && G && G.on && G.can && G.can()) { SPEAK = true; G.say(cfg.hello, { onend: function () { SPEAK = false; } }); } } };
     clock.getDelta(); frame();
     /* окно задания поверх: комната размыта и стоит */
