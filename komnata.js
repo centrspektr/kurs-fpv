@@ -540,7 +540,7 @@ function make(cfg) {
         var w = ease(Math.max(0, (u - .25) / .75)); pos.lerpVectors(from, to, w); bob = w * 8; },
       end: function () { var first = !lsG('kmn_hi_' + cfg.mid); lsS('kmn_hi_' + cfg.mid, '1');
         doorAnim(0);
-        hint(MOB ? 'Нажми на пол - иди. Нажми на стенд или стол - подойди. Тяни пальцем - осмотрись.' : 'W A S D - идти, Shift - бегом, пробел - прыжок. Мышь или два пальца по тачпаду - осмотреться. E или Enter - подойти и открыть.', 7000);
+        hint(MOB ? 'Нажми на пол - иди. Нажми на стенд или стол - подойди. Тяни пальцем - осмотрись.' : 'W A S D - идти, Shift - бегом, пробел - прыжок. Мышь или тачпад - осмотреться, стрелки ← → - повернуться. E или Enter - подойти и открыть.', 7000);
         var G = window.GOLOS; if (first && cfg.hello && G && G.on && G.can && G.can()) { SPEAK = true; G.say(cfg.hello, { onend: function () { SPEAK = false; } }); } } };
     clock.getDelta(); frame();
     /* окно задания поверх: комната размыта и стоит */

@@ -74,7 +74,7 @@ body:has(.k-card:not([hidden])) #nextb,body.k-focus #nextb{display:none}
 <div id="ui">
   <div class="top"><button class="ic" id="back" title="Назад">←</button><div class="ttl"><small>МОДУЛЬ 5</small><b>Гоночный клуб</b></div><button class="ic" id="snd" title="Звук">🔊</button><input id="vol" type="range" min="0" max="100" step="5" title="Громкость" aria-label="Громкость"></div>
   <div id="hint">Проведи пальцем - осмотрись · нажми на пол - иди · нажми на предмет - подойди</div>
-  <script>if (matchMedia("(pointer:fine)").matches) document.getElementById("hint").textContent = "W A S D - идти · Shift - бегом · пробел - прыжок · мышь или тачпад - осмотреться · E или Enter - подойти и открыть";</script>
+  <script>if (matchMedia("(pointer:fine)").matches) document.getElementById("hint").textContent = "W A S D - идти · Shift - бегом · пробел - прыжок · мышь или тачпад - осмотреться · стрелки ← → - повернуться (если тачпад залипает) · E или Enter - подойти и открыть";</script>
   <div id="nextb" hidden><span>ДАЛЬШЕ</span><b></b><button>Идти</button></div>
   <div id="demo" hidden><div><b></b><p>На пробной странице задания курса не открываются. В курсе здесь откроется само задание.</p><button class="d-ok">Засчитать (проба)</button><button class="d-no">Закрыть</button></div></div>
 </div>
