@@ -12,6 +12,23 @@
 'use strict';
 var TOUCH = matchMedia('(pointer:coarse)').matches && 'ontouchstart' in window;
 var V2 = !/[?&]pobeg=0\b/.test(location.search);   /* 17.11 вечер по "ставь": новое управление везде; ?pobeg=0 - прежнее (откат otkat/fps-upr-1711.js) */
+/* 17.11 ночь (проба new.html, ?zahvat=1 - проверить в другом месте): камера на тачпаде упиралась в край экрана вместе со стрелкой.
+   Как в "Побеге": щелчок по сцене или первая клавиша ходьбы захватывает курсор - камера крутится без края, Esc возвращает стрелку;
+   когда стрелка подходит к краю - подсказка. При "ставь" убрать условие V3. */
+var V3 = false; try { V3 = /[?&]zahvat=1\b/.test(location.search) || /\/new\.html$/.test(location.pathname) || (parent !== window && /\/new\.html$/.test(parent.location.pathname)); } catch (e) {}
+function mouseHelp(h) {   /* h: { canvas, locked(), lock(), walk() } */
+  if (!V3 || TOUCH || !h.canvas.requestPointerLock) return;
+  var tip = document.createElement('div'), tipT = 0, tipLast = -1e9;
+  tip.style.cssText = 'position:fixed;left:50%;top:18%;transform:translateX(-50%);max-width:min(92vw,520px);padding:10px 16px;border-radius:14px;background:rgba(8,11,28,.88);border:1px solid rgba(124,243,255,.5);color:#fff;font:600 14px/1.35 system-ui,sans-serif;text-align:center;z-index:60;pointer-events:none;display:none';
+  tip.textContent = 'Щёлкни по комнате - камера будет поворачиваться без края экрана. Esc - вернуть стрелку.';
+  document.body.appendChild(tip);
+  function show() { var n = performance.now(); if (n - tipLast < 15000) return; tipLast = n; tip.style.display = 'block'; clearTimeout(tipT); tipT = setTimeout(function () { tip.style.display = 'none'; }, 3500); }
+  document.addEventListener('pointerlockchange', function () { if (h.locked()) { tip.style.display = 'none'; } });
+  addEventListener('mousemove', function (e) { if (h.locked() || e.buttons || !h.walk()) return; var m = 24;
+    if (e.clientX < m || e.clientY < m || e.clientX > innerWidth - m || e.clientY > innerHeight - m) show(); });
+  addEventListener('keydown', function (e) { if (h.locked() || e.repeat || !h.walk()) return; if (e.target && /INPUT|TEXTAREA|SELECT/.test(e.target.tagName)) return;
+    if (/^(Key[WASD]|Arrow(Up|Down|Left|Right)|Shift(Left|Right)|Space)$/.test(e.code) && e.isTrusted) h.lock(); });
+}
 function create(o) {
   var cv = o.canvas, root = o.root || document.body, U = { joy: { f: 0, s: 0, run: false }, touch: TOUCH };
   var canLock = o.lock !== false && !TOUCH && !o.noMouse && !!cv.requestPointerLock; /* 12.11 вечер: щелчок по полу захватывает мышь; камера идёт за пальцем по тачпаду и без захвата */ /* noMouse: мышью управляет сама комната (модуль 2), отсюда только телефон */
@@ -48,6 +65,7 @@ function create(o) {
   /* 13.11: тачпад присылает движение неровно - копим и отдаём камере плавно, по кадрам (без заиканий) */
   U.ax = 0; U.ay = 0; var smT = 0; (function sm(t) { requestAnimationFrame(sm); var dt = smT ? Math.min(.1, (t - smT) / 1000) : .016; smT = t; if (Math.abs(U.ax) + Math.abs(U.ay) < 1e-5) { U.ax = U.ay = 0; return; } var k = 1 - Math.exp(-dt * 22), x = U.ax * k, y = U.ay * k; U.ax -= x; U.ay -= y; if (o.walk()) o.look(x, y); else U.ax = U.ay = 0; })(0);
   /* следим, чтобы захват снимался, когда открыто окно задания или нельзя ходить */
+  if (canLock) mouseHelp({ canvas: cv, locked: U.locked, lock: U.lock, walk: o.walk });
   setInterval(function () { var w = o.walk(); document.body.classList.toggle('fps-walk', !!w); if (!o.noMouse && (!w || (o.lockOk && !o.lockOk()))) U.unlock(); }, 200);
   if (TOUCH) {
     /* джойстик слева */
@@ -69,7 +87,7 @@ function create(o) {
   return U;
 }
 /* 17.11 (v2): прыжок, тяжесть, скорость шага и бега - как в "Побеге"; на главной прежние числа */
-window.FPSUPR = { create: create, touch: TOUCH, v2: V2, JV: V2 ? 6.5 : 3.6, G: V2 ? 22 : 11, WALK: V2 ? 4.4 : 2.6, RUN: V2 ? 7.4 : 5.2,
+window.FPSUPR = { create: create, mouseHelp: mouseHelp, touch: TOUCH, v2: V2, v3: V3, JV: V2 ? 6.5 : 3.6, G: V2 ? 22 : 11, WALK: V2 ? 4.4 : 2.6, RUN: V2 ? 7.4 : 5.2,
   /* поворот перетаскиванием (палец или мышь с нажатой кнопкой): как в "Побеге" камера идёт за пальцем и по горизонтали, и по вертикали */
   dragK: V2 ? .005 : 0, pitchSign: V2 ? -1 : 1 };
 })();
