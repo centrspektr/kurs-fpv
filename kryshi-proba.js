@@ -320,7 +320,7 @@ function kvCard(){ var s=KV.s, cs=s.st.cards, cd=cs[s.c], lv=lvl(KV.L.mid), p=lv
 function kvKey(){ var s=KV&&KV.s; if(!s) return; if(s.ph==='cards'){ hush(); s.c++; if(s.c>=s.st.cards.length){ E.I.step(s.tid,s.i,{}); kvStep(); } else kvCard(); } else if(s.ph==='trEnd'){ s.trDone=1; trShow(false); s.i--; kvStep(); } else if(s.ph==='end'&&s.nextT){ var t=s.nextT; KV.s={tid:t,i:-1,ph:''}; kvStep(); } }
 function kvAsk(){ var s=KV.s; if(!s) return; if(!s.items.length){ E.I.step(s.tid,s.i,{lv:lvl(KV.L.mid)}); beep(true); kvStep(); return; } var q=s.items[0]; s.q=q; s.armed=false; s.ready=true; kvHud((s.ph==='sort'?'Тренажёр ':'Вопрос ')+(s.n-s.items.length+1)+' из '+s.n);
   tvDraw({head:'Вопрос '+(s.n-s.items.length+1)+' из '+s.n,title:s.ph==='sort'?(s.st.h||'Куда это?'):'',text:q.q,foot:KV.W.foot}); gateText(q.o.map(function(o){ return o?o.a:''; }),q.o.map(function(o){ return o?null:'off'; }));
-  /* 13.11: голос читает только сам вопрос, без перечисления ворот и ответов */ var txt=(s.ph==='sort'&&s.n===s.items.length&&!q.tr&&s.st.h?s.st.h+' ':'')+q.q; hush(); qChime(); clearTimeout(KV.qT); KV.qT=setTimeout(function(){ if(KV.s===s&&s.q===q&&s.ready) say(txt,function(){}); },550); }
+  /* 13.11: голос читает только сам вопрос, без перечисления ворот и ответов */ var txt=(s.ph==='sort'&&s.n===s.items.length&&!q.tr&&s.st.h?s.st.h+' ':'')+q.q; hush(); qChime(); clearTimeout(KV.qT); KV.qT=setTimeout(function(){ if(KV.s===s&&s.q===q&&s.ready) say(txt,function(){ if(s.auto&&s.auto.look) s.auto.said=true; }); },550); kvLook(s); }
 function kvAnswer(k){ var s=KV.s, q=s.q, o=q.o[k]; if(!o) return; hush(); s.armed=false; s.ready=false; s.back=true; var g=KV.gates[k], st=q.o.map(function(x,j){ return !x?'off':x.ok?'ok':j===k?'bad':null; });
   var tm=''; if(KV.mode==='race'&&s.t0){ var sec=(performance.now()-s.t0)/1000+(o.ok?0:5); s.time=(s.time||0)+sec; s.t0=null; tm=' Время: '+sec.toFixed(1).replace('.',',')+' с'+(o.ok?'.':' (штраф 5 с).'); }
   g.fx=1.4; g.fc=o.ok?'#39ff8a':'#ff4d4d'; beep(o.ok); gateText(q.o.map(function(x){ return x?x.a:''; }),st); s.items.shift();
@@ -332,7 +332,7 @@ function kvTaskEnd(){ var s=KV.s, ts=modTasks(), nx=null; try{ E.refresh(); }cat
   var dn=taskDone(s.tid); tvDraw({head:s.head,col:'#ffd36e',title:dn?'Задание пройдено! ★':'Шаг пройден',text:rc+(nx?'Следующее: '+E.K.lib[nx].t:'Все задания модуля пройдены. Ты молодец!'),foot:nx?'Кнопка "Следующее задание" или Enter':'Esc - выйти из полёта'}); kvHud(dn?'Задание пройдено':''); kvNextBtn(!!nx,'Следующее задание ▶'); say(dn?'Задание пройдено! Отлично.':'Шаг пройден.',function(){}); }
 /* каждый кадр полёта: пересёк ли дрон ворота, вернулся ли за линию */
 K.flyStep=function(L,f,dt){ var s=KV&&KV.s; if(!s||L!==KV.L) return; var z=f.p.z, z0=s.z0==null?z:s.z0; s.z0=z;
-  var pk=$('kvPick'); if(pk){ var po=!!(s.ready&&!s.auto&&(s.ph==='quiz'||s.ph==='sort')); if(pk._on!==po){ pk._on=po; pk.classList.toggle('on',po); } if(po&&pk._q!==s.q){ pk._q=s.q; for(var pi=0;pi<3;pi++) pk.children[pi].style.visibility=s.q.o[pi]?'visible':'hidden'; } }
+  var pk=$('kvPick'); if(pk){ var po=!!(s.ready&&(!s.auto||s.auto.look)&&(s.ph==='quiz'||s.ph==='sort')); if(pk._on!==po){ pk._on=po; pk.classList.toggle('on',po); } if(po&&pk._q!==s.q){ pk._q=s.q; for(var pi=0;pi<3;pi++) pk.children[pi].style.visibility=s.q.o[pi]?'visible':'hidden'; } }
   if(s.auto){ kvAuto(f,dt); return; }
   if(s.ph==='tr'||s.ph==='trEnd'){ trStep(f,dt); return; }
   if(s.ph!=='quiz'&&s.ph!=='sort') return;
@@ -368,22 +368,50 @@ function trStep(f,dt){ var s=KV.s, tr=KV.tr; if(!tr) return; var gs=tr.gs, n=gs.
   pp.copy(p); if(s.ph==='tr'){ s.hud=(s.hud||0)+dt; if(s.hud>.1){ s.hud=0; kvHud('Ворота '+Math.min(n,s.tk+1)+' из '+n+(s.t0?' · '+trTime((now-s.t0)/1000):'')); } } }
 
 /* быстрый режим (13.11): нажал на ворота, площадку или кнопку А/Б/В - дрон сам резко летит туда с бочкой и возвращается сальто назад */
-K.pick=function(k){ var s=KV&&KV.s; if(!s||!s.ready||s.auto||(s.ph!=='quiz'&&s.ph!=='sort')||!s.q||!s.q.o[k]) return false; var f=E.free.get(); if(!f) return false;
-  if(KV.mode==='race'&&!s.t0) s.t0=performance.now(); s.auto={k:k,t:0,ph:1,p0:f.p.clone(),h0:f.h}; return true; };
+K.pick=function(k){ var s=KV&&KV.s; if(!s||!s.ready||(s.auto&&!s.auto.look)||(s.ph!=='quiz'&&s.ph!=='sort')||!s.q||!s.q.o[k]) return false; var f=E.free.get(); if(!f) return false;
+  if(KV.mode==='race'&&!s.t0) s.t0=performance.now(); s.auto={k:k,t:0,ph:1,p0:f.p.clone(),h0:f.h,tr:trick()}; return true; };
 /* 13.11: после любого ответа (и когда летел сам) дрон не пропадает из вида: сальто назад и возврат на своё место */
-function kvBack(f,k){ var s=KV.s; if(!s||s.auto) return; s.auto={k:k,t:0,ph:2,p1:f.p.clone(),ok:!!(s.q&&s.q.o[k]&&s.q.o[k].ok),man:1}; }
+function kvBack(f,k){ var s=KV.s; if(!s||s.auto) return; s.auto={k:k,t:0,ph:2,p1:f.p.clone(),ok:!!(s.q&&s.q.o[k]&&s.q.o[k].ok),man:1,tr:trick()}; }
 var kvC1=new T.Vector3(), kvC2=new T.Vector3();
+/* 17.11: пока голос читает вопрос, дрон сам подлетает к воротам - ответы на табло видно крупно; дочитал - отлетает на своё место.
+   Нажал А/Б/В или ворота раньше - дрон сразу летит в ворота оттуда, где он сейчас. Только ворота модуля 1 (на посадке и в гонке - как было). */
+function kvLook(s){ if(!s||KV.mode!=='gate'||s.auto) return; var f=E.free&&E.free.get(); if(!f) return; s.auto={look:1,ph:0,t:0,p0:f.p.clone(),said:false}; }
+function kvLookStep(f,dt,a,H){ var ez=function(u){ return u*u*(3-2*u); }, R=new T.Vector3(0,PY+7.6,GZ+16), u, e;
+  if(a.ph===0){ u=Math.min(1,a.t/2.2); e=ez(u); f.p.lerpVectors(a.p0,R,e); f.p.y+=Math.sin(Math.PI*u)*1.2; if(u>=1){ a.ph=1; a.t=0; } }
+  else if(a.ph===1){ f.p.copy(R); f.p.y+=Math.sin(a.t*2.2)*.12; if((a.said&&a.t>1.2)||a.t>14){ a.ph=2; a.t=0; a.p1=f.p.clone(); } }
+  else { u=Math.min(1,a.t/2.2); e=ez(u); f.p.lerpVectors(a.p1,H,e); f.p.y+=Math.sin(Math.PI*u)*1.5; if(u>=1){ KV.s.auto=null; } }
+  /* камера сзади и выше дрона, смотрит на табло ворот */
+  if(E.cam){ var near=a.ph===1?1:a.ph===0?ez(Math.min(1,a.t/2.2)):1-ez(Math.min(1,a.t/2.2));
+    kvC1.set(f.p.x*.4,f.p.y+2.6+near*.6,f.p.z+8.5+near*1.5); kvC2.set(0,PY+6+near*4.6,GZ-2); E.cam(kvC1,kvC2,Math.min(1,dt*4)); }
+  var dh=Math.PI-f.h; dh=Math.atan2(Math.sin(dh),Math.cos(dh)); f.h+=dh*Math.min(1,dt*6); f.v.set(0,0,0); f.tilt[0]=f.tilt[1]=0;
+  var tl=a.ph===0?.25*Math.sin(Math.PI*Math.min(1,a.t/2.2)):a.ph===2?-.25*Math.sin(Math.PI*Math.min(1,a.t/2.2)):0;
+  var g=f.d.g; g.position.copy(f.p); g.rotation.set(0,f.h,0); g.rotateX(tl); return true; }
+/* 17.11: разные фигуры по дороге к воротам и обратно, каждый раз случайно и не подряд одинаковые */
+var TRICKS=['bochka','dvoynaya','vpered','nazad','petlya','shtopor','vint'], trLast='';
+function trick(){ var t; do t=TRICKS[Math.floor(Math.random()*TRICKS.length)]; while(t===trLast); trLast=t; return t; }
+function trickAt(t,u,e,dir){ var P2=Math.PI*2, o={rx:0,rz:0,dx:0,dy:0,dz:0}, v=Math.max(0,Math.min(1,(u-.2)/.6)), ve=v*v*(3-2*v);
+  if(t==='bochka') o.rz=P2*e;                                   /* бочка: оборот вокруг себя */
+  else if(t==='dvoynaya') o.rz=-2*P2*e;                         /* двойная бочка в другую сторону */
+  else if(t==='vpered') { o.rx=P2*ve; o.dy=Math.sin(Math.PI*v)*2; }   /* кувырок вперёд с подскоком */
+  else if(t==='nazad') { o.rx=-P2*ve; o.dy=Math.sin(Math.PI*v)*2.5; } /* сальто назад */
+  else if(t==='petlya') { var R=3.2; o.rx=-P2*ve; o.dy=R*(1-Math.cos(P2*ve)); o.dz=-dir*R*Math.sin(P2*ve); } /* мёртвая петля */
+  else if(t==='shtopor') { var r=2.2; o.rz=P2*ve; o.dx=r*Math.sin(P2*ve); o.dy=r*(1-Math.cos(P2*ve)); }   /* штопор: бочка по кругу */
+  else if(t==='vint') { o.rz=P2*e; o.rx=-P2*ve; o.dy=Math.sin(Math.PI*v)*3; }   /* винт: бочка и сальто сразу */
+  if(dir<0) o.rx=-o.rx; return o; }
 function kvAuto(f,dt){ var s=KV.s, a=s.auto, land=KV.mode==='land', ez=function(u){ return u*u*(3-2*u); }, u, e, rx=0, rz=0;
   var T1=land?new T.Vector3(GX[a.k],PY+.56,GZ):new T.Vector3(GX[a.k],PY+4.6,GZ-7), H=new T.Vector3(0,PY+3,LINE+12); a.t+=dt;
-  if(a.ph===1){ u=Math.min(1,a.t/1); e=ez(u); f.p.lerpVectors(a.p0,T1,e); if(land) f.p.y+=Math.sin(Math.PI*u)*7; rz=Math.PI*2*e; rx=.55*Math.sin(Math.PI*u); if(u>=1){ a.ph=2; a.t=0; a.p1=T1; kvAnswer(a.k); a.ok=s.q&&s.q.o[a.k]&&s.q.o[a.k].ok; } }
-  else if(a.ph===2){ u=Math.min(1,a.t/1.3); e=ez(u); f.p.lerpVectors(a.p1,H,e); f.p.y+=Math.sin(Math.PI*u)*(land?9:14); rx=-Math.PI*2*e; if(u>=1){ a.ph=3; a.t=0; } }
+  if(a.look){ if(kvLookStep(f,dt,a,H)) return; }
+  else if(a.ph===1){ u=Math.min(1,a.t/1.35); e=ez(u); f.p.lerpVectors(a.p0,T1,e); if(land) f.p.y+=Math.sin(Math.PI*u)*7; var r1=trickAt(a.tr,u,e,1); f.p.x+=r1.dx; f.p.y+=r1.dy; f.p.z+=r1.dz; rx=r1.rx; rz=r1.rz; if(u>=1){ a.ph=2; a.t=0; a.p1=T1; a.tr=trick(); kvAnswer(a.k); a.ok=s.q&&s.q.o[a.k]&&s.q.o[a.k].ok; } }
+  else if(a.ph===2){ u=Math.min(1,a.t/1.5); e=ez(u); f.p.lerpVectors(a.p1,H,e); f.p.y+=Math.sin(Math.PI*u)*(land?9:14); var r2=trickAt(a.tr,u,e,-1); f.p.x+=r2.dx; f.p.y+=r2.dy; f.p.z+=r2.dz; rx=r2.rx; rz=r2.rz; if(u>=1){ a.ph=3; a.t=0; } }
   else { f.p.copy(H); f.p.y+=Math.sin(a.t*3)*.15; if(a.t>(a.ok?1.5:3.2)){ s.auto=null; } }
-  if(E.cam){ kvC1.set(H.x,H.y+4.5,H.z+13); kvC2.set(f.p.x*.6,Math.max(PY+3,f.p.y*.5+(PY+3)*.5),f.p.z-6); E.cam(kvC1,kvC2,Math.min(1,dt*(a.ph===1?5:3.5))); }
+  /* 17.11: к воротам камера летит следом за дроном - фигуру видно вблизи; обратно - смотрит с места старта */
+  if(E.cam){ if(a.ph===1&&!land){ kvC1.set(f.p.x*.7,f.p.y+3.2,f.p.z+10); kvC2.set(f.p.x,f.p.y+.4,f.p.z-4); E.cam(kvC1,kvC2,Math.min(1,dt*4)); }
+    else { kvC1.set(H.x,H.y+4.5,H.z+13); kvC2.set(f.p.x*.6,Math.max(PY+3,f.p.y*.5+(PY+3)*.5),f.p.z-6); E.cam(kvC1,kvC2,Math.min(1,dt*(a.ph===1?5:3.5))); } }
   var dh=Math.PI-f.h; dh=Math.atan2(Math.sin(dh),Math.cos(dh)); f.h+=dh*Math.min(1,dt*8); f.v.set(0,0,0); f.tilt[0]=f.tilt[1]=0;
   var g=f.d.g; g.position.copy(f.p); g.rotation.set(0,f.h,0); g.rotateX(rx); g.rotateZ(rz); }
 function kvTap(){ var cv=E.R.domElement, d0=null, rc=new T.Raycaster(), v2=new T.Vector2();
   cv.addEventListener('pointerdown',function(e){ d0=[e.clientX,e.clientY,performance.now()]; });
-  cv.addEventListener('pointerup',function(e){ if(!d0||!KV||!KV.s||!KV.s.ready||KV.s.auto) return; if(Math.hypot(e.clientX-d0[0],e.clientY-d0[1])>12||performance.now()-d0[2]>600) return; var r=cv.getBoundingClientRect(); v2.set((e.clientX-r.left)/r.width*2-1,-((e.clientY-r.top)/r.height*2-1)); rc.setFromCamera(v2,E.C);
+  cv.addEventListener('pointerup',function(e){ if(!d0||!KV||!KV.s||!KV.s.ready||(KV.s.auto&&!KV.s.auto.look)) return; if(Math.hypot(e.clientX-d0[0],e.clientY-d0[1])>12||performance.now()-d0[2]>600) return; var r=cv.getBoundingClientRect(); v2.set((e.clientX-r.left)/r.width*2-1,-((e.clientY-r.top)/r.height*2-1)); rc.setFromCamera(v2,E.C);
     var best=-1, bd=1e9; KV.gates.forEach(function(q,k){ var h=rc.intersectObject(q.g,true); if(h.length&&h[0].distance<bd){ bd=h[0].distance; best=k; } }); if(best>=0) K.pick(best); }); }
 
 /* ================= модуль 4: "Аэродром" ================= */
