@@ -63,3 +63,10 @@ Alexandr выбрал на карточке вариант А: вместо от
 По "ставь" Alexandr главная берёт golos-proba.js вместо golos-new.js: только записи Леры, нет записи - молчим (раньше читал голос устройства). Игра "Собери дрон" внутри курса тоже берёт свой golos-proba.js.
 Прежние файлы: `index-1711.html` (главная), `sborka-index-1711.html`, `sborka-mladshie-1711.html` (страницы игры в trenazhery/sborka/).
 Как откатить: скопировать `index-1711.html` в корень как index.html, а sborka-*-1711.html - в trenazhery/sborka/ как index.html и mladshie.html (только после "ставь").
+
+## Выкладка 17.11.2026 вечер (вся проба new.html)
+По "ставь" Alexandr (20:20) на главную ушла вся проба: на телефоне игра только горизонтально (povorot.js, экран "Переверните телефон" и пауза), удобный полёт в горизонтали (плашка в углу, стики в нижних углах), в модуле 1 дрон подлетает к воротам на время вопроса, плавные фигуры и иногда вид от первого лица, понятный вопрос про дождь, трасса на время в модуле 4 (задание 4.7), голос golos-proba2.js без обрывов, ссылка "У меня есть код" после входа скрыта, управление в модулях 2, 3, 5 как в "Побеге", подсказка "Тяни деталь" в "Собери дрон" не закрывает стол.
+Главная index.html снова копия new.html.
+Прежние файлы: `index-1711b.html` (главная), `fps-upr-1711.js` (корень), `modul3-fps-upr-1711.js` (proba/modul3/fps-upr.js), `kryshi-proba-1711.js`, `sborka-index-1711b.html`, `sborka-mladshie-1711b.html` (trenazhery/sborka/).
+Как откатить (только после "ставь"): `index-1711b.html` -> `index.html` в корне; fps-upr-1711.js -> fps-upr.js в корне, modul3-fps-upr-1711.js -> proba/modul3/fps-upr.js; kryshi-proba-1711.js -> kryshi-proba.js; sborka-*-1711b.html -> trenazhery/sborka/index.html и mladshie.html.
+Быстро без отката: `?pobeg=0` - прежнее управление в комнатах, `?trassa=0` - без трассы на время.

@@ -344,7 +344,7 @@ K.flyStep=function(L,f,dt){ var s=KV&&KV.s; if(!s||L!==KV.L) return; var z=f.p.z
 
 /* 13.11: трасса на время (проба): в задании "Трасса с зачётным временем" перед записью результата из симулятора пролетаешь над аэродромом 8 ворот по порядку - квадраты и кольца.
    Время идёт с первых ворот, рекорд хранится на устройстве. Включено на new.html или по метке ?trassa */
-var TRON=/new\.html/.test(location.pathname)||/[?&]trassa\b/.test(location.search), TRASSA={m4_track:[[0,6,-84],[-28,8,-100],[-50,10,-80],[-40,7,-50],[0,9,-38],[40,7,-50],[50,10,-80],[28,8,-100]]};
+var TRON=!/[?&]trassa=0\b/.test(location.search), /* 17.11 вечер по "ставь": трасса на время везде, ?trassa=0 - без неё */ TRASSA={m4_track:[[0,6,-84],[-28,8,-100],[-50,10,-80],[-40,7,-50],[0,9,-38],[40,7,-50],[50,10,-80],[28,8,-100]]};
 function trBuild(){ var pts=TRASSA[KV.s.tid], g=new T.Group(), gs=[], n=pts.length; KV.L.g.add(g);
   pts.forEach(function(q,i){ var a=i?pts[i-1]:[0,0,LINE+12], b=q, sq=i%2===0, R=sq?5.6:4.8, gg=new T.Group(); gg.position.set(q[0],PY+q[1],q[2]); gg.rotation.y=Math.atan2(b[0]-a[0],b[2]-a[2]); g.add(gg);
     var m=new T.MeshStandardMaterial({color:0x0b0e18,emissive:0x3d6bff,emissiveIntensity:.9,toneMapped:false}), fr=new T.Mesh(new T.TorusGeometry(R,.32,10,sq?4:48),m); if(sq) fr.rotation.z=Math.PI/4; gg.add(fr);

@@ -10,6 +10,7 @@
 <meta name="theme-color" content="#0d1117">
 <link rel="icon" type="image/png" href="favicon.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
+<script src="povorot.js?v=1711a"></script>   <!-- 17.11: на телефоне игра только горизонтально, в вертикали - экран "Переверните телефон" и пауза -->
 <script src="config.js?v=1211d"></script>
 <script src="perenos.js?v=1211d"></script>
 <script src="rejting.js?v=1211d"></script>   <!-- проба 09.11: рейтинг курса по площадкам, очки th/sb на сервер -->
@@ -116,6 +117,7 @@
   #goB b{display:inline-block;animation:blink 1.1s steps(1) infinite}
   @keyframes blink{50%{opacity:0}}
   #codeL{display:block;margin:16px auto 0;background:none;border:0;color:var(--dim);text-decoration:underline;cursor:pointer;font-size:13px}
+  #codeL[hidden]{display:none}   /* 17.11: после входа ссылка была видна (display:block перебивал hidden), а нажатие ничего не делало */
   /* полёт ко входу в город: рамка бортового экрана, печатается приветствие */
   #intro{position:fixed;inset:max(14px,env(safe-area-inset-top,0px)) max(14px,env(safe-area-inset-right,0px)) max(14px,env(safe-area-inset-bottom,0px)) max(14px,env(safe-area-inset-left,0px));z-index:7;pointer-events:none;opacity:0;transition:opacity .6s;font-family:var(--mono);color:var(--ia)}
   #intro.on{opacity:1}
@@ -238,6 +240,21 @@
   .fs small{position:absolute;left:0;right:0;top:-20px;text-align:center;color:#bff;font:600 11px var(--body)}
   #fsL{left:max(18px,env(safe-area-inset-left,0px))}#fsR{right:max(18px,env(safe-area-inset-right,0px))}
   body.free #fh{display:flex}
+  /* 17.11: телефон горизонтально (низкий экран): плашка полёта маленькая в левом верхнем углу у кнопки "назад", не закрывает ворота; стики ниже, в нижних углах */
+  @media (pointer:coarse) and (orientation:landscape) and (max-height:560px){
+    html body #fh{top:calc(10px + env(safe-area-inset-top,0px));left:calc(max(12px,env(safe-area-inset-left,0px)) + 54px);bottom:auto;transform:none;flex-direction:row;flex-wrap:wrap;align-items:center;justify-content:flex-start;gap:3px 8px;padding:5px 10px;max-width:min(300px,34vw);border-radius:12px;background:rgba(5,8,20,.55);font-size:11px;text-align:left}
+    html body #fh>div:first-child b{display:none}
+    html body #fhG{font-size:11.5px}
+    html body #fhAlt{font-size:10.5px;opacity:.85}
+    html body #fhX{margin:0;min-height:26px;padding:0 10px;font-size:11px;border-radius:99px}
+    html body.free .fs{bottom:calc(10px + env(safe-area-inset-bottom,0px));width:112px;height:112px}
+    html body .fs i{width:48px;height:48px;margin:-24px 0 0 -24px}
+    html body .fs small{top:-17px;font-size:10px}
+    html body #kvPick{bottom:calc(44px + env(safe-area-inset-bottom,0px));padding:4px 8px;gap:8px}
+    html body #kvPick button{width:50px;height:34px;font-size:17px;border-radius:11px}
+    html body #kvQ{bottom:calc(6px + env(safe-area-inset-bottom,0px));padding:6px 12px;font-size:12px}
+    html body #fsL{left:max(12px,env(safe-area-inset-left,0px))}html body #fsR{right:max(12px,env(safe-area-inset-right,0px))}
+  }
   @media (pointer:coarse){ body.free .fs{display:block} body.free #fhKeys,body.free #fhPad{display:none} #fh{top:calc(14px + env(safe-area-inset-top,0px));bottom:auto;padding:6px 12px;max-width:62vw} #fhX{min-height:30px} }
   body.free #labels,body.free #leads,body.free #guide,body.free #hud,body.free #arrow,body.free #ptr,body.free #cap,body.free #stars,body.free #mb{opacity:0!important;pointer-events:none!important}
 </style>
@@ -305,19 +322,19 @@ document.getElementById('hudC').textContent = (window.KURSY && KURSY.name) || '�
 </script>
 <script src="three-umd.js?v=1211d" defer></script><script src="three.min.js?v=1211" defer></script><script src="three-umd.js?v=1211d" defer></script><script src="three-zapas.js?v=1211d" defer></script>   <!-- 11.11: чужой загрузчик модулей (расширения браузера) не мешает three -->   <!-- своя копия three r128 (09.11): чужие сайты не подключаем -->
 <script src="modeli.js?v=1211d" defer></script>
-<script src="zadaniya-new.js?v=1211d" defer></script>   <!-- проба 09.11: картинки карточек кодом вместо неподходящих эмодзи -->
+<script src="zadaniya-new.js?v=1711r" defer></script>   <!-- проба 09.11: картинки карточек кодом вместо неподходящих эмодзи -->
 <script src="kartinki.js?v=1211d" defer></script>
 <script src="trenazhery/sborka/scene-k.js?v=1211d" defer></script>   <!-- проба 11.11: верстак из игры "Собери дрон" стоит и в комнате мастерской -->
 <script src="trenazhery.js?v=1211d" defer></script>   <!-- тренажёры (08.11): "Собери дрон" в задании 2.6 и окно "Тренажёры" -->
 <script src="RoomEnvironment.js?v=1211d" defer></script>
 <script src="proba/modul3/post.js?v=1211d" defer></script><script src="proba/modul3/inter.js?v=1311n" defer></script>   <!-- проба 11.11: новая графика помещений (модули 2 и 3) -->
-<script src="fps-upr.js?v=1311m" defer></script><script src="komnata-new.js?v=1411b" defer></script>   <!-- проба 09.11: движок модуля-помещения (модуль 2) -->
+<script src="fps-upr.js?v=1711u" defer></script><script src="komnata-new.js?v=1711u" defer></script>   <!-- проба 09.11: движок модуля-помещения (модуль 2) -->
 <script src="masterskaya.js?v=1211d" defer></script>   <!-- проба 09.11: модуль 2 "Мастерская" от первого лица -->
 <script src="moduli.js?v=1211d" defer></script>
-<script src="golos-proba.js?v=1711b" defer></script>   <!-- 17.11 по "ставь": только голос Леры, без голоса устройства (прежнее: golos-new.js, откат otkat/index-1711.html) -->
+<script src="golos-proba2.js?v=1711m" defer></script>   <!-- 17.11: только голос Леры, без голоса устройства (откат главной: otkat/index-1711b.html) -->
 <script src="komnaty.js?v=1311n" defer></script>   <!-- проба 09.11: модули-помещения (модуль 3 - комната от первого лица) -->
 <script src="kryshi/bloom.js?v=1211d" defer></script>   <!-- проба 10.11: свечение огней на крышах (three.js r128, MIT) -->
-<script src="kryshi-new.js?v=1311g" defer></script>   <!-- проба 10.11: новые крыши модулей 1, 4, 6 -->
-<script src="kosmos-kurs-new.js?v=1311q" defer></script>
+<script src="kryshi-proba.js?v=1711w" defer></script>   <!-- проба 10.11: новые крыши модулей 1, 4, 6 -->
+<script src="kosmos-kurs-proba.js?v=1711p" defer></script>   <!-- проба 17.11: камера полёта на телефоне горизонтально; кнопка "Вход по коду" после входа открывает обычный вид (сменить код) -->
 </body>
 </html>
