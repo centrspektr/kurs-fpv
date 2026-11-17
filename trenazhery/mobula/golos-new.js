@@ -21,7 +21,9 @@ function speakFrom(sp){ var off=sp.pos, u=new SpeechSynthesisUtterance(sp.s.slic
   u.onboundary=function(e){ if(e.charIndex==null) return; sp.pos=off+e.charIndex; if(sp.o.onb) sp.o.onb(sp.back(off+e.charIndex+(e.charLength||6))); };
   u.onend=u.onerror=function(){ if(sp.u===u) sp.end(); }; sp.u=u; syn.speak(u); }
 var G=window.GOLOS={ on:lsG(KEY)!=='off', vol:isNaN(V0)?1:Math.max(0,Math.min(1,V0)), tm:0, list:list, live:live,
-  can:function(){ return !!syn&&list().length>0; },
+  /* 17.11: can() - "голос есть": записи Леры играют и без голоса устройства (встроенный браузер Telegram/VK, часть телефонов) - раньше там молчали. dev() - голос устройства. */
+  can:function(){ return !!window.Audio||G.dev(); },
+  dev:function(){ return !!syn&&list().length>0; },
   cur:function(){ var r=list(), nm=lsG(KEY+'_v'); return r.find(function(v){ return v.name===nm; })||r[0]||null; },
   pick:function(nm){ lsS(KEY+'_v',nm); },
   setVol:function(v){ G.vol=Math.max(0,Math.min(1,+v||0)); lsS(KEY+'_vol',String(G.vol)); if(G.au) G.au.volume=G.vol;
@@ -34,10 +36,13 @@ var G=window.GOLOS={ on:lsG(KEY)!=='off', vol:isNaN(V0)?1:Math.max(0,Math.min(1,
     function end(ok){ if(done) return; done=true; if(G.au===au) G.au=null; o.onend&&o.onend(ok); }
     function back(){ if(done) return; if(G.au===au) G.au=null; done=true; if(o.text) G.say(o.text,o); else o.onend&&o.onend(false); } /* нет файла - голос устройства */
     au.onended=function(){ end(true); }; au.onerror=back; var pr=au.play(); if(pr&&pr.catch) pr.catch(back); return true; },
-  say:function(text,o){ o=o||{}; G.stop(); if(G.on&&zSay(text,o)) return true; if(!G.on||!G.can()){ o.onend&&o.onend(false); return false; }
-    var f=G.fix(text), done=false, sp={s:f.s,back:f.back,o:o,pos:0};
-    sp.end=function(){ if(done) return; done=true; if(G.sp===sp) G.sp=null; o.onend&&o.onend(true); };
-    G.sp=sp; speakFrom(sp); return true; } };
+  /* 17.11: только записанный голос Леры, как на главной (golos-proba2.js). Записи нет - молчим (текст на экране остаётся), голос устройства ("робот") не подменяет.
+     Список записей ещё грузится - ждём его. Чего не хватило - в GOLOS.miss (для дозаписи). */
+  say:function(text,o){ o=o||{}; G.stop(); if(!G.on){ o.onend&&o.onend(false); return false; }
+    if(zSay(text,o)) return true;
+    if(!ZL&&ZLwait){ var tok={}; G.zt=tok; ZLwait.then(function(){ if(G.zt!==tok) return; G.zt=null; if(!zSay(text,o)){ zMiss(text); o.onend&&o.onend(false); } }); return true; }
+    zMiss(text); o.onend&&o.onend(false); return false; } };
+G.miss=[]; function zMiss(t){ if(G.miss.indexOf(t)<0){ G.miss.push(t); try{ console.info('GOLOS: нет записи -', t); }catch(e){} } }
 /* Произношение (8.11.2026, дополнено 10.11: "Комната 1" -> "Комната первая", "из 5" -> "из пяти", слова тренажёров): голос устройства читал "Задание 1" как "задание первых", путал сокращения.
    Перед чтением текст переводится в слова, на экране он прежний:
      "Задание 1" -> "Задание первое", "Модуль 2" -> "Модуль второй" (так же уровень, шаг, этап, урок, вопрос);
@@ -102,7 +107,7 @@ function zGesture(fn){ ZWAIT=fn; if(zGesture.on) return; zGesture.on=1; var go=f
 function zSay(text,o){ if(!ZL) return false; var files=zFiles(text); if(!files) return false;
   var f=G.fix(text), i=0, done=false, tok={}, au=files.map(function(x){ var a=new Audio(G.zdir()+x); a.preload='auto'; return a; }); G.zt=tok;
   function end(ok){ if(done) return; done=true; if(G.zt===tok) G.zt=null; G.au=null; o.onend&&o.onend(ok); }
-  function back(){ if(done||G.zt!==tok) return; done=true; G.zt=null; G.au=null; if(G.can()){ var sp={s:f.s,back:f.back,o:o,pos:0}, d2=false; sp.end=function(){ if(d2) return; d2=true; if(G.sp===sp) G.sp=null; o.onend&&o.onend(true); }; G.sp=sp; speakFrom(sp); } else o.onend&&o.onend(false); }
+  function back(){ if(done||G.zt!==tok) return; done=true; G.zt=null; G.au=null; o.onend&&o.onend(false); } /* файл не открылся - молчим, без голоса устройства */
   function prog(a){ if(!o.onb||!a.duration) return; var u=(i-1+a.currentTime/a.duration)/au.length; o.onb(f.back(Math.min(f.s.length,Math.round(f.s.length*u)))); }
   function play(a){ var pr=a.play(); if(pr&&pr.catch) pr.catch(function(e){ if(G.zt!==tok) return; if(e&&e.name==='NotAllowedError') zGesture(function(){ if(G.zt===tok&&G.au===a) play(a); }); else back(); }); }
   function next(){ if(G.zt!==tok) return; if(i>=au.length){ if(o.onb) o.onb(f.back(f.s.length)); return end(true); } var a=G.au=au[i++]; a.volume=G.vol; a.ontimeupdate=function(){ prog(a); }; a.onended=next; a.onerror=back; play(a); }

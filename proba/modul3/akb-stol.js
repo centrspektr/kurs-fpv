@@ -17,7 +17,13 @@ var bub = el('div', 'g-bub'); bub.hidden = true; ui.appendChild(bub);
 var bar = el('div', 'g-bar'); bar.hidden = true; ui.appendChild(bar);
 var menu = el('div', 'g-menu'); menu.hidden = true; ui.appendChild(menu);
 function say(html, kind, chip) { bub.hidden = false; bub.className = 'g-bub' + (kind ? ' ' + kind : ''); bub.innerHTML = (chip ? '<span class="chip">' + chip + '</span><br>' : '') + html;
-  if (window.GOLOS && GOLOS.on) GOLOS.say(bub.textContent.replace(chip || '', '').replace(/(\d),(\d)/g, '$1 и $2 десятых').replace(/\bS\b/g, 'эс')); }
+  if (window.GOLOS && GOLOS.on) GOLOS.say(vg(bub.textContent.replace(chip || '', ''))); }
+/* 17.11: дробные числа голосом: "4,35" - "4 и 35 сотых", "3,1" - "3 и одна десятая" (раньше "4 и 3 десятых5"). Цифры словами делает голос (GOLOS.fix). */
+function dec(t) { return t.replace(/(\d+),(\d+)/g, function (m, a, f) { f = f.replace(/0+$/, ''); var n = +f, d = f.length === 1 ? 'десят' : 'сот', u = n % 10, x = n % 100, ten = n - u;
+  if (!n) return a; var w = x >= 11 && x <= 19 ? n + ' ' + d + 'ых' : u === 1 ? (ten ? ten + ' ' : '') + 'одна ' + d + 'ая' : u === 2 ? (ten ? ten + ' ' : '') + 'две ' + d + 'ых' : n + ' ' + d + 'ых'; return a + ' и ' + w; }); }
+/* текст для голоса: дроби, вольты и амперы словами, значки кнопок и стрелки (как записан голос Леры) */
+function vg(t) { return dec(t).replace(/\bS\b/g, 'эс').replace(/(\d|десятых|сотых|десятая|сотая)\s+В(?![А-Яа-яЁё])/g, '$1 вольт').replace(/(\d|десятых|сотых|десятая|сотая)\s+А(?![А-Яа-яЁё])/g, '$1 ампер')
+  .replace(/①/g, 'один').replace(/②/g, 'два').replace(/\s*→\s*/g, ', ').replace(/\s×\s/g, ' умножить на ').replace(/\s=\s/g, ' равно ').replace(/\s+/g, ' ').trim(); }
 function buttons(list) { bar.hidden = false; bar.innerHTML = ''; list.forEach(function (b) { var x = el('button', b.cls || '', b.t); x.onclick = function () { b.f(x); }; if (b.dis) x.disabled = true; bar.appendChild(x); }); return bar; }
 function clearUI() { bub.hidden = true; bar.hidden = true; menu.hidden = true; }
 function kid() { return window.AKB_VER() === 'kid'; }

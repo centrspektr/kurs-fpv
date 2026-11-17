@@ -70,3 +70,9 @@ Alexandr выбрал на карточке вариант А: вместо от
 Прежние файлы: `index-1711b.html` (главная), `fps-upr-1711.js` (корень), `modul3-fps-upr-1711.js` (proba/modul3/fps-upr.js), `kryshi-proba-1711.js`, `sborka-index-1711b.html`, `sborka-mladshie-1711b.html` (trenazhery/sborka/).
 Как откатить (только после "ставь"): `index-1711b.html` -> `index.html` в корне; fps-upr-1711.js -> fps-upr.js в корне, modul3-fps-upr-1711.js -> proba/modul3/fps-upr.js; kryshi-proba-1711.js -> kryshi-proba.js; sborka-*-1711b.html -> trenazhery/sborka/index.html и mladshie.html.
 Быстро без отката: `?pobeg=0` - прежнее управление в комнатах, `?trassa=0` - без трассы на время.
+
+## Исправление 17.11.2026 поздно вечером (голос в модулях 2, 3, 5)
+Модуль 2 молчал там, где у устройства нет своего голоса (встроенный браузер Telegram/VK, часть телефонов): GOLOS.can() спрашивал голос устройства. Теперь can() - "есть записи Леры", голос устройства - GOLOS.dev().
+В модулях 3, 5 и тренажёрах (pult, klassy, mobula) убран робот: нет записи - молчим, фраза попадает в GOLOS.miss. Подсказки стола и зарядки модуля 3 дозаписаны Лерой (229 фраз, zvuk/), дроби читаются как "4 и 35 сотых вольт".
+Прежние файлы: `golos-proba2-1711v.js`, `kosmos-kurs-proba-1711v.js` (корень), `proba-modul3-golos-new-1711v.js` (proba/modul3/golos-new.js), `proba-modul3-akb-stol-1711v.js` (proba/modul3/akb-stol.js), `trenazhery-pult-golos-new-1711v.js` (trenazhery/pult, klassy, mobula - golos-new.js, был один и тот же).
+Как откатить: скопировать эти файлы обратно под прежними именами. Новые записи в zvuk/ ничему не мешают.
