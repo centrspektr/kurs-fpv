@@ -1390,7 +1390,9 @@ function freeStep(dt){ var f=FREE, b=freeBox(), gp=padIn(), k=function(c){ retur
   var g=f.d.g; g.position.copy(f.p); g.rotation.set(0,f.h,0); g.rotateX(f.tilt[0]); g.rotateZ(f.tilt[1]); /* 13.11: крен в ту же сторону, куда летим */
   var spd=f.v.length(); for(var pj=1;pj<f.d.props.length;pj+=2) f.d.props[pj].rotation.y+=dt*(30+spd*2+thr*15); speed=spd*2;
   /* камера за дроном, чуть выше */
-  var cp=V(f.p.x-fx*8,f.p.y+3,f.p.z-fz*8); camP.lerp(cp,Math.min(1,dt*4)); camL.lerp(V(f.p.x+fx*6,f.p.y+.6,f.p.z+fz*6),Math.min(1,dt*6)); yaw=0;
+  /* 17.11: телефон горизонтально (низкий широкий экран) - камера дальше и смотрит выше: дрон меньше и не закрывает ворота с ответами */
+  var lsp=innerWidth>innerHeight*1.4&&innerHeight<560&&matchMedia('(pointer:coarse)').matches, ch=lsp?3.3:3, cb=lsp?10.5:8, la=lsp?8:6, ly=lsp?1.1:.6;
+  var cp=V(f.p.x-fx*cb,f.p.y+ch,f.p.z-fz*cb); camP.lerp(cp,Math.min(1,dt*4)); camL.lerp(V(f.p.x+fx*la,f.p.y+ly,f.p.z+fz*la),Math.min(1,dt*6)); yaw=0;
   /* ворота на лётном поле: пролетел насквозь - зажглись белым */
   (curL.aerGates||[]).forEach(function(gt,j){ var c=gt.position, nx=Math.sin(gt.rotation.y), nz=Math.cos(gt.rotation.y), sd=(f.p.x-c.x)*nx+(f.p.z-c.z)*nz, near=f.p.distanceTo(c)<2.7, ps=f.side[j];
     if(near&&ps!=null&&Math.sign(sd)!==Math.sign(ps)&&!gt.userData.ok){ gt.userData.ok=1; gt.material.color.set('#ffffff'); f.gates++; freeHud(); }
