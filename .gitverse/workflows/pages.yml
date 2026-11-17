@@ -17,10 +17,22 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+      # 17.11 (выбор Alexandr): на сайт не выкладываем старые пробы и откаты - сайт ими не пользуется,
+      # в репозитории они остаются. Так сайт ~44,5 МБ вместо ~49. Вернуть - убрать строку из списка ниже.
+      - name: Collect site files
+        run: |
+          mkdir -p ../_site
+          tar -cf - --exclude=./.git --exclude=./.github --exclude=./.gitverse \
+            --exclude=./otkat \
+            --exclude=./proba/modul2 --exclude=./proba/sborka --exclude=./proba/fpv --exclude=./proba/engine \
+            --exclude=./proba/ekran --exclude=./proba/zadanie --exclude=./proba/index.html --exclude=./proba/perenos.html \
+            . | tar -xf - -C ../_site
+          du -sh ../_site
+          mv ../_site ./_site
       - name: Upload artifact
         uses: gitverse/upload-pages-artifact@v1.0.0
         with:
-          path: .
+          path: _site
           retention-days: 1
   deploy:
     needs: build
