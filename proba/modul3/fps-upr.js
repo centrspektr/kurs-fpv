@@ -4,10 +4,15 @@
    Телефон: слева джойстик - ходить, справа води пальцем - смотреть, кнопки БЕГ, ПРЫЖОК и E (действие). Касание предмета - подойти, как раньше.
    Подключение: FPSUPR.create({ canvas, root, walk(): можно ли ходить, look(dx, dy): повернуть (в радианах), act(): действие,
      jump(), lockOk(): можно ли захватывать мышь, noMouse: мышь не трогать }) -> { joy: {f, s, run}, locked(), unlock() }.
+   17.11 (только проба new.html, FPSUPR.v2): ещё ближе к "Побегу" - камера по вертикали идёт за пальцем (вверх - смотрим вверх),
+     раскладка на телефоне как в игре: джойстик слева внизу, рядом БЕГ (включить/выключить), справа ПРЫЖОК и большая E;
+     прыжок и скорость как в игре (FPSUPR.JV, FPSUPR.G, FPSUPR.WALK, FPSUPR.RUN; бег только вперёд). Главная (index.html) - по-старому.
    Копия лежит в proba/modul3/fps-upr.js (для этажей модулей 3 и 5), файлы одинаковые. */
 (function () {
 'use strict';
 var TOUCH = matchMedia('(pointer:coarse)').matches && 'ontouchstart' in window;
+/* 17.11: новое управление только на пробе new.html (или ?pobeg=1), главная по-старому до "ставь" */
+var V2 = false; try { V2 = /[?&]pobeg\b/.test(location.search) || /\/new\.html$/.test(location.pathname) || /\/new\.html$/.test(top.location.pathname); } catch (e) {}
 function create(o) {
   var cv = o.canvas, root = o.root || document.body, U = { joy: { f: 0, s: 0, run: false }, touch: TOUCH };
   var canLock = o.lock !== false && !TOUCH && !o.noMouse && !!cv.requestPointerLock; /* 12.11 вечер: щелчок по полу захватывает мышь; камера идёт за пальцем по тачпаду и без захвата */ /* noMouse: мышью управляет сама комната (модуль 2), отсюда только телефон */
@@ -22,7 +27,18 @@ function create(o) {
     '.fpsb{position:fixed;right:18px;z-index:40;display:none;gap:10px;flex-direction:column;align-items:flex-end}' +
     '.fpsb button{width:68px;height:68px;border-radius:50%;border:2px solid rgba(255,255,255,.45);background:rgba(10,14,30,.45);color:#fff;font:800 11px system-ui,sans-serif;letter-spacing:-.02em;padding:0;touch-action:none}' +
     '.fpsb button.on{background:rgba(124,243,255,.45)}' +
-    'body.fps-walk.fps-touch .fpsj, body.fps-walk.fps-touch .fpsb{display:flex}';
+    'body.fps-walk.fps-touch .fpsj, body.fps-walk.fps-touch .fpsb{display:flex}' +
+    /* 17.11: раскладка как в "Побеге" (телефон): джойстик 104 слева внизу, БЕГ рядом, справа E (большая) и ПРЫЖОК над ней */
+    (V2 ? '.fpsj.v2{left:calc(18px + env(safe-area-inset-left,0px));bottom:calc(16px + env(safe-area-inset-bottom,0px));width:104px;height:104px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.18)}' +
+    '.fpsj.v2 i{width:38px;height:38px;margin:-19px;background:rgba(242,194,48,.45);border:0}' +
+    '.fpsb .fpsv{position:fixed;z-index:40;display:none;width:44px;height:44px;border-radius:50%;border:1px solid rgba(255,255,255,.28);background:rgba(20,24,28,.38);color:#fff;font:800 8px system-ui,sans-serif;letter-spacing:0;padding:0;touch-action:none;place-items:center}' +
+    '.fpsb .fpsv.on{background:rgba(242,194,48,.5)}' +
+    '.fpsb .fpsv-run{left:calc(132px + env(safe-area-inset-left,0px));bottom:calc(20px + env(safe-area-inset-bottom,0px))}' +
+    '.fpsb .fpsv-act{right:calc(16px + env(safe-area-inset-right,0px));bottom:calc(16px + env(safe-area-inset-bottom,0px));width:62px;height:62px;font-size:16px;background:rgba(124,243,255,.3)}' +
+    '.fpsb .fpsv-jump{right:calc(20px + env(safe-area-inset-right,0px));bottom:calc(90px + env(safe-area-inset-bottom,0px))}' +
+    'body.fps-walk.fps-touch .fpsb .fpsv{display:grid}' +
+    /* строка "Дальше" не должна закрывать джойстик и БЕГ - сдвигаем её между ними и кнопками справа */
+    'body.fps-walk.fps-touch #nextb{left:calc(188px + env(safe-area-inset-left,0px));max-width:calc(100vw - 290px)}body.fps-walk.fps-touch #nextb b{max-width:calc(100vw - 480px)}' : '');
   document.head.appendChild(st);
   var cross = document.createElement('div'); cross.className = 'fpsx'; document.body.appendChild(cross);
   document.body.classList.toggle('fps-touch', TOUCH);
@@ -36,7 +52,7 @@ function create(o) {
   setInterval(function () { var w = o.walk(); document.body.classList.toggle('fps-walk', !!w); if (!o.noMouse && (!w || (o.lockOk && !o.lockOk()))) U.unlock(); }, 200);
   if (TOUCH) {
     /* джойстик слева */
-    var J = document.createElement('div'); J.className = 'fpsj'; J.innerHTML = '<i></i>'; root.appendChild(J); var kn = J.firstChild, jid = null, jc = null;
+    var J = document.createElement('div'); J.className = 'fpsj' + (V2 ? ' v2' : ''); J.innerHTML = '<i></i>'; root.appendChild(J); var kn = J.firstChild, jid = null, jc = null;
     function jset(x, y) { var dx = x - jc.x, dy = y - jc.y, L = Math.hypot(dx, dy), R = 50; if (L > R) { dx *= R / L; dy *= R / L; }
       kn.style.transform = 'translate(' + dx + 'px,' + dy + 'px)'; U.joy.s = dx / R; U.joy.f = -dy / R; }
     J.addEventListener('touchstart', function (e) { e.preventDefault(); e.stopPropagation(); var t = e.changedTouches[0]; jid = t.identifier; var r = J.getBoundingClientRect(); jc = { x: r.left + r.width / 2, y: r.top + r.height / 2 }; jset(t.clientX, t.clientY); }, { passive: false });
@@ -45,11 +61,16 @@ function create(o) {
     J.addEventListener('touchend', jend); J.addEventListener('touchcancel', jend);
     /* кнопки справа */
     var B = document.createElement('div'); B.className = 'fpsb'; B.style.bottom = '26px';
-    B.innerHTML = '<button type="button" data-k="act">E</button><button type="button" data-k="jump">ПРЫЖОК</button><button type="button" data-k="run">БЕГ</button>'; root.appendChild(B);
+    if (V2) { B.style.display = 'contents'; B.innerHTML = '<button type="button" class="fpsv fpsv-run" data-k="run">БЕГ</button><button type="button" class="fpsv fpsv-jump" data-k="jump">ПРЫЖОК</button><button type="button" class="fpsv fpsv-act" data-k="act">E</button>'; }
+    else B.innerHTML = '<button type="button" data-k="act">E</button><button type="button" data-k="jump">ПРЫЖОК</button><button type="button" data-k="run">БЕГ</button>';
+    root.appendChild(B);
     B.addEventListener('touchstart', function (e) { var b = e.target.closest('button'); if (!b) return; e.preventDefault(); e.stopPropagation(); var k = b.dataset.k;
       if (k === 'run') { U.joy.run = !U.joy.run; b.classList.toggle('on', U.joy.run); } else if (k === 'jump') o.jump(); else o.act(); }, { passive: false });
   }
   return U;
 }
-window.FPSUPR = { create: create, touch: TOUCH };
+/* 17.11 (v2): прыжок, тяжесть, скорость шага и бега - как в "Побеге"; на главной прежние числа */
+window.FPSUPR = { create: create, touch: TOUCH, v2: V2, JV: V2 ? 6.5 : 3.6, G: V2 ? 22 : 11, WALK: V2 ? 4.4 : 2.6, RUN: V2 ? 7.4 : 5.2,
+  /* поворот перетаскиванием (палец или мышь с нажатой кнопкой): как в "Побеге" камера идёт за пальцем и по горизонтали, и по вертикали */
+  dragK: V2 ? .005 : 0, pitchSign: V2 ? -1 : 1 };
 })();

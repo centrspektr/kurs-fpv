@@ -515,7 +515,7 @@ function make(cfg) {
   function unlock() { if (locked()) try { document.exitPointerLock(); } catch (e) {} }
   function input() {
     cv.addEventListener('pointerdown', function (e) { if (anim) return; drag = { id: e.pointerId, x: e.clientX, y: e.clientY, yaw: yaw, pitch: pitch, moved: false }; });
-    addEventListener('pointermove', function (e) { if (!on) return; if (!drag || drag.id !== e.pointerId) { hover(e); return; } var dx = e.clientX - drag.x, dy = e.clientY - drag.y; if (Math.abs(dx) + Math.abs(dy) > (PROBA ? 3 : 8)) drag.moved = true; if (drag.moved) { yaw = drag.yaw + (PROBA ? -dx : dx) * .0055; pitch = Math.max(-1.1, Math.min(.85, drag.pitch + dy * .0045)); lookAt = null; } });
+    addEventListener('pointermove', function (e) { if (!on) return; if (!drag || drag.id !== e.pointerId) { hover(e); return; } var dx = e.clientX - drag.x, dy = e.clientY - drag.y; if (Math.abs(dx) + Math.abs(dy) > (PROBA ? 3 : 8)) drag.moved = true; if (drag.moved) { var FX = window.FPSUPR || {}; /* 17.11 (проба): как в "Побеге" - палец вверх, камера смотрит вверх */ yaw = drag.yaw + (PROBA ? -dx : dx) * (FX.dragK || .0055); pitch = Math.max(-1.1, Math.min(.85, drag.pitch + (FX.pitchSign || 1) * dy * (FX.dragK || .0045))); lookAt = null; } });
     addEventListener('pointerup', function (e) { if (!on || !drag || drag.id !== e.pointerId) return; var d = drag; drag = null; if (d.moved || anim || paused) return;
       if (MLOOK && e.pointerType === 'mouse') { if (locked()) interact(); else { if (sel && arrived) tap(e.clientX, e.clientY); else { try { cv.requestPointerLock(); } catch (er) {} } } return; }
       tap(e.clientX, e.clientY); });
@@ -528,10 +528,10 @@ function make(cfg) {
       function cl(v) { return Math.max(-.12, Math.min(.12, v)); } yaw -= cl(dx * .0025); pitch = Math.max(-1.1, Math.min(.85, pitch - cl(dy * .0025))); lookAt = null; }, { passive: false });
     addEventListener('keydown', function (e) { if (!on || paused) return; if (e.target && /INPUT|TEXTAREA|SELECT/.test(e.target.tagName) && e.code !== 'Escape') return; keys[e.code] = 1; if (e.code === 'Escape' && sel) { sel = null; card(null); }
       /* пробел - прыжок, Enter или E - действие */
-      if (e.code === 'Space') { e.preventDefault(); if (!anim && jy <= 0) jv = 3.6; }
+      if (e.code === 'Space') { e.preventDefault(); if (!anim && jy <= 0) jv = window.FPSUPR ? FPSUPR.JV : 3.6; }
       if ((e.code === 'Enter' || e.code === 'NumpadEnter' || e.code === 'KeyE') && !e.repeat && !anim) { e.preventDefault(); interact(); } });
     addEventListener('keyup', function (e) { keys[e.code] = 0; });
-    if (PROBA && window.FPSUPR) FU = FPSUPR.create({ canvas: cv, root: root, noMouse: true, walk: function () { return on && !paused && !anim; }, act: function () { if (!anim) interact(); }, jump: function () { if (!anim && jy <= 0) jv = 3.6; },
+    if (PROBA && window.FPSUPR) FU = FPSUPR.create({ canvas: cv, root: root, noMouse: true, walk: function () { return on && !paused && !anim; }, act: function () { if (!anim) interact(); }, jump: function () { if (!anim && jy <= 0) jv = FPSUPR.JV; },
       look: function (dx, dy) { yaw += dx; pitch = Math.max(-1.1, Math.min(.85, pitch + dy)); lookAt = null; } });
   }
   var FU = null;
@@ -577,7 +577,14 @@ function make(cfg) {
       if (FU) { kx = Math.max(-1, Math.min(1, kx + FU.joy.s)); kz = Math.max(-1, Math.min(1, kz + FU.joy.f)); }
       if (keys.ArrowLeft) yaw += dt * 1.8; if (keys.ArrowRight) yaw -= dt * 1.8;
       var run = keys.ShiftLeft || keys.ShiftRight || (FU && FU.joy.run), st = run ? 1.5 : .6;
-      if (kx || kz) { var f = new T.Vector3(-Math.sin(yaw), 0, -Math.cos(yaw)), r = new T.Vector3(-f.z, 0, f.x); target = pos.clone().addScaledVector(f, kz * st).addScaledVector(r, kx * st); clampP(target); target.y = EYE; lookAt = null; if (sel) { sel = null; card(null); } }
+      if (window.FPSUPR && FPSUPR.v2 && (kx || kz)) { /* 17.11 (проба): ходьба как в "Побеге" - скорость 4.4, бегом 7.4 только вперёд, плавный разгон */
+        var fv = new T.Vector3(-Math.sin(yaw), 0, -Math.cos(yaw)), rv = new T.Vector3(-fv.z, 0, fv.x), ln = Math.max(1, Math.hypot(kx, kz)), spd = run && kz > 0 ? FPSUPR.RUN : FPSUPR.WALK;
+        var want2 = fv.multiplyScalar(kz / ln * spd).addScaledVector(rv, kx / ln * spd); vel.lerp(want2, Math.min(1, dt * 12)); target = null; lookAt = null; if (sel) { sel = null; card(null); }
+        var nx2 = pos.x + vel.x * dt, nz2 = pos.z + vel.z * dt, tp2 = new T.Vector3(nx2, EYE, nz2); clampP(tp2); nx2 = tp2.x; nz2 = tp2.z;
+        if (!blocked(nx2, nz2, pos.x, pos.z)) { pos.x = nx2; pos.z = nz2; } else if (!blocked(nx2, pos.z, pos.x, pos.z)) pos.x = nx2; else if (!blocked(pos.x, nz2, pos.x, pos.z)) pos.z = nz2;
+        bob += vel.length() * dt * 2.4; }
+      else if (kx || kz) { var f = new T.Vector3(-Math.sin(yaw), 0, -Math.cos(yaw)), r = new T.Vector3(-f.z, 0, f.x); target = pos.clone().addScaledVector(f, kz * st).addScaledVector(r, kx * st); clampP(target); target.y = EYE; lookAt = null; if (sel) { sel = null; card(null); } }
+      if (window.FPSUPR && FPSUPR.v2 && !kx && !kz && !target) vel.set(0, 0, 0);
       /* ходьба к цели: плавный разгон и торможение, обход препятствий скольжением */
       if (target) { var d = target.clone().sub(pos); d.y = 0; var L = d.length();
         if (L < .04) { target = null; vel.set(0, 0, 0); if (sel) { arrived = true; unlock(); } }
@@ -585,7 +592,7 @@ function make(cfg) {
           if (!blocked(nx, nz, pos.x, pos.z)) { pos.x = nx; pos.z = nz; } else if (!blocked(nx, pos.z, pos.x, pos.z)) pos.x = nx; else if (!blocked(pos.x, nz, pos.x, pos.z)) pos.z = nz; else { target = null; vel.set(0, 0, 0); if (sel) arrived = true; }
           bob += vel.length() * dt * 2.4; } }
       /* прыжок */
-      if (jy > 0 || jv > 0) { jv -= 11 * dt; jy += jv * dt; if (jy <= 0) { jy = 0; jv = 0; } }
+      if (jy > 0 || jv > 0) { jv -= (window.FPSUPR ? FPSUPR.G : 11) * dt; jy += jv * dt; if (jy <= 0) { jy = 0; jv = 0; } }
       if (lookAt) { var dd = lookAt.clone().sub(pos), ty = Math.atan2(-dd.x, -dd.z), tp = Math.atan2(dd.y, Math.hypot(dd.x, dd.z)); yaw += angD(yaw, ty) * Math.min(1, dt * 3.2); pitch += (tp - pitch) * Math.min(1, dt * 3.2); if (!target && Math.abs(angD(yaw, ty)) < .01) lookAt = null; }
     }
     CAM.position.set(pos.x, (anim ? pos.y : EYE + jy) + (anim || jy > 0 ? 0 : Math.sin(bob * 2) * .022), pos.z); CAM.rotation.order = 'YXZ'; CAM.rotation.set(pitch, yaw, 0);

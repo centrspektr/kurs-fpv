@@ -134,8 +134,9 @@ function create(o) {
   cv.addEventListener('pointermove', function (e) {
     if (!down) { if (e.pointerType === 'mouse' && R.mode === 'walk') hover(e.clientX, e.clientY); return; }
     var dx = e.clientX - down.x, dy = e.clientY - down.y; if (Math.abs(dx) + Math.abs(dy) > 7) down.moved = true;
-    if (down.moved && R.mode === 'walk') { var k = (e.pointerType === 'touch' ? 0.0062 : 0.0042);
-      yaw = down.y0 + (FPSP ? -dx : dx) * k; pitch = Math.max(-1.2, Math.min(1.0, down.p0 + dy * k * 0.9)); turn = null; }
+    if (down.moved && R.mode === 'walk') { var FX = window.FPSUPR || {}, k = FX.dragK || (e.pointerType === 'touch' ? 0.0062 : 0.0042);
+      /* 17.11 (проба): как в "Побеге" - палец вверх, камера смотрит вверх (раньше по вертикали было наоборот) */
+      yaw = down.y0 + (FPSP ? -dx : dx) * k; pitch = Math.max(-1.2, Math.min(1.0, down.p0 + (FX.pitchSign || 1) * dy * k * (FX.dragK ? 1 : 0.9))); turn = null; }
     if (R.onDrag && R.mode === 'focus') R.onDrag(dx, dy, e); });
   cv.addEventListener('pointerup', function (e) { var d = down; down = null; if (!d) return;
     if (d.moved) { if (R.onDragEnd) R.onDragEnd(); return; }
@@ -166,12 +167,12 @@ function create(o) {
   var jy = 0, jv = 0;
   addEventListener('keydown', function (e) { if (e.target && /INPUT|TEXTAREA|SELECT/.test(e.target.tagName) && e.code !== 'Escape') return; keys[e.code] = 1; if (e.code === 'Escape' && R.mode === 'focus' && R.onEsc) R.onEsc();
     if (R.mode !== 'walk' || (R.busy && R.busy())) return;
-    if (e.code === 'Space') { e.preventDefault(); if (jy <= 0) jv = 3.6; }
+    if (e.code === 'Space') { e.preventDefault(); if (jy <= 0) jv = window.FPSUPR ? FPSUPR.JV : 3.6; }
     if ((e.code === 'Enter' || e.code === 'NumpadEnter' || e.code === 'KeyE') && !e.repeat) { e.preventDefault(); interact(); } });
   addEventListener('keyup', function (e) { keys[e.code] = 0; });
   var FPSP = false; try { FPSP = /[?&]new\b/.test(location.search) || (parent !== window && /\/((new|g|index)\.html)?$/.test(parent.location.pathname)); } catch (e) {}
   function canWalk() { return R.mode === 'walk' && !(R.busy && R.busy()); }
-  var FU = FPSP && window.FPSUPR ? FPSUPR.create({ canvas: cv, root: document.body, walk: canWalk, lockOk: canWalk, act: function () { interact(); }, jump: function () { if (jy <= 0) jv = 3.6; },
+  var FU = FPSP && window.FPSUPR ? FPSUPR.create({ canvas: cv, root: document.body, walk: canWalk, lockOk: canWalk, act: function () { interact(); }, jump: function () { if (jy <= 0) jv = FPSUPR.JV; },
     look: function (dx, dy) { yaw += dx; pitch = Math.max(-1.2, Math.min(1.0, pitch + dy)); turn = null; } }) : null;
   R.fpsU = FU;
   addEventListener('blur', function () { keys = {}; });
@@ -185,7 +186,7 @@ function create(o) {
       var f = (keys.KeyW || keys.ArrowUp ? 1 : 0) - (keys.KeyS || keys.ArrowDown ? 1 : 0), s = (keys.KeyD ? 1 : 0) - (keys.KeyA ? 1 : 0);
       if (FU) { f = Math.max(-1, Math.min(1, f + FU.joy.f)); s = Math.max(-1, Math.min(1, s + FU.joy.s)); }
       if (keys.ArrowLeft) yaw += dt * 1.8; if (keys.ArrowRight) yaw -= dt * 1.8;
-      if (f || s) { walk = null; hideMarker(); showCard(null); var sp = (keys.ShiftLeft || keys.ShiftRight || (FU && FU.joy.run) ? 5.2 : 2.6) * dt;
+      if (f || s) { walk = null; hideMarker(); showCard(null); var FX = window.FPSUPR || { WALK: 2.6, RUN: 5.2 }, rn = keys.ShiftLeft || keys.ShiftRight || (FU && FU.joy.run); if (FX.v2 && f <= 0) rn = false; /* 17.11: как в "Побеге" - бегом только вперёд */ var sp = (rn ? FX.RUN : FX.WALK) * dt;
         moveBy((-Math.sin(yaw) * f + Math.cos(yaw) * s) * sp, (-Math.cos(yaw) * f - Math.sin(yaw) * s) * sp); }
       if (walk) { var dx = walk.x - cam.position.x, dz = walk.z - cam.position.z, dist = Math.hypot(dx, dz), sp2 = Math.min(dist, 3.4 * dt);
         if (dist < 0.05) { if (walk.q && walk.q.length) { var nx = walk.q.shift(); walk.x = nx[0]; walk.z = nx[1]; } else arrive(); } else {
@@ -193,7 +194,7 @@ function create(o) {
           if (dist > 0.8) { yaw += dyaw * Math.min(1, dt * 3.2); pitch += (-0.06 - pitch) * Math.min(1, dt * 2); }
           if (!moveBy(dx / dist * sp2, dz / dist * sp2)) { if (walk.q && walk.q.length) { var nx2 = walk.q.shift(); walk.x = nx2[0]; walk.z = nx2[1]; } else arrive(); } } }
       if (turn) { turn.t = Math.min(1, turn.t + dt * 2.2); var k = 1 - Math.pow(1 - turn.t, 3); yaw = turn.y0 + (turn.y1 - turn.y0) * k; pitch = turn.p0 + (turn.p1 - turn.p0) * k; if (turn.t >= 1) turn = null; }
-      if (jy > 0 || jv > 0) { jv -= 11 * dt; jy += jv * dt; if (jy <= 0) { jy = 0; jv = 0; } }
+      if (jy > 0 || jv > 0) { jv -= (window.FPSUPR ? FPSUPR.G : 11) * dt; jy += jv * dt; if (jy <= 0) { jy = 0; jv = 0; } }
       cam.position.y = EYE + jy + (walk && !jy ? Math.sin(t * 9) * 0.018 : 0);
       cam.rotation.set(pitch, yaw, 0, 'YXZ');
       if (near && Math.hypot(cam.position.x - near.at[0], cam.position.z - near.at[1]) > 1.6) showCard(null);
