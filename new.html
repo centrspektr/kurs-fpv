@@ -6,11 +6,13 @@
 <title>Курс FPV - карта</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Marck+Script&family=Unbounded:wght@500;700&family=Manrope:wght@400;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
-<link rel="manifest" href="manifest.webmanifest">
+<link rel="manifest" href="manifest-new.webmanifest">   <!-- проба 17.11: установленный курс открывается на весь экран, без полос -->
 <meta name="theme-color" content="#0d1117">
 <link rel="icon" type="image/png" href="favicon.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <script src="povorot.js?v=1711a"></script>   <!-- 17.11: на телефоне игра только горизонтально, в вертикали - экран "Переверните телефон" и пауза -->
+<script src="ekran.js?v=1711g"></script>   <!-- проба 17.11: кнопка "На весь экран" на телефоне (iPhone и мессенджер - подсказка, как убрать полосы) -->
+<meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="apple-mobile-web-app-title" content="Курс FPV">
 <script src="config.js?v=1211d"></script>
 <script src="perenos.js?v=1211d"></script>
 <script src="rejting.js?v=1211d"></script>   <!-- проба 09.11: рейтинг курса по площадкам, очки th/sb на сервер -->
@@ -331,10 +333,10 @@ document.getElementById('hudC').textContent = (window.KURSY && KURSY.name) || '�
 <script src="fps-upr.js?v=1711z" defer></script><script src="komnata-new.js?v=1711z" defer></script>   <!-- проба 09.11: движок модуля-помещения (модуль 2) -->
 <script src="masterskaya.js?v=1211d" defer></script>   <!-- проба 09.11: модуль 2 "Мастерская" от первого лица -->
 <script src="moduli.js?v=1211d" defer></script>
-<script src="golos-proba2.js?v=1711m" defer></script>   <!-- проба 17.11: только голос Леры, без голоса устройства -->
+<script src="golos-proba2.js?v=1711g" defer></script>   <!-- проба 17.11: только голос Леры, без голоса устройства -->
 <script src="komnaty.js?v=1311n" defer></script>   <!-- проба 09.11: модули-помещения (модуль 3 - комната от первого лица) -->
 <script src="kryshi/bloom.js?v=1211d" defer></script>   <!-- проба 10.11: свечение огней на крышах (three.js r128, MIT) -->
 <script src="kryshi-proba.js?v=1711w" defer></script>   <!-- проба 10.11: новые крыши модулей 1, 4, 6 -->
-<script src="kosmos-kurs-proba.js?v=1711p" defer></script>   <!-- проба 17.11: камера полёта на телефоне горизонтально; кнопка "Вход по коду" после входа открывает обычный вид (сменить код) -->
+<script src="kosmos-kurs-proba.js?v=1711g" defer></script>   <!-- проба 17.11: камера полёта на телефоне горизонтально; кнопка "Вход по коду" после входа открывает обычный вид (сменить код) -->
 </body>
 </html>

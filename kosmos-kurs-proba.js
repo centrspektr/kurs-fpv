@@ -1195,7 +1195,7 @@ function openWin(mode,n,from){ winOn=true; winMode=mode; st='win'; cur=n; winTas
 /* передача задания: сверху окна печатается номер, название и план задания, голос читает (engine/golos.js). Пройденное - без голоса */
 var bEl=$('brief'), bT=$('bT'), bX=$('bX'), tk=$('t-kurs'), bTm=0, GL=window.GOLOS;
 /* шестерёнка в окне задания (22.10, правка 12): звук всегда виден; голос - если на устройстве есть русские голоса (список может появиться не сразу) */
-function sndUI(){ var ok=!!GL&&GL.can(); $('sndB').textContent=GL&&GL.on?'🔊 Звук: вкл':'🔇 Звук: выкл'; $('sndB').hidden=!GL; $('vB').hidden=!ok; if(!ok) $('vRow').hidden=true; }
+function sndUI(){ var ok=!!GL&&(GL.dev?GL.dev():GL.can()); $('sndB').textContent=GL&&GL.on?'🔊 Звук: вкл':'🔇 Звук: выкл'; $('sndB').hidden=!GL; $('vB').hidden=!ok; if(!ok) $('vRow').hidden=true; }
 $('gearB').onclick=function(){ var m=$('gearM'); m.hidden=!m.hidden; sndUI(); };
 document.addEventListener('pointerdown',function(e){ var m=$('gearM'); if(!m.hidden&&!m.contains(e.target)&&e.target!==$('gearB')) m.hidden=true; });
 /* выбор голоса: все русские голоса устройства, живые (Natural) первыми */

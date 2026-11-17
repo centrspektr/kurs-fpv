@@ -21,7 +21,11 @@ function speakFrom(sp){ var off=sp.pos, u=new SpeechSynthesisUtterance(sp.s.slic
   u.onboundary=function(e){ if(e.charIndex==null) return; sp.pos=off+e.charIndex; if(sp.o.onb) sp.o.onb(sp.back(off+e.charIndex+(e.charLength||6))); };
   u.onend=u.onerror=function(){ if(sp.u===u) sp.end(); }; sp.u=u; syn.speak(u); }
 var G=window.GOLOS={ on:lsG(KEY)!=='off', vol:isNaN(V0)?1:Math.max(0,Math.min(1,V0)), tm:0, list:list, live:live,
-  can:function(){ return !!syn&&list().length>0; },
+  /* 17.11 (исправление): can() - "голос есть". Раньше это значило "в устройстве есть русский голос", и модуль 2 (монитор, приветствие)
+     молчал там, где голоса устройства нет: встроенный браузер Telegram/VK, часть телефонов. Голос теперь - записи Леры, им голос устройства не нужен.
+     dev() - есть ли голос устройства (для выбора голоса в настройках). */
+  can:function(){ return !!window.Audio||G.dev(); },
+  dev:function(){ return !!syn&&list().length>0; },
   cur:function(){ var r=list(), nm=lsG(KEY+'_v'); return r.find(function(v){ return v.name===nm; })||r[0]||null; },
   pick:function(nm){ lsS(KEY+'_v',nm); },
   setVol:function(v){ G.vol=Math.max(0,Math.min(1,+v||0)); lsS(KEY+'_vol',String(G.vol)); if(G.au) G.au.volume=G.vol;
