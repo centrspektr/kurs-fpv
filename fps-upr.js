@@ -11,8 +11,7 @@
 (function () {
 'use strict';
 var TOUCH = matchMedia('(pointer:coarse)').matches && 'ontouchstart' in window;
-/* 17.11: новое управление только на пробе new.html (или ?pobeg=1), главная по-старому до "ставь" */
-var V2 = false; try { V2 = /[?&]pobeg\b/.test(location.search) || /\/new\.html$/.test(location.pathname) || /\/new\.html$/.test(top.location.pathname); } catch (e) {}
+var V2 = !/[?&]pobeg=0\b/.test(location.search);   /* 17.11 вечер по "ставь": новое управление везде; ?pobeg=0 - прежнее (откат otkat/fps-upr-1711.js) */
 function create(o) {
   var cv = o.canvas, root = o.root || document.body, U = { joy: { f: 0, s: 0, run: false }, touch: TOUCH };
   var canLock = o.lock !== false && !TOUCH && !o.noMouse && !!cv.requestPointerLock; /* 12.11 вечер: щелчок по полу захватывает мышь; камера идёт за пальцем по тачпаду и без захвата */ /* noMouse: мышью управляет сама комната (модуль 2), отсюда только телефон */
