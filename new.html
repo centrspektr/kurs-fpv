@@ -116,6 +116,7 @@
   #goB b{display:inline-block;animation:blink 1.1s steps(1) infinite}
   @keyframes blink{50%{opacity:0}}
   #codeL{display:block;margin:16px auto 0;background:none;border:0;color:var(--dim);text-decoration:underline;cursor:pointer;font-size:13px}
+  #codeL[hidden]{display:none}   /* 17.11: после входа ссылка была видна (display:block перебивал hidden), а нажатие ничего не делало */
   /* полёт ко входу в город: рамка бортового экрана, печатается приветствие */
   #intro{position:fixed;inset:max(14px,env(safe-area-inset-top,0px)) max(14px,env(safe-area-inset-right,0px)) max(14px,env(safe-area-inset-bottom,0px)) max(14px,env(safe-area-inset-left,0px));z-index:7;pointer-events:none;opacity:0;transition:opacity .6s;font-family:var(--mono);color:var(--ia)}
   #intro.on{opacity:1}
@@ -318,6 +319,6 @@ document.getElementById('hudC').textContent = (window.KURSY && KURSY.name) || '�
 <script src="komnaty.js?v=1311n" defer></script>   <!-- проба 09.11: модули-помещения (модуль 3 - комната от первого лица) -->
 <script src="kryshi/bloom.js?v=1211d" defer></script>   <!-- проба 10.11: свечение огней на крышах (three.js r128, MIT) -->
 <script src="kryshi-proba.js?v=1711m" defer></script>   <!-- проба 10.11: новые крыши модулей 1, 4, 6 -->
-<script src="kosmos-kurs-new.js?v=1311q" defer></script>
+<script src="kosmos-kurs-proba.js?v=1711a" defer></script>   <!-- проба 17.11: кнопка "Вход по коду" после входа открывает обычный вид (сменить код) -->
 </body>
 </html>
