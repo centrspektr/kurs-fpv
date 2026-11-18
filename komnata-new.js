@@ -285,6 +285,8 @@ function make(cfg) {
   /* ---------- стол с мини-игрой ---------- */
   var PROBA = /\/((new|g|index)\.html)?$/.test(location.pathname);   /* правки 11.11 сначала в пробе курса */
   var TABLE = null;
+  var QK = null; /* 18.11 (проба new.html): мини-квест с предметами - window.KOMNATA_KVEST[mid](ctx), см. masterskaya-kvest.js */
+  function qLock() { try { return QK && QK.table ? QK.table() : null; } catch (e) { return null; } }
   function table(o) {
     var g = grp(o.x, 0, o.z, o.ry || 0);
     var SBT = null; if (PROBA && window.SBStol) try { SBT = window.SBStol(); } catch (e) { SBT = null; }
@@ -429,12 +431,16 @@ function make(cfg) {
     else if (c.kind === 'mon') { var sl = MON.list[MON.k]; sm = 'ТЕОРИЯ · ' + (MON.k + 1) + ' ИЗ ' + MON.list.length; h = sl.h; p = sl.p;
       acts = '<button class="k-b" data-a="prev">‹</button><button class="k-b" data-a="next">›</button>' + (window.GOLOS && GOLOS.can && GOLOS.can() ? '<button class="k-b pri" data-a="listen">🔊 Слушать</button>' : ''); }
     else if (c.kind === 'info') { sm = c.info[0]; h = c.info[1]; p = c.info[2]; }
+    else if (c.kind === 'q') { var q = c.q.card(c) || {}; sm = q.sm || ''; h = q.h || ''; p = q.p || ''; acts = q.acts || ''; }
+    if (c.kind === 'table') { var lk = qLock(); if (lk) { sm = lk.sm || sm; h = lk.h || h; p = lk.p || ''; acts = lk.acts || ''; } }
     ui.card.querySelector('small').textContent = sm; ui.card.querySelector('h3').textContent = h; ui.card.querySelector('p').textContent = p;
     ui.card.querySelector('.k-acts').innerHTML = acts; ui.card.classList.add('on'); ui.hint.style.opacity = 0;
   }
   function kidFirst() { try { var P = JSON.parse(lsG((window.KURSY || {}).meKey || 'spk_vzlet') || 'null'), c = P && parseInt(P.cls, 10); return c > 0 && c <= 6; } catch (e) { return false; } }
   function doAct(a) {
     var c = sel; if (!c) return;
+    if (a.indexOf('q:') === 0) { if (QK && QK.act) QK.act(a.slice(2), c); return; }
+    if ((a === 'game0' || a === 'game1') && qLock()) a = 'lock';
     if (a === 'lock') { ui.card.classList.remove('shake'); void ui.card.offsetWidth; ui.card.classList.add('shake'); return; }
     if (a === 'task') { stopTalk(); if (api.task(c.tid) === false) doAct('lock'); return; }
     if (a === 'game0' || a === 'game1') { diveTable(a === 'game1'); return; }
@@ -502,6 +508,8 @@ function make(cfg) {
     (cfg.stands || []).forEach(stand);
     if (cfg.table) table(cfg.table);
     (cfg.decor || []).forEach(decor);
+    if (window.KOMNATA_KVEST && KOMNATA_KVEST[cfg.mid]) try { QK = KOMNATA_KVEST[cfg.mid]({ T: T, S: S, CAM: CAM, root: root, CLICK: CLICK, TICK: TICK, TABLE: TABLE, box: box, cyl: cyl, grp: grp, M: M, glow: glow, block: block, fwd: fwd, ring: ring, hint: hint, toast: toast,
+      sel: function () { return sel; }, arrived: function () { return arrived; }, recard: function () { if (sel) card(sel); }, go: function (c) { go(c); }, unsel: function () { sel = null; card(null); }, refresh: function () { refreshAll(); }, mats: { steel: mSteel, wood: mWood, dark: mDark, metal: mMetal } }); } catch (e) { QK = null; if (window.console) console.warn('kvest', e); }
     if (cfg.signs) cfg.signs.forEach(function (s) { label(s[0], s[1], s[2] || MC, s[3], s[4], s[5], s[6]); });
     guideBuild(); adoptG(); if (GX) setTimeout(function () { adoptG(); try { GX.bakeEnv(0, 1.6, 0); } catch (e) {} }, 1500);
     addEventListener('resize', function () { if (!on) return; CAM.aspect = innerWidth / innerHeight; if (!anim) CAM.fov = fov0(); CAM.updateProjectionMatrix(); R.setSize(innerWidth, innerHeight); gfit(); });
@@ -552,7 +560,8 @@ function make(cfg) {
   function hover(e) { if (MOB || paused || anim) return; var h = pick(e.clientX, e.clientY); cv.style.cursor = h && h.c ? 'pointer' : 'default'; }
   function tap(cx, cy) {
     var h = pick(cx, cy); if (!h) return;
-    if (h.c) { if (sel === h.c && arrived) { var a = h.c.kind === 'stand' ? 'task' : h.c.kind === 'table' ? 'game' + (kidFirst() ? 1 : 0) : null; if (a) { if (a === 'task' && stState(h.c.tid) === 'lock') doAct('lock'); else doAct(a); } return; }
+    if (h.c) { if (sel === h.c && arrived && (h.c.kind === 'q' || (h.c.kind === 'table' && qLock()))) { var qb = ui.card.querySelector('.k-b.pri'); if (qb) doAct(qb.dataset.a); return; }
+      if (sel === h.c && arrived) { var a = h.c.kind === 'stand' ? 'task' : h.c.kind === 'table' ? 'game' + (kidFirst() ? 1 : 0) : null; if (a) { if (a === 'task' && stState(h.c.tid) === 'lock') doAct('lock'); else doAct(a); } return; }
       go(h.c); return; }
     sel = null; card(null); target = h.p.clone(); clampP(target); target.y = EYE; lookAt = null; arrived = false;
   }
