@@ -20,6 +20,11 @@ var V0=parseFloat(lsG(KEY+'_vol')); /* громкость 0..1, помнится
 function speakFrom(sp){ var off=sp.pos, u=new SpeechSynthesisUtterance(sp.s.slice(off)); u.lang='ru-RU'; u.voice=G.cur(); u.rate=1; u.pitch=1; u.volume=G.vol;
   u.onboundary=function(e){ if(e.charIndex==null) return; sp.pos=off+e.charIndex; if(sp.o.onb) sp.o.onb(sp.back(off+e.charIndex+(e.charLength||6))); };
   u.onend=u.onerror=function(){ if(sp.u===u) sp.end(); }; sp.u=u; syn.speak(u); }
+/* 18.11 (проба new.html, просьба Alexandr: в модуле голоса накладывались): один голос на весь курс. Город, комната и тренажёр - разные окна,
+   у каждого свой GOLOS, и раньше они не глушили друг друга. Теперь новая фраза в любом окне останавливает голос во всех остальных.
+   Включается только когда главная страница - проба (GOLOS.one в golos-proba3.js). */
+function ONE(){ try{ return !!(window.top.GOLOS&&window.top.GOLOS.one); }catch(e){ return false; } }
+function hush(){ if(!ONE()) return; var seen=[]; (function walk(w){ try{ if(!w||seen.indexOf(w)>=0) return; seen.push(w); if(w!==window&&w.GOLOS&&w.GOLOS.stop) w.GOLOS.stop(); for(var i=0;i<w.frames.length;i++) walk(w.frames[i]); }catch(e){} })(window.top); }
 var G=window.GOLOS={ on:lsG(KEY)!=='off', vol:isNaN(V0)?1:Math.max(0,Math.min(1,V0)), tm:0, list:list, live:live,
   /* 17.11: can() - "голос есть": записи Леры играют и без голоса устройства (встроенный браузер Telegram/VK, часть телефонов) - раньше там молчали. dev() - голос устройства. */
   can:function(){ return !!window.Audio||G.dev(); },
@@ -31,14 +36,14 @@ var G=window.GOLOS={ on:lsG(KEY)!=='off', vol:isNaN(V0)?1:Math.max(0,Math.min(1,
     var sp=G.sp; if(sp&&syn){ clearTimeout(G.vt); G.vt=setTimeout(function(){ if(G.sp!==sp) return; sp.u=null; syn.cancel(); if(G.vol>0) speakFrom(sp); else sp.end(); },250); } },
   setOn:function(b){ G.on=!!b; lsS(KEY,b?'on':'off'); if(!b) G.stop(); },
   stop:function(){ G.zt=null; clearTimeout(G.tm); clearTimeout(G.vt); if(syn) syn.cancel(); if(G.au){ G.au.onended=G.au.onerror=null; G.au.pause(); G.au=null; } },
-  play:function(file,o){ o=o||{}; G.stop(); if(!G.on){ o.onend&&o.onend(false); return false; }
+  play:function(file,o){ o=o||{}; G.stop(); hush(); if(!G.on){ o.onend&&o.onend(false); return false; }
     var au=G.au=new Audio((window.ZVUK_DIR||'zvuk/')+file), done=false; au.volume=G.vol;
     function end(ok){ if(done) return; done=true; if(G.au===au) G.au=null; o.onend&&o.onend(ok); }
-    function back(){ if(done) return; if(G.au===au) G.au=null; done=true; if(o.text) G.say(o.text,o); else o.onend&&o.onend(false); } /* нет файла - голос устройства */
+    function back(){ if(done) return; if(ONE()&&G.au!==au){ done=true; return; } /* 18.11: фразу уже остановили - запасной текст не читаем */ if(G.au===au) G.au=null; done=true; if(o.text) G.say(o.text,o); else o.onend&&o.onend(false); } /* нет файла - голос устройства */
     au.onended=function(){ end(true); }; au.onerror=back; var pr=au.play(); if(pr&&pr.catch) pr.catch(back); return true; },
   /* 17.11: только записанный голос Леры, как на главной (golos-proba2.js). Записи нет - молчим (текст на экране остаётся), голос устройства ("робот") не подменяет.
      Список записей ещё грузится - ждём его. Чего не хватило - в GOLOS.miss (для дозаписи). */
-  say:function(text,o){ o=o||{}; G.stop(); if(!G.on){ o.onend&&o.onend(false); return false; }
+  say:function(text,o){ o=o||{}; G.stop(); hush(); if(!G.on){ o.onend&&o.onend(false); return false; }
     if(zSay(text,o)) return true;
     if(!ZL&&ZLwait){ var tok={}; G.zt=tok; ZLwait.then(function(){ if(G.zt!==tok) return; G.zt=null; if(!zSay(text,o)){ zMiss(text); o.onend&&o.onend(false); } }); return true; }
     zMiss(text); o.onend&&o.onend(false); return false; } };
