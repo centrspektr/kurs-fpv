@@ -119,7 +119,7 @@ function make(cfg) {
   /* помещение в новой графике: зал, ворота, тамбур за воротами, окно на город */
   function roomG() { var gw = 3.2, gh = 3.5, lamps = [], ww = Math.min(14, D - 3), i, k;
     for (i = -1; i <= 1; i++) for (k = -1.5; k <= 1.5; k++) lamps.push([i * W / 3.2, k * D / 4.4, 1.35, 0]);
-    var g = GX.room({ x0: -W / 2, z0: -D / 2, x1: W / 2, z1: D / 2, h: H, holes: { s: [[-gw / 2, gw / 2, gh]], e: cfg.window !== false ? [[-1 - ww / 2, -1 + ww / 2, H - 1.0, H - 3.3]] : [] }, lamps: lamps, walls: { n: GX.S.feature } });
+    var g = GX.room({ x0: -W / 2, z0: -D / 2, x1: W / 2, z1: D / 2, h: H, holes: { s: [[-gw / 2, gw / 2, gh]], e: cfg.window !== false ? [[-1 - ww / 2, -1 + ww / 2, H - 1.0, H - 3.3]] : [], n: (cfg.okno && cfg.okno.n) || [] }, lamps: lamps, walls: { n: GX.S.feature } });
     g.traverse(function (m) { if (m.userData.floor) FLOOR = m; });
     if (cfg.window !== false) GX.window({ axis: 'z', c: W / 2, a0: -1 - ww / 2, a1: -1 + ww / 2, y0: H - 3.3, y1: H - 1.0, out: 1 });
     GX.room({ x0: -gw / 2, z0: D / 2 + .24, x1: gw / 2, z1: D / 2 + 3.4, h: gh + .1, holes: { n: [[-gw / 2, gw / 2, gh]] }, lamps: [[0, D / 2 + 1.8, .8, 0]] });
@@ -276,7 +276,7 @@ function make(cfg) {
     if (!MON) return;
     if (MON.a < 1) { MON.a = Math.min(1, MON.a + dt * 2); MON.draw(MON.a); }
     else if (MON.talk && Math.floor(t * 6) !== MON.tb) { MON.tb = Math.floor(t * 6); MON.draw(1); }
-    var G = window.GOLOS, near = pos.distanceTo(MON.g.position) < 11 && !paused && !anim, can = G && G.on && G.can && G.can();
+    var G = window.GOLOS, near = (OKN ? !!SIT : pos.distanceTo(MON.g.position) < 11) && !paused && !anim, can = G && G.on && G.can && G.can();
     if (can && near && MON.said !== MON.k && !SPEAK) { var s = MON.list[MON.k]; MON.said = MON.k; MON.talk = true; G.say(s.say || (s.h + '. ' + s.p), { onend: function () { MON.talk = false; MON.draw(1); setTimeout(function () { if (on && !paused && MON.said === MON.k) MON.go(MON.k + 1); }, 1800); } }); return; }
     if (!MON.talk) { MON.t0 += dt; if (MON.t0 > (can && near ? 30 : 9)) MON.go(MON.k + 1); }
   }
@@ -431,6 +431,7 @@ function make(cfg) {
     else if (c.kind === 'mon') { var sl = MON.list[MON.k]; sm = 'ТЕОРИЯ · ' + (MON.k + 1) + ' ИЗ ' + MON.list.length; h = sl.h; p = sl.p;
       acts = '<button class="k-b" data-a="prev">‹</button><button class="k-b" data-a="next">›</button>' + (window.GOLOS && GOLOS.can && GOLOS.can() ? '<button class="k-b pri" data-a="listen">🔊 Слушать</button>' : ''); }
     else if (c.kind === 'info') { sm = c.info[0]; h = c.info[1]; p = c.info[2]; }
+    else if (c.kind === 'seat') { sm = 'КРЕСЛО'; h = 'Садись - начнётся теория'; p = 'Сядь в кресло и слушай. За окном летают корабли и дроны - голова сама повернётся за ними.'; acts = '<button class="k-b pri" data-a="sit">Сесть</button>'; }
     else if (c.kind === 'q') { var q = c.q.card(c) || {}; sm = q.sm || ''; h = q.h || ''; p = q.p || ''; acts = q.acts || ''; }
     if (c.kind === 'table') { var lk = qLock(); if (lk) { sm = lk.sm || sm; h = lk.h || h; p = lk.p || ''; acts = lk.acts || ''; } }
     ui.card.querySelector('small').textContent = sm; ui.card.querySelector('h3').textContent = h; ui.card.querySelector('p').textContent = p;
@@ -445,6 +446,8 @@ function make(cfg) {
     if (a === 'task') { stopTalk(); if (api.task(c.tid) === false) doAct('lock'); return; }
     if (a === 'game0' || a === 'game1') { diveTable(a === 'game1'); return; }
     if (a === 'prev' || a === 'next') { MON.go(MON.k + (a === 'next' ? 1 : -1)); card(c); return; }
+    if (a === 'sit') { sit(); return; }
+    if (a === 'listen' && OKN && !SIT) { sit(); return; }
     if (a === 'listen') { var G = window.GOLOS; if (G) { if (!G.on) { G.setOn(true); sndUI(); } MON.said = -1; MON.talk = false; G.stop(); } return; }
   }
   function stopTalk() { if (window.GOLOS) GOLOS.stop(); if (MON) MON.talk = false; SPEAK = false; }
@@ -503,6 +506,7 @@ function make(cfg) {
     CAM = new T.PerspectiveCamera(64, innerWidth / innerHeight, .05, 200);
     if (window.INTER && cfg.grafika !== false) { var gs = (/[?&]s=([ABC])/.exec(location.search) || [])[1] || cfg.style || 'C';
       try { GX = INTER.create({ renderer: R, scene: S, camera: CAM, style: gs, accent: gs === 'A' ? '#e0409a' : MC, quality: gq(), tex: cfg.tex || 'proba/modul3/tex/' }); gfit(); } catch (e) { GX = null; } }
+    var OKH = GX && window.KOMNATA_OKNO && KOMNATA_OKNO[cfg.mid]; if (OKH && OKH.pre) try { OKH.pre(cfg); } catch (e) { OKH = null; }   /* 18.11 (проба new.html): теория у большого окна - teoriya-okno.js */
     mats(); room();
     if (cfg.monitor) monitor(cfg.monitor);
     (cfg.stands || []).forEach(stand);
@@ -510,6 +514,9 @@ function make(cfg) {
     (cfg.decor || []).forEach(decor);
     if (window.KOMNATA_KVEST && KOMNATA_KVEST[cfg.mid]) try { QK = KOMNATA_KVEST[cfg.mid]({ T: T, S: S, CAM: CAM, root: root, CLICK: CLICK, TICK: TICK, TABLE: TABLE, box: box, cyl: cyl, grp: grp, M: M, glow: glow, block: block, fwd: fwd, ring: ring, hint: hint, toast: toast,
       sel: function () { return sel; }, arrived: function () { return arrived; }, recard: function () { if (sel) card(sel); }, go: function (c) { go(c); }, unsel: function () { sel = null; card(null); }, refresh: function () { refreshAll(); }, mats: { steel: mSteel, wood: mWood, dark: mDark, metal: mMetal } }); } catch (e) { QK = null; if (window.console) console.warn('kvest', e); }
+    if (OKH && OKH.build) try { OKN = OKH.build({ T: T, S: S, CAM: CAM, GX: GX, root: root, CLICK: CLICK, TICK: TICK, MON: MON, pos: pos, W: W, D: D, H: H, MC: MC, MOB: MOB, RED: RED, box: box, cyl: cyl, grp: grp, M: M, glow: glow, tex: tex, block: block, quad: quad, hint: hint, ring: ring,
+      sitting: function () { return !!SIT; }, sit: function () { sit(); },
+      view: function (p, l) { pos.copy(p); var v = aimAt(l); yaw = v[0]; pitch = v[1]; SIT = { uT: 1e9, y: yaw, p: pitch }; window._kd = function () { return [pos.toArray(), yaw, pitch, CAM.position.toArray(), !!anim, !!target]; }; } });   /* view - для снимков: поставить камеру */ } catch (e) { OKN = null; if (window.console) console.warn('okno', e); }
     if (cfg.signs) cfg.signs.forEach(function (s) { label(s[0], s[1], s[2] || MC, s[3], s[4], s[5], s[6]); });
     guideBuild(); adoptG(); if (GX) setTimeout(function () { adoptG(); try { GX.bakeEnv(0, 1.6, 0); } catch (e) {} }, 1500);
     addEventListener('resize', function () { if (!on) return; CAM.aspect = innerWidth / innerHeight; if (!anim) CAM.fov = fov0(); CAM.updateProjectionMatrix(); R.setSize(innerWidth, innerHeight); gfit(); });
@@ -565,13 +572,36 @@ function make(cfg) {
       go(h.c); return; }
     sel = null; card(null); target = h.p.clone(); clampP(target); target.y = EYE; lookAt = null; arrived = false;
   }
-  function go(c) { sel = c; arrived = false; target = new T.Vector3(c.at[0], EYE, c.at[1]); clampP(target); lookAt = new T.Vector3(c.look[0], c.look[1], c.look[2]); card(c); stopTalkIfNotMon(c); }
+  function go(c) { if (OKN && c.kind === 'mon') { if (SIT) { sel = c; arrived = true; card(c); return; } var sc = CLICK.find(function (z) { return z.kind === 'seat'; }); if (sc) c = sc; }
+    if (SIT && c.kind === 'seat') return;
+    sel = c; arrived = false; target = new T.Vector3(c.at[0], EYE, c.at[1]); clampP(target); lookAt = new T.Vector3(c.look[0], c.look[1], c.look[2]); card(c); stopTalkIfNotMon(c); }
   function stopTalkIfNotMon(c) { if (c.kind !== 'mon' && MON && MON.talk) { /* голос монитора не обрываем, он тихо дочитает */ } }
   function clampP(p) { p.x = Math.max(-W / 2 + .7, Math.min(W / 2 - .7, p.x)); p.z = Math.max(-D / 2 + .7, Math.min(D / 2 - .7, p.z)); }
   function blocked(x, z, fx, fz) { if (fx != null && inBox(fx, fz)) return inBox(x, z) && depth(x, z) > depth(fx, fz) + 1e-4; return inBox(x, z); }
   function inBox(x, z) { return depth(x, z) > 0; }
   /* насколько точка залезла в препятствие (0 - свободна); если игрок уже внутри, выпускаем его наружу */
   function depth(x, z) { var m = 0; for (var i = 0; i < BOX.length; i++) { var b = BOX[i], dx = b[2] + .35 - Math.abs(x - b[0]), dz = b[3] + .35 - Math.abs(z - b[1]); if (dx > 0 && dz > 0) m = Math.max(m, Math.min(dx, dz)); } return m; }
+
+  /* ---------- кресло у окна (18.11, проба): сел - начинается теория, голова сама следит за кораблями за окном ---------- */
+  var OKN = null, SIT = null;
+  function upUI() { if (ui.up) return; var d = document.createElement('div'); d.className = 'k-up'; d.innerHTML = '<button class="k-b" data-u="prev" aria-label="Назад">‹</button><button class="k-b pri" data-u="up">Встать</button><button class="k-b" data-u="next" aria-label="Дальше">›</button>';
+    var cs = document.createElement('style'); cs.textContent = '#kmn .k-up{position:absolute;left:50%;top:calc(66px + env(safe-area-inset-top,0px));transform:translate(-50%,-8px);display:flex;gap:8px;opacity:0;pointer-events:none;transition:opacity .4s,transform .4s;z-index:3}#kmn .k-up.on{opacity:1;transform:translate(-50%,0);pointer-events:auto}#kmn .k-up .k-b{min-height:40px;backdrop-filter:blur(10px);background:rgba(10,14,32,.6)}#kmn .k-up .k-b.pri{background:var(--kc);color:#14120a;border-color:transparent}';
+    document.head.appendChild(cs); root.appendChild(d); ui.up = d;
+    d.addEventListener('pointerdown', function (e) { e.stopPropagation(); });
+    d.addEventListener('click', function (e) { var b = e.target.closest('[data-u]'); if (!b) return; b.blur(); if (b.dataset.u === 'up') standUp(null); else if (MON) MON.go(MON.k + (b.dataset.u === 'next' ? 1 : -1)); }); }
+  function aimAt(p) { var d = p.clone().sub(pos); return [Math.atan2(-d.x, -d.z), Math.atan2(d.y, Math.hypot(d.x, d.z))]; }
+  function sit() { if (!OKN || SIT || anim) return; var s = OKN.seat; upUI(); sel = null; card(null); target = null; lookAt = null; vel.set(0, 0, 0);
+    var from = pos.clone(), to = new T.Vector3(s.x, s.eye, s.z), fy = yaw, fp = pitch; from.y = EYE; var sv = pos.clone(); pos.copy(to); var a = aimAt(OKN.look()); pos.copy(sv);
+    anim = { t: 0, d: RED ? .3 : 1.5, step: function (u) { var e = ease(u); pos.lerpVectors(from, to, e); yaw = fy + angD(fy, a[0]) * e; pitch = fp + (a[1] - fp) * e; },
+      end: function () { SIT = { uT: -99, y: yaw, p: pitch }; ui.up.classList.add('on'); if (MON) { if (window.GOLOS && MON.talk) GOLOS.stop(); MON.talk = false; MON.said = -1; MON.t0 = 0; }
+        if (OKN.sat) OKN.sat(true); var G = window.GOLOS; hint(G && G.on ? 'Слушай теорию. Встать - W, стрелка или кнопка "Встать".' : 'Включи звук 🔊 вверху - Лера прочитает теорию. Встать - кнопка "Встать".', 5000); } };
+  }
+  function standUp(tg) { if (!SIT || anim) return; var s = OKN.seat, from = pos.clone(), to = new T.Vector3(s.x + (s.ux || 0), EYE, s.z + (s.uz || 1.1)); SIT = null; if (ui.up) ui.up.classList.remove('on'); if (OKN.sat) OKN.sat(false);
+    anim = { t: 0, d: RED ? .2 : .7, step: function (u) { pos.lerpVectors(from, to, ease(u)); }, end: function () { pos.y = EYE; if (tg) { target = tg; arrived = false; } } }; }
+  /* сидя: ученик крутит головой сам - ждём 3.5 с, потом взгляд плавно идёт за кораблём за окном или возвращается к экрану */
+  function seatLook(t, dt) { if (Math.abs(angD(SIT.y, yaw)) > 1e-4 || Math.abs(SIT.p - pitch) > 1e-4) SIT.uT = t;
+    if (t - SIT.uT > 3.5) { var f = OKN.focus && OKN.focus(pos), a = aimAt(f || OKN.look()), k = 1 - Math.exp(-dt * (f ? 1.5 : .9)); yaw += angD(yaw, a[0]) * k; pitch += (a[1] - pitch) * k; }
+    SIT.y = yaw; SIT.p = pitch; }
 
   /* ---------- кадр ---------- */
   var last = 0, raf = 0;
@@ -586,6 +616,8 @@ function make(cfg) {
       var kx = (keys.KeyD || 0) - (keys.KeyA || 0), kz = (keys.KeyW || keys.ArrowUp || 0) - (keys.KeyS || keys.ArrowDown || 0);
       if (FU) { kx = Math.max(-1, Math.min(1, kx + FU.joy.s)); kz = Math.max(-1, Math.min(1, kz + FU.joy.f)); }
       if (keys.ArrowLeft) yaw += dt * 1.8; if (keys.ArrowRight) yaw -= dt * 1.8;
+      if (SIT) { if (kx || kz || target || jv > 0) { var tg0 = target; kx = kz = 0; target = null; jv = 0; standUp(tg0); } else { seatLook(t, dt); kx = kz = 0; } }
+      else if (OKN && sel && sel.kind === 'seat' && arrived) { sit(); }
       var run = keys.ShiftLeft || keys.ShiftRight || (FU && FU.joy.run), st = run ? 1.5 : .6;
       if (window.FPSUPR && FPSUPR.v2 && (kx || kz)) { /* 17.11 (проба): ходьба как в "Побеге" - скорость 4.4, бегом 7.4 только вперёд, плавный разгон */
         var fv = new T.Vector3(-Math.sin(yaw), 0, -Math.cos(yaw)), rv = new T.Vector3(-fv.z, 0, fv.x), ln = Math.max(1, Math.hypot(kx, kz)), spd = run && kz > 0 ? FPSUPR.RUN : FPSUPR.WALK;
@@ -605,7 +637,7 @@ function make(cfg) {
       if (jy > 0 || jv > 0) { jv -= (window.FPSUPR ? FPSUPR.G : 11) * dt; jy += jv * dt; if (jy <= 0) { jy = 0; jv = 0; } }
       if (lookAt) { var dd = lookAt.clone().sub(pos), ty = Math.atan2(-dd.x, -dd.z), tp = Math.atan2(dd.y, Math.hypot(dd.x, dd.z)); yaw += angD(yaw, ty) * Math.min(1, dt * 3.2); pitch += (tp - pitch) * Math.min(1, dt * 3.2); if (!target && Math.abs(angD(yaw, ty)) < .01) lookAt = null; }
     }
-    CAM.position.set(pos.x, (anim ? pos.y : EYE + jy) + (anim || jy > 0 ? 0 : Math.sin(bob * 2) * .022), pos.z); CAM.rotation.order = 'YXZ'; CAM.rotation.set(pitch, yaw, 0);
+    CAM.position.set(pos.x, (anim || SIT ? pos.y : EYE + jy) + (anim || SIT || jy > 0 ? 0 : Math.sin(bob * 2) * .022), pos.z); CAM.rotation.order = 'YXZ'; CAM.rotation.set(pitch, yaw, 0);
     if (GX) { GX.render(dt); fpsG(raw); } else R.render(S, CAM);
   }
   var fL = 0, fN = 0, fT = 0, fW = /[?&]q=/.test(location.search) ? 1e9 : 5;
@@ -623,6 +655,7 @@ function make(cfg) {
     refreshAll();
     /* вход: за воротами, ворота разъезжаются, шагаем внутрь */
     var st = cfg.start, lk = cfg.look, from = new T.Vector3(0, EYE, D / 2 + 2.6), to = new T.Vector3(st[0], EYE, st[1]);
+    SIT = null; if (ui.up) ui.up.classList.remove('on');
     pos.copy(from); yaw = Math.atan2(-(lk[0] - from.x), -(lk[2] - from.z)); pitch = -.04; target = null; lookAt = null; vel.set(0, 0, 0);
     doorL.position.x = -.8; doorR.position.x = .8;
     ui.fade.style.background = '#05060f'; ui.fade.style.transition = 'opacity .9s'; ui.fade.style.opacity = 1; requestAnimationFrame(function () { ui.fade.style.opacity = 0; });
@@ -643,7 +676,7 @@ function make(cfg) {
   /* ворота: закрыть после входа (0) или открыть (1) за секунду */
   function doorAnim(open) { var a0 = doorR.position.x, a1 = open ? 2.4 : .8, t0 = clock.elapsedTime;
     TICK.push(function dA(t) { var u = Math.min(1, (t - t0) / 1.1), e = ease(u), x = a0 + (a1 - a0) * e; doorR.position.x = x; doorL.position.x = -x; if (u >= 1) TICK.splice(TICK.indexOf(dA), 1); }); }
-  function close() { unlock(); on = false; cancelAnimationFrame(raf); stopTalk(); root.classList.remove('on'); document.body.classList.remove('kmn-win'); if (winObs) winObs.disconnect(); card(null); }
+  function close() { if (SIT) { SIT = null; if (OKN && OKN.sat) OKN.sat(false); } unlock(); on = false; cancelAnimationFrame(raf); stopTalk(); root.classList.remove('on'); document.body.classList.remove('kmn-win'); if (winObs) winObs.disconnect(); card(null); }
   function leave() { stopTalk(); if (api) api.exit(); }
   /* окно задания закрыто: обновляем стенды, при свежем прохождении - праздник и проводник к следующему */
   function back(tid, fresh) {
