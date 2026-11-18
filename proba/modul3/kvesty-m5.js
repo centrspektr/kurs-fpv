@@ -15,8 +15,7 @@ function Pt(r, u, v) { return r.south ? [r.ox + RW - u, CZ1 + v] : [r.ox + u, CZ
 function RY(r, a) { return (a || 0) + (r.south ? PI : 0); }
 var E = P.etazh({ R: R, H: H, Pt: Pt, RY: RY });
 function save() { P.save(KEY, st); }
-function inside(L, it) { L.it.act = function () { var on = !L.g.userData.open; L.g.userData.toggle(on, function () { L.it.actLabel = on ? 'Закрыть' : '🚪 Открыть'; if (it && !it.kvTaken) { if (on) E.showIt(it); else E.hideIt(it); } R.card(L.it); }); };
-  if (it) { var a0 = it.act; it.act = function (x) { if (!H.o) it.kvTaken = true; a0(x); }; } }
+function inside(L, it) { L.setInside(it); }
 
 var raceIt = E.findItem('Заезд на время'), r5 = room('N2'), r6 = room('S2');
 if (!raceIt || !r5 || !r6) return;
@@ -53,4 +52,19 @@ E.target(raceIt, { need: 'ochki', ok: ready, lockLabel: '🔒 Сначала п�
   put: function () { st.ochki = 1; save(); ochOn(); H.say(st.akb ? 'Очки на стойке, дрон заряжен. Нажми E - заезд!' : 'Очки на стойке. Теперь вставь аккумулятор в дрон на старте.', 4000); } });
 /* если очки уже на стойке, а аккумулятора нет - подсказка про дрон */
 var a1 = raceIt.act; raceIt.act = function (x) { if (st.ochki && !st.akb && !(H.o && H.o.id === 'ochki')) { H.say('Очки на месте. В дроне на старте нет аккумулятора - он в ящике LiPo в боксе 6 "Брифинг".', 4500); return; } a1(x); };
+
+/* ---------- 18.11: что искать и куда идти: список в углу и маяк над следующим местом ---------- */
+(function () {
+  var LS = P.spisok(document.body), b1 = P.beacon(R.scene, '#7cf3ff'), b2 = P.beacon(R.scene, '#ffd36e'), pp = pilot.position;
+  function gp(o) { return [o.position.x, o.position.z]; }
+  function upd() {
+    var h1 = H.o && H.o.id === 'ochki', h2 = H.o && H.o.id === 'akb';
+    if (st.ochki) b1.off(); else if (h1) b1.at(pp.x, 1.0, pp.z); else if (H.o || !och || och.taken) b1.off(); else { var a = gp(L1.g); b1.at(a[0], 1.5, a[1]); }
+    if (st.akb) b2.off(); else if (h2) b2.at(S0[0], .15, S0[1]); else if (H.o || !akb || akb.taken) b2.off(); else { var c = gp(L2.g); b2.at(c[0], .7, c[1]); }
+    if (ready()) LS.hide(); else LS.set('ПЕРЕД ЗАЕЗДОМ', [{ ok: !!st.ochki, t: 'FPV-очки - на стойку пилота', w: h1 ? 'неси в зал с трассой' : 'шкафчик в боксе 5 "Видеоканалы"' },
+      { ok: !!st.akb, t: 'Аккумулятор - в дрон на старте', w: h2 ? 'неси в зал, на стартовую площадку' : 'ящик LiPo в боксе 6 "Брифинг"' }]);
+    var busy = false; try { busy = R.mode !== 'walk' || (R.busy && R.busy()); } catch (e) {} LS.el.style.visibility = busy ? 'hidden' : '';
+  }
+  upd(); setInterval(upd, 400);
+})();
 })();

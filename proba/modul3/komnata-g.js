@@ -158,6 +158,9 @@ function create(o) {
   /* E или Enter: подойти к тому, на что смотришь (или ближнему впереди), у предмета - открыть */
   function interact() {
     if (near && near.act) { var it0 = near; showCard(null); it0.act(it0); return; }
+    /* 18.11: маленький предмет (it.kv) рядом и примерно впереди - подходим к нему без точного прицела */
+    var nq = null, nd = 1e9; R.items.forEach(function (it) { if (!it.kv || it.hidden || !it.at) return; var c = it.look || [it.at[0], 0, it.at[1]], dx = c[0] - cam.position.x, dz = c[2] - cam.position.z, L = Math.hypot(dx, dz); if (L > 2.6 || (L > .3 && (dx * -Math.sin(yaw) + dz * -Math.cos(yaw)) / L < .2)) return; if (L < nd) { nd = L; nq = it; } });
+    if (nq) { R.walkTo(nq.at[0], nq.at[1], nq); return; }
     var h = pick(innerWidth / 2, innerHeight / 2); if (h && h.item) { R.walkTo(h.item.at[0], h.item.at[1], h.item); return; }
     var best = null, bs = 1e9, fx = -Math.sin(yaw), fz = -Math.cos(yaw);
     R.items.forEach(function (it) { if (!it.at || it.hidden) return; var c = it.look || [it.at[0], 0, it.at[1]], dx = c[0] - cam.position.x, dz = c[2] - cam.position.z, L = Math.hypot(dx, dz); if (L < .01 || L > 9) return;
@@ -175,7 +178,8 @@ function create(o) {
   var FU = FPSP && window.FPSUPR ? FPSUPR.create({ canvas: cv, root: document.body, walk: canWalk, lockOk: canWalk, act: function () { interact(); }, jump: function () { if (jy <= 0) jv = FPSUPR.JV; },
     look: function (dx, dy) { yaw += dx; pitch = Math.max(-1.2, Math.min(1.0, pitch + dy)); turn = null; } }) : null;
   R.fpsU = FU;
-  addEventListener('blur', function () { keys = {}; });
+  addEventListener('blur', function () { keys = {}; }); document.addEventListener('visibilitychange', function () { keys = {}; }); document.addEventListener('pointerlockchange', function () { if (!document.pointerLockElement) keys = {}; });
+  addEventListener('keyup', function (e) { if (!e.code || e.key === 'Fn' || e.key === 'Meta' || e.key === 'OS') keys = {}; });
 
   R.frame = function (fn) { R.frames.push(fn); };
 

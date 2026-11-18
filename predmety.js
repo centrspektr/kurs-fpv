@@ -105,6 +105,27 @@ function shkaf(o) { var g = new T.Group(), body = M(o.col || '#3b4256', .45, .45
   g.userData.shelfY = h * .5 + th * .3; g.userData.floorY = th; return g; }
 
 /* помощники для этажей модулей 3 и 5 (движок komnata-g.js: R.item, R.card): o = { R, H: ruki(), Pt(r,u,v), RY(r,a) } */
+/* невидимая "большая" зона нажатия вокруг маленького предмета: по нему легко попасть щелчком и прицелом (k - размер в единицах модели) */
+function proxy(m, k) { var b = new T.Box3().setFromObject(m), c = b.getCenter(new T.Vector3()), z = b.getSize(new T.Vector3()); m.worldToLocal(c);
+  var h = new T.Mesh(new T.BoxGeometry(1, 1, 1), new T.MeshBasicMaterial({ colorWrite: false, depthWrite: false })); var sc = m.scale.x || 1;
+  h.scale.set(Math.max(z.x / sc, k), Math.max(z.y / sc, k * .7), Math.max(z.z / sc, k)); h.position.copy(c); h.userData.noShadow = true; h.renderOrder = -1; m.add(h); return h; }
+/* маяк: светящаяся стрелка над местом и кольцо на полу - "иди сюда" */
+function beacon(scene, col) { var g = new T.Group(), c = new T.Color(col || '#ffd36e'), mb = new T.MeshBasicMaterial({ color: c.clone().multiplyScalar(1.6), toneMapped: false, transparent: true, opacity: .95, depthWrite: false });
+  var ar = new T.Mesh(new T.ConeGeometry(.13, .28, 4), mb); ar.rotation.x = Math.PI; g.add(ar);
+  var rg = new T.Mesh(new T.RingGeometry(.42, .5, 40), new T.MeshBasicMaterial({ color: c.clone().multiplyScalar(1.4), toneMapped: false, transparent: true, depthWrite: false, side: T.DoubleSide })); rg.rotation.x = -Math.PI / 2; g.add(rg);
+  g.visible = false; g.renderOrder = 3; scene.add(g); var y0 = 1.5, t0 = performance.now();
+  (function k(t) { requestAnimationFrame(k); if (!g.visible) return; var s = (t - t0) / 1000; ar.position.y = y0 + Math.sin(s * 3) * .08; ar.rotation.y = s * 1.5; rg.position.y = .02 - g.position.y; rg.material.opacity = .45 + Math.sin(s * 4) * .35; var q = 1 + (s * .8 % 1) * .25; rg.scale.set(q, q, 1); })(t0);
+  return { g: g, at: function (x, y, z) { g.position.set(x, 0, z); y0 = (y || 0) + .55; g.visible = true; }, off: function () { g.visible = false; } }; }
+/* список "что найти" в углу экрана */
+var CSS2 = '.prd-list{position:absolute;left:max(14px,env(safe-area-inset-left,0px));top:calc(70px + env(safe-area-inset-top,0px));z-index:5;pointer-events:none;background:rgba(8,12,28,.72);border:1px solid rgba(255,211,110,.4);border-radius:12px;padding:8px 12px;color:#fff;font:600 13px/1.4 Manrope,"Segoe UI",system-ui,sans-serif;max-width:min(78vw,330px)}' +
+  '.prd-list b{display:block;color:#ffd36e;font-size:12px;letter-spacing:.04em;margin-bottom:2px}.prd-list div.ok{opacity:.55;text-decoration:line-through}.prd-list small{color:#cfe9ff;font-weight:600}' +
+  '@media (max-width:700px){.prd-list{font-size:11.5px;top:calc(58px + env(safe-area-inset-top,0px));padding:6px 9px}}';
+function spisok(root) { if (!document.getElementById('prd-css2')) { var st = document.createElement('style'); st.id = 'prd-css2'; st.textContent = CSS2; document.head.appendChild(st); }
+  var el = document.createElement('div'); el.className = 'prd-list'; el.style.display = 'none'; (root || document.body).appendChild(el);
+  return { set: function (title, rows) { var h = '<b></b>'; rows.forEach(function () { h += '<div><span></span> <small></small></div>'; }); el.innerHTML = h; el.querySelector('b').textContent = title;
+      var ds = el.querySelectorAll('div'); rows.forEach(function (r, i) { ds[i].className = r.ok ? 'ok' : ''; ds[i].querySelector('span').textContent = (r.ok ? '✓ ' : '○ ') + r.t; ds[i].querySelector('small').textContent = r.ok ? '' : (r.w || ''); }); el.style.display = ''; },
+    hide: function () { el.style.display = 'none'; }, el: el }; }
+
 function etazh(o) { var R = o.R, H = o.H, Pt = o.Pt, RY = o.RY, P = window.PREDMETY;
   function findItem(name) { for (var i = 0; i < R.items.length; i++) if (R.items[i].name === name) return R.items[i]; return null; }
   function hideIt(it) { it.hidden = true; it.noTag = true; it.obj.visible = false; }
@@ -115,8 +136,8 @@ function etazh(o) { var R = o.R, H = o.H, Pt = o.Pt, RY = o.RY, P = window.PREDM
     var m = P.model(o.kind); m.scale.setScalar(o.s || 1.5); m.position.set(o.pos[0], o.pos[1], o.pos[2]); m.rotation.y = o.ry || 0; R.scene.add(m);
     var it = R.item({ obj: m, name: o.name, kicker: 'Предмет', sub: o.sub, at: o.at, look: [o.pos[0], o.pos[1] + .1, o.pos[2]], tagY: o.pos[1] + .45, tagFar: 6, actLabel: '✋ Взять', act: function () {
       if (H.o) { H.say('Руки заняты: ' + H.o.name + '. Сначала отнеси.', 3000); return; }
-      hideIt(it); H.take({ id: o.id, name: o.name, where: o.where }, P.model(o.kind)); H.say('Взял: ' + o.name + '. Отнеси: ' + o.where + '.', 3500); } });
-    it.reg = o.reg; it.at3 = o.pos; it.kv = o; if (o.hidden) hideIt(it); return it; }
+      it.taken = true; hideIt(it); if (it.beacon) it.beacon.off(); H.take({ id: o.id, name: o.name, where: o.where }, P.model(o.kind)); H.say('Взял: ' + o.name + '. Отнеси: ' + o.where + '.', 3500); } });
+    proxy(m, .5 / (o.s || 1.5)); it.reg = o.reg; it.at3 = o.pos; it.kv = o; if (o.hidden) hideIt(it); return it; }
 
   /* ящик или шкафчик с дверцей: открыть - внутри появляется предмет */
   function locker(o) { /* o: { r, u, v, a, w, h, d, col, label, inside: it, y } */
@@ -124,10 +145,15 @@ function etazh(o) { var R = o.R, H = o.H, Pt = o.Pt, RY = o.RY, P = window.PREDM
     g.position.set(p[0], o.y || 0, p[1]); g.rotation.y = ry; R.scene.add(g); g.updateMatrixWorld(true);
     if (!o.noBlock) R.block(p[0] - .4, p[1] - .4, p[0] + .4, p[1] + .4);
     var f = [Math.sin(ry), Math.cos(ry)], it = R.item({ obj: g, name: o.name, kicker: o.kicker || 'Шкафчик', sub: o.sub, at: [p[0] + f[0] * 1.3, p[1] + f[1] * 1.3], look: [p[0], (o.y || 0) + o.h * .55, p[1]], tagY: (o.y || 0) + o.h + .35, tagFar: 7, actLabel: '🚪 Открыть',
-      act: function () { var on = !g.userData.open; g.userData.toggle(on, function () { it.actLabel = on ? 'Закрыть' : '🚪 Открыть'; R.card(it); }); } });
+      act: function () { var ins = L.inside, can = ins && !ins.taken && g.userData.open;
+        /* 18.11: открытый шкафчик - E сразу берёт то, что внутри (раньше E закрывал дверцу, и предмет было не взять) */
+        if (can) { if (H.o) { H.say('Руки заняты: ' + H.o.name + '. Сначала отнеси.', 3000); return; } ins.act(ins); lab(); return; }
+        var on = !g.userData.open; g.userData.toggle(on, function () { if (ins && !ins.taken) { if (on) showIt(ins); else hideIt(ins); } lab(); R.card(it); }); } });
+    function lab() { var ins = L.inside, can = ins && !ins.taken && g.userData.open; it.actLabel = can ? '✋ Взять: ' + ins.name : g.userData.open ? 'Закрыть' : '🚪 Открыть'; }
+    var L = { g: g, it: it, ry: ry, inside: null, setInside: function (x) { L.inside = x; lab(); } };
     it.reg = o.r.id; it.at3 = [p[0], 0, p[1]];
     g.localPt = function (x, y, z) { var v = new T.Vector3(x, y, z); g.localToWorld(v); return [v.x, v.y, v.z]; };
-    return { g: g, it: it, ry: ry }; }
+    return L; }
 
   /* место, куда кладут: обёртка над уже существующим предметом этажа */
   function target(it, o) { /* o: { need: id, put(), lock: текст, ok(): готово ли } */
@@ -142,5 +168,5 @@ function etazh(o) { var R = o.R, H = o.H, Pt = o.Pt, RY = o.RY, P = window.PREDM
 
 /* 18.11: сообщения квестов читает Лера (записи zvuk/); soft - не перебивать, если голос уже говорит */
 function golos(t, soft) { try { var G = window.GOLOS; if (!G || !G.on || !G.say) return; if (soft && (G.au || G.zt)) return; G.say(t); } catch (e) {} }
-window.PREDMETY = { model: model, golos: golos, ruki: ruki, anim: anim, load: load, save: save, shkaf: shkaf, etazh: etazh };
+window.PREDMETY = { model: model, golos: golos, proxy: proxy, beacon: beacon, spisok: spisok, ruki: ruki, anim: anim, load: load, save: save, shkaf: shkaf, etazh: etazh };
 })();
