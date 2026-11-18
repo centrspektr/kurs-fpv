@@ -84,7 +84,7 @@ function ruki(o) {
     hud.classList.add('on'); if (same) return; var y0 = -.32; anim(.35, function (u) { holder.position.y = y0 + (-.2 - y0) * u; }); };
   H.put = function () { var it = H.o; clearTimeout(sayT); if (H.mesh) { holder.remove(H.mesh); H.mesh.scale.setScalar(1); H.mesh.traverse(function (m) { if (m.isMesh) { m.castShadow = true; m.renderOrder = 0; } }); } H.o = null; H.mesh = null; hud.classList.remove('on'); return it; };
   var sayT = 0; /* короткое сообщение в той же плашке (для этажей модулей 3 и 5, где нет своей подсказки) */
-  H.say = function (txt, ms) { clearTimeout(sayT); hud.innerHTML = '<b></b>'; hud.querySelector('b').textContent = txt; hud.classList.add('on');
+  H.say = function (txt, ms) { clearTimeout(sayT); hud.innerHTML = '<b></b>'; hud.querySelector('b').textContent = txt; hud.classList.add('on'); golos(txt);
     sayT = setTimeout(function () { if (H.o) H.take(H.o, H.mesh); else hud.classList.remove('on'); }, ms || 4000); };
   H.visible = function (v) { holder.visible = v; hud.style.display = v ? '' : 'none'; };
   var t0 = performance.now(); (function bob(t) { requestAnimationFrame(bob); if (!H.mesh) return; var s = (t - t0) / 1000; holder.rotation.z = Math.sin(s * 1.6) * .03; holder.position.x = .2 + Math.sin(s * 1.1) * .004; })(t0);
@@ -140,5 +140,7 @@ function etazh(o) { var R = o.R, H = o.H, Pt = o.Pt, RY = o.RY, P = window.PREDM
     upd(); setInterval(upd, 500); return upd; }
   return { findItem: findItem, hideIt: hideIt, showIt: showIt, pickable: pickable, locker: locker, target: target }; }
 
-window.PREDMETY = { model: model, ruki: ruki, anim: anim, load: load, save: save, shkaf: shkaf, etazh: etazh };
+/* 18.11: сообщения квестов читает Лера (записи zvuk/); soft - не перебивать, если голос уже говорит */
+function golos(t, soft) { try { var G = window.GOLOS; if (!G || !G.on || !G.say) return; if (soft && (G.au || G.zt)) return; G.say(t); } catch (e) {} }
+window.PREDMETY = { model: model, golos: golos, ruki: ruki, anim: anim, load: load, save: save, shkaf: shkaf, etazh: etazh };
 })();
