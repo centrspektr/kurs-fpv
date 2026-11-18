@@ -14,6 +14,8 @@ window.KOMNATA_KVEST = window.KOMNATA_KVEST || {};
 window.KOMNATA_KVEST.m2 = function (X) {
   var T = X.T, P = window.PREDMETY, D = 17, W = 24, PI = Math.PI;
   var st = P.load(KEY), H = P.ruki({ camera: X.CAM, scene: X.S, root: X.root });
+  /* 18.11: сообщения квеста читает Лера; первая подсказка (soft) не перебивает экран-монитор */
+  function hint(t, ms, soft) { X.hint(t, ms); if (P.golos) P.golos(t, soft); }
   var TB = X.TABLE; if (!TB) return null;
 
   /* что приносим: где лежит и куда ложится на столе (координаты стола: x вправо, z к ученику) */
@@ -45,7 +47,7 @@ window.KOMNATA_KVEST.m2 = function (X) {
       return { sm: 'ПРЕДМЕТ · ДЛЯ СТОЛА СБОРКИ', h: it.name, p: it.sub, acts: busy ? '<button class="k-b dis" data-a="lock">Руки заняты: ' + H.o.name + '</button>' : '<button class="k-b pri" data-a="q:take">✋ Взять</button>' }; } }, item: it };
     if (it.open !== false) X.CLICK.push(it.c); }
   function take(it) { if (H.o) return; var i = X.CLICK.indexOf(it.c); if (i >= 0) X.CLICK.splice(i, 1); X.S.remove(it.mesh);
-    it.where = 'на стол сборки в центре зала'; H.take(it, P.model(it.kind)); X.unsel(); X.hint('Взял: ' + it.name + '. Отнеси на стол сборки в центре и нажми E.', 4500); }
+    it.where = 'на стол сборки в центре зала'; H.take(it, P.model(it.kind)); X.unsel(); hint('Взял: ' + it.name + '. Отнеси на стол сборки в центре и нажми E.', 4500); }
 
   /* шкаф инструментов у правой стены: паяльная станция на нижней полке, кейс с отвёртками на верхней */
   var SX = W / 2 - .34, SZ = -5.6, sh = P.shkaf({ w: 1.2, h: 1.7, d: .56, col: '#7f1d1d', door: '#991b1b', label: 'ИНСТРУМЕНТ', labelBg: '#f5f5f5' });
@@ -95,14 +97,14 @@ window.KOMNATA_KVEST.m2 = function (X) {
     act: function (a, c) {
       if (a === 'take' && c.item) { take(c.item); return; }
       if (a === 'put' && H.o) { var it = H.put(); st[it.id] = 1; P.save(KEY, st); onTable(it);
-        if (done()) { X.toast('Рабочее место готово! Теперь собирай дрон.'); X.hint('Всё на столе. Нажми E у стола - начнём сборку.', 5000); }
-        else X.toast('На столе: ' + it.name + '. Ещё ' + ITEMS.filter(function (q) { return !st[q.id]; }).length + '.');
+        if (done()) { X.toast('Рабочее место готово! Теперь собирай дрон.'); X.hint('Всё на столе. Нажми E у стола - начнём сборку.', 5000); if (P.golos) P.golos('Рабочее место готово! Теперь собирай дрон. Всё на столе. Нажми E у стола - начнём сборку.'); }
+        else { var left = ITEMS.filter(function (q) { return !st[q.id]; }).length; X.toast('На столе: ' + it.name + '. Ещё ' + left + '.'); if (P.golos) P.golos('На столе: ' + it.name + '. ' + (left === 1 ? 'Осталась одна вещь.' : 'Осталось ' + (left === 2 ? 'две' : 'три') + ' вещи.')); }
         X.recard(); return; }
       if (c && c.q && c.q.act) c.q.act(a, c);
     }
   };
   /* первая подсказка: когда ученик впервые подходит к столу или через 25 секунд после входа */
-  if (!done()) { var said = false, t0 = null; X.TICK.push(function (t) { if (said) return; if (t0 == null) t0 = t; if (t - t0 > 25) { said = true; X.hint('Перед сборкой дрона подготовь рабочее место: принеси на стол 4 вещи. ' + where(), 7000); } }); }
+  if (!done()) { var said = false, t0 = null; X.TICK.push(function (t) { if (said) return; if (t0 == null) t0 = t; if (t - t0 > 25) { said = true; hint('Перед сборкой дрона подготовь рабочее место: принеси на стол 4 вещи. ' + where(), 7000, true); } }); }
   return Q;
 };
 })();
