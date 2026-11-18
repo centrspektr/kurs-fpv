@@ -516,7 +516,7 @@ function make(cfg) {
       sel: function () { return sel; }, arrived: function () { return arrived; }, recard: function () { if (sel) card(sel); }, go: function (c) { go(c); }, unsel: function () { sel = null; card(null); }, refresh: function () { refreshAll(); }, mats: { steel: mSteel, wood: mWood, dark: mDark, metal: mMetal } }); } catch (e) { QK = null; if (window.console) console.warn('kvest', e); }
     if (OKH && OKH.build) try { OKN = OKH.build({ T: T, S: S, CAM: CAM, GX: GX, root: root, CLICK: CLICK, TICK: TICK, MON: MON, pos: pos, W: W, D: D, H: H, MC: MC, MOB: MOB, RED: RED, box: box, cyl: cyl, grp: grp, M: M, glow: glow, tex: tex, block: block, quad: quad, hint: hint, ring: ring,
       sitting: function () { return !!SIT; }, sit: function () { sit(); },
-      view: function (p, l) { pos.copy(p); var v = aimAt(l); yaw = v[0]; pitch = v[1]; SIT = { uT: 1e9, y: yaw, p: pitch }; window._kd = function () { return [pos.toArray(), yaw, pitch, CAM.position.toArray(), !!anim, !!target]; }; } });   /* view - для снимков: поставить камеру */ } catch (e) { OKN = null; if (window.console) console.warn('okno', e); }
+      anim: function () { return !!anim; }, view: function (p, l) { pos.copy(p); var v = aimAt(l); yaw = v[0]; pitch = v[1]; SIT = { uT: 1e9, y: yaw, p: pitch }; } });   /* view - для снимков: поставить камеру */ } catch (e) { OKN = null; if (window.console) console.warn('okno', e); }
     if (cfg.signs) cfg.signs.forEach(function (s) { label(s[0], s[1], s[2] || MC, s[3], s[4], s[5], s[6]); });
     guideBuild(); adoptG(); if (GX) setTimeout(function () { adoptG(); try { GX.bakeEnv(0, 1.6, 0); } catch (e) {} }, 1500);
     addEventListener('resize', function () { if (!on) return; CAM.aspect = innerWidth / innerHeight; if (!anim) CAM.fov = fov0(); CAM.updateProjectionMatrix(); R.setSize(innerWidth, innerHeight); gfit(); });
@@ -598,7 +598,7 @@ function make(cfg) {
     var from = pos.clone(), to = new T.Vector3(s.x, s.eye, s.z), fy = yaw, fp = pitch; from.y = EYE; var sv = pos.clone(); pos.copy(to); var a = aimAt(OKN.look()); pos.copy(sv);
     anim = { t: 0, d: RED ? .3 : 1.5, step: function (u) { var e = ease(u); pos.lerpVectors(from, to, e); yaw = fy + angD(fy, a[0]) * e; pitch = fp + (a[1] - fp) * e; },
       end: function () { SIT = { uT: -99, y: yaw, p: pitch }; ui.up.classList.add('on'); if (MON) { if (window.GOLOS && MON.talk) GOLOS.stop(); MON.talk = false; MON.said = -1; MON.t0 = 0; }
-        if (OKN.sat) OKN.sat(true); var G = window.GOLOS; hint(G && G.on ? 'Слушай теорию. Встать - W, стрелка или кнопка "Встать".' : 'Включи звук 🔊 вверху - Лера прочитает теорию. Встать - кнопка "Встать".', 5000); } };
+        if (OKN.sat) OKN.sat(true); var G = window.GOLOS; hint((G && G.on ? 'Слушай теорию. ' : 'Включи звук 🔊 вверху - Лера прочитает теорию. ') + (MOB ? 'Встать - джойстик или кнопка "Встать".' : 'Встать - W, стрелка или кнопка "Встать".'), 5000); } };
   }
   function standUp(tg) { if (!SIT || anim) return; var s = OKN.seat, from = pos.clone(), to = new T.Vector3(s.x + (s.ux || 0), EYE, s.z + (s.uz || 1.1)); SIT = null; if (ui.up) ui.up.classList.remove('on'); if (OKN.sat) OKN.sat(false);
     anim = { t: 0, d: RED ? .2 : .7, step: function (u) { pos.lerpVectors(from, to, ease(u)); }, end: function () { pos.y = EYE; if (tg) { target = tg; arrived = false; } } }; }

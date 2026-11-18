@@ -205,6 +205,6 @@ window.KOMNATA_OKNO.m2 = {
     cfg.decor = (cfg.decor || []).filter(function (d) { return d.t !== 'sofa'; });
     cfg.look = [0, 2.4, -D / 2];
   },
-  build: function (X) { X.monW = MW; X.monH = MH; this.sit = X.sit; this.view = function (a, b) { X.view(new X.T.Vector3(a[0], a[1], a[2]), new X.T.Vector3(b[0], b[1], b[2])); }; return make(X); }   /* sit - для проверок: KOMNATA_OKNO.m2.sit() */
+  build: function (X) { X.monW = MW; X.monH = MH; this.sit = X.sit; this.busy = X.anim; this.view = function (a, b) { X.view(new X.T.Vector3(a[0], a[1], a[2]), new X.T.Vector3(b[0], b[1], b[2])); }; return make(X); }   /* sit - для проверок: KOMNATA_OKNO.m2.sit() */
 };
 })();
