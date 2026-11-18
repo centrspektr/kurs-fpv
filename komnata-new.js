@@ -536,8 +536,8 @@ function make(cfg) {
       tap(e.clientX, e.clientY); });
     if (MLOOK) { addEventListener('mousemove', function (e) { if (!on || anim || paused) return; if (!locked() && (e.buttons || e.target !== cv)) return; /* 12.11: как в "Побеге" - камера идёт за пальцем по тачпаду и без нажатия */ var mx = e.movementX || 0, my = e.movementY || 0; if (Math.abs(mx) > 250 || Math.abs(my) > 250) return; /* браузер иногда присылает ложный рывок */ lkX -= mx * .0023; lkY -= my * .0023; lookAt = null; });
       var lkX = 0, lkY = 0, lkT = 0; (function sm(t) { requestAnimationFrame(sm); var dt = lkT ? Math.min(.1, (t - lkT) / 1000) : .016; lkT = t; if (!on || (Math.abs(lkX) + Math.abs(lkY) < 1e-5)) { lkX = lkY = 0; return; } var k = 1 - Math.exp(-dt * 22), x = lkX * k, y = lkY * k; lkX -= x; lkY -= y; yaw += x; pitch = Math.max(-1.1, Math.min(.85, pitch + y)); })(0);
-      if (window.FPSUPR && FPSUPR.mouseHelp) FPSUPR.mouseHelp({ canvas: cv, locked: locked, lock: function () { try { var r = cv.requestPointerLock(); if (r && r.catch) r.catch(function () {}); } catch (er) {} }, walk: function () { return on && !paused && !anim; } });
-      document.addEventListener('pointerlockchange', function () { var L = locked(); document.body.classList.toggle('kmn-lock', L); if (L && !lockHint) { lockHint = true; hint('Мышь поворачивает камеру. Щелчок или E - подойти и открыть. Esc - вернуть стрелку.', 6000); } }); }
+      if (window.FPSUPR && FPSUPR.mouseHelp) FPSUPR.mouseHelp({ canvas: cv, locked: locked, lock: function () { try { var r = cv.requestPointerLock(); if (r && r.catch) r.catch(function () {}); } catch (er) {} }, walk: function () { return on && !paused && !anim; }, look: function (dx, dy) { yaw += dx; pitch = Math.max(-1.1, Math.min(.85, pitch + dy)); lookAt = null; } });
+      document.addEventListener('pointerlockchange', function () { var L = locked(); if (!L) keys = {}; document.body.classList.toggle('kmn-lock', L); if (L && !lockHint) { lockHint = true; hint('Мышь поворачивает камеру. Щелчок или E - подойти и открыть. Esc - вернуть стрелку.', 6000); } }); }
     /* тачпад и колесо мыши: два пальца по тачпаду (или колесо) - поворот камеры вверх-вниз и влево-вправо; щипок (Ctrl + колесо) - шаг вперёд-назад */
     cv.addEventListener('wheel', function (e) { if (anim || paused) return; e.preventDefault(); var k = e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? 400 : 1, dx = e.deltaX * k, dy = e.deltaY * k;
       if (e.ctrlKey) { var f = new T.Vector3(-Math.sin(yaw), 0, -Math.cos(yaw)); target = pos.clone().addScaledVector(f, dy < 0 ? .8 : -.8); clampP(target); sel = null; card(null); return; }
@@ -546,7 +546,9 @@ function make(cfg) {
       /* пробел - прыжок, Enter или E - действие */
       if (e.code === 'Space') { e.preventDefault(); if (!anim && jy <= 0) jv = window.FPSUPR ? FPSUPR.JV : 3.6; }
       if ((e.code === 'Enter' || e.code === 'NumpadEnter' || e.code === 'KeyE') && !e.repeat && !anim) { e.preventDefault(); interact(); } });
-    addEventListener('keyup', function (e) { keys[e.code] = 0; });
+    addEventListener('keyup', function (e) { keys[e.code] = 0; if (!e.code || e.key === 'Fn' || e.key === 'Meta' || e.key === 'OS') keys = {}; });
+    /* 18.11: клавиша не должна залипать (Alexandr нажал Fn - бег вперёд не останавливался): окно потеряло фокус - все клавиши отпущены */
+    addEventListener('blur', function () { keys = {}; }); document.addEventListener('visibilitychange', function () { keys = {}; });
     if (PROBA && window.FPSUPR) FU = FPSUPR.create({ canvas: cv, root: root, noMouse: true, walk: function () { return on && !paused && !anim; }, act: function () { if (!anim) interact(); }, jump: function () { if (!anim && jy <= 0) jv = FPSUPR.JV; },
       look: function (dx, dy) { yaw += dx; pitch = Math.max(-1.1, Math.min(.85, pitch + dy)); lookAt = null; } });
   }
@@ -555,6 +557,8 @@ function make(cfg) {
   var jy = 0, jv = 0;
   function interact() {
     if (sel && arrived) { var b = ui.card.querySelector('.k-b.pri') || ui.card.querySelector('.k-b[data-a]'); if (b) doAct(b.dataset.a); else if (sel.kind === 'info') { sel = null; card(null); } return; }
+    /* 18.11: предмет квеста рядом (до 2.6 м) и примерно впереди - берём его, целиться точно не нужно */
+    var fq = new T.Vector3(-Math.sin(yaw), 0, -Math.cos(yaw)), nq = null, nd = 1e9; CLICK.forEach(function (c) { if (!c.item) return; var d = new T.Vector3(c.look[0] - pos.x, 0, c.look[2] - pos.z), L = d.length(); if (L > 2.6 || (L > .3 && d.dot(fq) / L < .2)) return; if (L < nd) { nd = L; nq = c; } }); if (nq) { go(nq); return; }
     var h = pick(innerWidth / 2, innerHeight / 2); if (h && h.c && h.d < 9) { go(h.c); return; }
     var best = null, bs = 1e9, f = new T.Vector3(-Math.sin(yaw), 0, -Math.cos(yaw));
     CLICK.forEach(function (c) { var d = new T.Vector3(c.look[0] - pos.x, 0, c.look[2] - pos.z), L = d.length(); if (L < .01 || L > 9) return; var cos = d.dot(f) / L; if (cos < .8) return; var sc = L * (2 - cos); if (sc < bs) { bs = sc; best = c; } });

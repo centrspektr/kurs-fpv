@@ -24,6 +24,14 @@ function mouseHelp(h) {   /* h: { canvas, locked(), lock(), walk() } */
   document.body.appendChild(tip);
   function show() { var n = performance.now(); if (n - tipLast < 15000) return; tipLast = n; tip.style.display = 'block'; clearTimeout(tipT); tipT = setTimeout(function () { tip.style.display = 'none'; }, 3500); }
   document.addEventListener('pointerlockchange', function () { if (h.locked()) { tip.style.display = 'none'; } });
+  /* 18.11 (Alexandr: стрелка упирается в край - камера встаёт): если курсор не захвачен и стоит у края экрана, камера сама доворачивает в ту сторону */
+  var mx = -1, my = -1, edT = 0; document.addEventListener('mouseleave', function () { mx = my = -1; }); addEventListener('blur', function () { mx = my = -1; });
+  addEventListener('mousemove', function (e) { mx = e.clientX; my = e.clientY; });
+  if (h.look) (function ed(t) { requestAnimationFrame(ed); var dt = edT ? Math.min(.1, (t - edT) / 1000) : .016; edT = t;
+    if (mx < 0 || h.locked() || !h.walk()) return; var m = Math.max(28, innerWidth * .04), sx = 0, sy = 0;
+    if (mx < m) sx = 1 - mx / m; else if (mx > innerWidth - m) sx = -(1 - (innerWidth - mx) / m);
+    if (my < m * .8) sy = (1 - my / (m * .8)) * .6; else if (my > innerHeight - m * .8) sy = -(1 - (innerHeight - my) / (m * .8)) * .6;
+    if (sx || sy) h.look(sx * 2.2 * dt, sy * 1.2 * dt); })(0);
   addEventListener('mousemove', function (e) { if (h.locked() || e.buttons || !h.walk()) return; var m = 24;
     if (e.clientX < m || e.clientY < m || e.clientX > innerWidth - m || e.clientY > innerHeight - m) show(); });
   addEventListener('keydown', function (e) { if (h.locked() || e.repeat || !h.walk()) return; if (e.target && /INPUT|TEXTAREA|SELECT/.test(e.target.tagName)) return;
@@ -65,7 +73,7 @@ function create(o) {
   /* 13.11: тачпад присылает движение неровно - копим и отдаём камере плавно, по кадрам (без заиканий) */
   U.ax = 0; U.ay = 0; var smT = 0; (function sm(t) { requestAnimationFrame(sm); var dt = smT ? Math.min(.1, (t - smT) / 1000) : .016; smT = t; if (Math.abs(U.ax) + Math.abs(U.ay) < 1e-5) { U.ax = U.ay = 0; return; } var k = 1 - Math.exp(-dt * 22), x = U.ax * k, y = U.ay * k; U.ax -= x; U.ay -= y; if (o.walk()) o.look(x, y); else U.ax = U.ay = 0; })(0);
   /* следим, чтобы захват снимался, когда открыто окно задания или нельзя ходить */
-  if (canLock) mouseHelp({ canvas: cv, locked: U.locked, lock: U.lock, walk: o.walk });
+  if (canLock) mouseHelp({ canvas: cv, locked: U.locked, lock: U.lock, walk: o.walk, look: o.look });
   setInterval(function () { var w = o.walk(); document.body.classList.toggle('fps-walk', !!w); if (!o.noMouse && (!w || (o.lockOk && !o.lockOk()))) U.unlock(); }, 200);
   if (TOUCH) {
     /* джойстик слева */

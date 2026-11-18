@@ -26,9 +26,8 @@ if (r4 && r5 && B && bench) {
   var L1 = locker({ r: r4, u: 1.7, v: 6.66, a: 0, w: .9, h: 1.5, d: .5, col: '#334155', door: '#475569', label: 'РАЗРЯЖЕННЫЕ', labelBg: '#fca5a5', name: 'Шкафчик "Разряженные"', kicker: 'Склад АКБ', sub: 'Здесь лежат аккумуляторы, которые пора зарядить. Открой дверцу.' });
   if (!st.akb) { var pa = L1.g.localPt(0, L1.g.userData.shelfY, .02); akbIt = pickable({ id: 'akb', kind: 'akb_razr', name: 'Разряженный аккумулятор', sub: 'Аккумулятор 4S после полётов: на банке около 3,5 вольта. Его надо зарядить. Отнеси на зарядную станцию в комнату 5.', where: 'на зарядную станцию в комнате 5 "Зарядная"', pos: pa, ry: L1.ry, s: 1.8, at: L1.it.at, reg: r4.id, hidden: true });
     L1.it.sub = 'Здесь лежат аккумуляторы, которые пора зарядить. Открой дверцу и возьми один.'; }
-  /* дверца знает, что внутри */
-  (function () { L1.it.act = function (x) { var on = !L1.g.userData.open; L1.g.userData.toggle(on, function () { L1.it.actLabel = on ? 'Закрыть' : '🚪 Открыть'; if (akbIt && !akbIt.kvTaken2) { if (on) showIt(akbIt); else hideIt(akbIt); } R.card(L1.it); }); }; })();
-  if (akbIt) { var take0 = akbIt.act; akbIt.act = function (x) { if (H.o) { take0(x); return; } akbIt.kvTaken2 = true; take0(x); }; }
+  L1.setInside(akbIt);
+
   var onBench = function () { var m = P.model('akb_razr'); m.scale.setScalar(1.8); m.position.set(-.12, B.y - B.g.position.y, 1.05); m.rotation.y = -PI / 2; B.g.add(m); };
   if (st.akb) onBench();
   target(bench, { need: 'akb', ok: function () { return !!st.akb; }, lock: 'Зарядке нужен аккумулятор. Разряженные лежат в шкафчике на складе (комната 4) - принеси один.',
@@ -41,8 +40,8 @@ if (r1 && table && TB) {
   var tesIt = null;
   var L2 = locker({ r: r1, u: 1.0, v: 6.66, a: 0, w: .7, h: .9, d: .4, y: 0, col: '#9a3412', door: '#c2410c', label: 'ИНСТРУМЕНТ', labelBg: '#fde68a', name: 'Ящик с инструментами', kicker: 'Устройство АКБ', sub: 'Здесь тестер банок и другие приборы. Открой дверцу.' });
   if (!st.tester) { var pt = L2.g.localPt(0, L2.g.userData.shelfY, .02); tesIt = pickable({ id: 'tester', kind: 'tester', name: 'Тестер банок', sub: 'Показывает напряжение каждой банки аккумулятора. Без него в лаборатории не проверить АКБ. Отнеси на стол в комнату 2.', where: 'на стол АКБ в комнате 2 "Лаборатория"', pos: pt, ry: L2.ry, s: 2.0, at: L2.it.at, reg: r1.id, hidden: true }); }
-  (function () { L2.it.act = function () { var on = !L2.g.userData.open; L2.g.userData.toggle(on, function () { L2.it.actLabel = on ? 'Закрыть' : '🚪 Открыть'; if (tesIt && !tesIt.kvTaken2) { if (on) showIt(tesIt); else hideIt(tesIt); } R.card(L2.it); }); }; })();
-  if (tesIt) { var tk0 = tesIt.act; tesIt.act = function (x) { if (H.o) { tk0(x); return; } tesIt.kvTaken2 = true; tk0(x); }; }
+  L2.setInside(tesIt);
+
   var onTable = function () { var m = P.model('tester'); m.scale.setScalar(2.2); m.position.set(TB.w / 2 - .45, TB.y - TB.g.position.y, TB.d / 2 - .3); m.rotation.y = .3; TB.g.add(m); };
   if (st.tester) onTable();
   target(table, { need: 'tester', ok: function () { return !!st.tester; }, lock: 'На столе нет тестера банок. Он в ящике с инструментами в комнате 1 "Устройство АКБ" - принеси.',
@@ -65,4 +64,24 @@ if (r6 && r5 && !st.vzdut) {
       H.say('Правильно! Вздутый аккумулятор - только в песок, потом его сдают на переработку.', 5000); } });
   bIt.reg = r5.id; bIt.at3 = [bx, 0, bz];
 }
+
+/* ---------- 18.11: что искать и куда идти (Alexandr не мог найти предметы): список в углу и маяк над следующим местом ---------- */
+(function () {
+  var LS = P.spisok(document.body), BC = [P.beacon(R.scene, '#ffd36e'), P.beacon(R.scene, '#7cf3ff'), P.beacon(R.scene, '#ff8a8a')];
+  function gp(o) { return o.position ? [o.position.x, o.position.z] : o; }
+  function step(n, ok, item, src, srcY, dst, dstY, need) { var b = BC[n]; if (ok || !item && !src) { b.off(); return; }
+    if (H.o && H.o.id === need) b.at(dst[0], dstY, dst[1]); else if (H.o || !item || item.taken) b.off(); else b.at(src[0], srcY, src[1]); }
+  function upd() {
+    var rows = [];
+    if (typeof L1 !== 'undefined' && L1) { var c1 = !!st.akb, h1 = H.o && H.o.id === 'akb'; rows.push({ ok: c1, t: 'Аккумулятор - на зарядку', w: h1 ? 'неси в комнату 5 "Зарядная"' : 'шкафчик на складе, комната 4' });
+      step(0, c1, akbIt, gp(L1.g), 1.5, [B.x, B.z], B.y, 'akb'); }
+    if (typeof L2 !== 'undefined' && L2) { var c2 = !!st.tester, h2 = H.o && H.o.id === 'tester'; rows.push({ ok: c2, t: 'Тестер - на стол лаборатории', w: h2 ? 'неси в комнату 2 "Лаборатория"' : 'ящик в комнате 1' });
+      step(1, c2, tesIt, gp(L2.g), .9, [TB.x, TB.z], TB.y, 'tester'); }
+    if (r6 && r5) { var c3 = !!st.vzdut, h3 = H.o && H.o.id === 'vzdut'; rows.push({ ok: c3, t: 'Вздутый аккумулятор - в песок', w: h3 ? 'ведро в комнате 5 "Зарядная"' : 'полётный зал, комната 6' });
+      if (!c3 && typeof vz !== 'undefined') step(2, c3, vz, [pv[0], pv[1]], .1, [bx, bz], .4, 'vzdut'); else BC[2].off(); }
+    if (rows.length && rows.some(function (r) { return !r.ok; })) LS.set('ЗАДАНИЯ С ПРЕДМЕТАМИ', rows); else LS.hide();
+    var busy = false; try { busy = R.mode !== 'walk' || (R.busy && R.busy()); } catch (e) {} LS.el.style.visibility = busy ? 'hidden' : '';
+  }
+  upd(); setInterval(upd, 400);
+})();
 })();

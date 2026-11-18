@@ -41,7 +41,7 @@ window.KOMNATA_KVEST.m2 = function (X) {
   ITEMS.forEach(function (it) { if (st[it.id]) onTable(it); });
 
   /* предмет, который можно взять */
-  function pickable(it, mesh, at, look) { it.mesh = mesh; X.S.add(mesh);
+  function pickable(it, mesh, at, look) { it.mesh = mesh; X.S.add(mesh); P.proxy(mesh, .55 / (mesh.scale.x || 1)); /* 18.11: большая зона нажатия */
     it.c = { o: mesh, kind: 'q', at: at, look: look, q: { card: function () {
       var busy = H.o && H.o !== it;
       return { sm: 'ПРЕДМЕТ · ДЛЯ СТОЛА СБОРКИ', h: it.name, p: it.sub, acts: busy ? '<button class="k-b dis" data-a="lock">Руки заняты: ' + H.o.name + '</button>' : '<button class="k-b pri" data-a="q:take">✋ Взять</button>' }; } }, item: it };
@@ -49,6 +49,9 @@ window.KOMNATA_KVEST.m2 = function (X) {
   function take(it) { if (H.o) return; var i = X.CLICK.indexOf(it.c); if (i >= 0) X.CLICK.splice(i, 1); X.S.remove(it.mesh);
     it.where = 'на стол сборки в центре зала'; H.take(it, P.model(it.kind)); X.unsel(); hint('Взял: ' + it.name + '. Отнеси на стол сборки в центре и нажми E.', 4500); }
 
+  /* 18.11: в открытом шкафу кнопка "Взять" сразу в карточке шкафа - E берёт предмет, а не закрывает дверцу */
+  function takeBtns(ids) { if (H.o) return '<button class="k-b dis" data-a="lock">Руки заняты: ' + H.o.name + '</button>';
+    return ids.filter(function (k) { var it = BYID[k]; return !st[k] && it.mesh && it.mesh.parent; }).map(function (k, i) { return '<button class="k-b' + (i ? '' : ' pri') + '" data-a="q:takeid:' + k + '">✋ Взять: ' + BYID[k].name + '</button>'; }).join(''); }
   /* шкаф инструментов у правой стены: паяльная станция на нижней полке, кейс с отвёртками на верхней */
   var SX = W / 2 - .34, SZ = -5.6, sh = P.shkaf({ w: 1.2, h: 1.7, d: .56, col: '#7f1d1d', door: '#991b1b', label: 'ИНСТРУМЕНТ', labelBg: '#f5f5f5' });
   sh.position.set(SX, 0, SZ); sh.rotation.y = -PI / 2; X.S.add(sh); X.block(SX, SZ, .3, .6, 0); sh.updateMatrixWorld(true);
@@ -59,7 +62,7 @@ window.KOMNATA_KVEST.m2 = function (X) {
     pickable(it, m, [SX - 1.9, SZ], [p.x, p.y + .1, p.z]); });
   var shC = { o: sh, kind: 'q', at: [SX - 2.3, SZ], look: [SX, 1.0, SZ], q: { card: function () { var o = sh.userData.open, left = ['payalnik', 'otvertki'].filter(function (k) { return !st[k] && !(H.o && H.o.id === k) && BYID[k].c && X.CLICK.indexOf(BYID[k].c) < 0; });
       return { sm: 'ШКАФ ИНСТРУМЕНТОВ', h: o ? 'Шкаф открыт' : 'Шкаф с инструментами', p: o ? 'Возьми, что нужно для стола сборки: нажми на предмет внутри.' : 'Здесь паяльная станция и отвёртки. Открой дверцу.',
-        acts: o ? '<button class="k-b" data-a="q:close">Закрыть</button>' : '<button class="k-b pri" data-a="q:open">🚪 Открыть</button>' }; },
+        acts: o ? takeBtns(['payalnik', 'otvertki']) + '<button class="k-b" data-a="q:close">Закрыть</button>' : '<button class="k-b pri" data-a="q:open">🚪 Открыть</button>' }; },
     act: function (a) { sh.userData.toggle(a === 'open', function () { ['payalnik', 'otvertki'].forEach(function (k) { var it = BYID[k]; if (!it.c || st[k] || (H.o && H.o.id === k) || !it.mesh.parent) return; var i = X.CLICK.indexOf(it.c); if (a === 'open' && i < 0) X.CLICK.push(it.c); if (a !== 'open' && i >= 0) X.CLICK.splice(i, 1); }); X.recard(); }); } } };
   X.CLICK.push(shC);
 
@@ -79,7 +82,7 @@ window.KOMNATA_KVEST.m2 = function (X) {
     pickable(it, m, [BX, BZ + 2.0], [BX, 1.3, BZ + .26]); })();
   var bC = { o: bh, kind: 'q', at: [BX + .3, BZ + 2.1], look: [BX, 1.1, BZ], q: { card: function () {
       return { sm: 'ШКАФ АККУМУЛЯТОРОВ', h: bOpen ? 'Шкаф открыт' : 'Шкаф с аккумуляторами', p: bOpen ? (st.akb || H.o === BYID.akb ? 'Огнестойкий шкаф: аккумуляторы хранят здесь, а не на столе. Закрой дверцу.' : 'Возьми аккумулятор с красными проводами - он заряжен и готов.') : 'Аккумуляторы LiPo хранят в огнестойком шкафу. Открой дверцу.',
-        acts: bOpen ? '<button class="k-b" data-a="q:close">Закрыть</button>' : '<button class="k-b pri" data-a="q:open">🚪 Открыть</button>' }; },
+        acts: bOpen ? takeBtns(['akb']) + '<button class="k-b" data-a="q:close">Закрыть</button>' : '<button class="k-b pri" data-a="q:open">🚪 Открыть</button>' }; },
     act: function (a) { var on = a === 'open'; if (on === bOpen) return; bOpen = on; var a0 = bh.rotation.y, a1 = on ? -1.9 : 0;
       P.anim(.6, function (u) { bh.rotation.y = a0 + (a1 - a0) * u; }, function () { var it = BYID.akb; if (it.c && !st.akb && it.mesh.parent) { var i = X.CLICK.indexOf(it.c); if (on && i < 0) X.CLICK.push(it.c); if (!on && i >= 0) X.CLICK.splice(i, 1); } X.recard(); }); } } };
   X.CLICK.push(bC);
@@ -96,6 +99,7 @@ window.KOMNATA_KVEST.m2 = function (X) {
         acts: H.o ? '<button class="k-b pri" data-a="q:put">⬇ Положить на стол</button>' : '<button class="k-b dis" data-a="lock">🔒 Собрать дрон: принеси 4 вещи</button>' }; },
     act: function (a, c) {
       if (a === 'take' && c.item) { take(c.item); return; }
+      if (a.indexOf('takeid:') === 0) { var ti = BYID[a.slice(7)]; if (ti && !st[ti.id] && ti.mesh && ti.mesh.parent) take(ti); return; }
       if (a === 'put' && H.o) { var it = H.put(); st[it.id] = 1; P.save(KEY, st); onTable(it);
         if (done()) { X.toast('Рабочее место готово! Теперь собирай дрон.'); X.hint('Всё на столе. Нажми E у стола - начнём сборку.', 5000); if (P.golos) P.golos('Рабочее место готово! Теперь собирай дрон. Всё на столе. Нажми E у стола - начнём сборку.'); }
         else { var left = ITEMS.filter(function (q) { return !st[q.id]; }).length; X.toast('На столе: ' + it.name + '. Ещё ' + left + '.'); if (P.golos) P.golos('На столе: ' + it.name + '. ' + (left === 1 ? 'Осталась одна вещь.' : 'Осталось ' + (left === 2 ? 'две' : 'три') + ' вещи.')); }
@@ -105,6 +109,13 @@ window.KOMNATA_KVEST.m2 = function (X) {
   };
   /* первая подсказка: когда ученик впервые подходит к столу или через 25 секунд после входа */
   if (!done()) { var said = false, t0 = null; X.TICK.push(function (t) { if (said) return; if (t0 == null) t0 = t; if (t - t0 > 25) { said = true; hint('Перед сборкой дрона подготовь рабочее место: принеси на стол 4 вещи. ' + where(), 7000, true); } }); }
+  /* 18.11: что найти и куда идти (Alexandr не мог найти 2-й и 3-й предмет): список в углу и маяк над местом */
+  var LS = P.spisok(X.root), BC = P.beacon(X.S, '#ffd36e');
+  var SRC = { payalnik: [SX - .1, 1.75, SZ, 'красный шкаф у правой стены'], otvertki: [SX - .1, 1.75, SZ, 'красный шкаф у правой стены'], detali: [-W / 2 + 1.2, .5, -5.9, 'у стеллажа деталей, слева'], akb: [BX, 2.3, BZ + .3, 'шкаф аккумуляторов у дальней стены'] };
+  X.TICK.push(function () { if (done()) { LS.hide(); BC.off(); return; }
+    LS.set('ПОДГОТОВЬ СТОЛ СБОРКИ', ITEMS.map(function (it) { return { ok: !!st[it.id], t: it.name, w: H.o === it ? 'неси на стол в центре' : SRC[it.id][3] }; }));
+    if (H.o) { BC.at(TB.g.position.x, 1.1, TB.g.position.z); return; }
+    var nx = null; ITEMS.forEach(function (it) { if (!nx && !st[it.id]) nx = it; }); if (nx) { var q = SRC[nx.id]; BC.at(q[0], q[1], q[2]); } });
   return Q;
 };
 })();
