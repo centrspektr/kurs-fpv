@@ -484,7 +484,8 @@ function makePen() { var g = new T.Group(), body = new T.MeshPhysicalMaterial({ 
   A.mesh(new T.CylinderGeometry(.025, .025, .6, 10), A.M.steel, 0, .3, 0, g); A.mesh(new T.CylinderGeometry(.09, .16, .4, 16), A.M.white, 0, .8, 0, g);
   A.mesh(new T.CylinderGeometry(.32, .32, 3.2, 20), body, 0, 2.6, 0, g); A.mesh(new T.CylinderGeometry(.34, .34, .3, 20), A.M.white, 0, 4.3, 0, g);
   A.mesh(new T.CylinderGeometry(.33, .33, 1.2, 20, 1, true), new T.MeshStandardMaterial({ color: lin(0xff4f6a), roughness: .5 }), 0, 2.6, 0, g); return g; }
-function fluxTap() { var g = cur; if (g.st !== 'flux') { if (g.st !== 'busy') say('Флюс уже есть. ' + (g.st === 'wire' ? 'Теперь положи провод на площадку.' : 'Прижми жало и держи.')); return; } g.st = 'busy'; $('#flux').classList.remove('go');
+var SB_NEW = false; try { SB_NEW = /\/new\.html$/.test(parent.location.pathname); } catch (e) {}   /* 18.11 проба new.html: фраза, записанная Лерой */
+function fluxTap() { var g = cur; if (g.st !== 'flux') { if (g.st !== 'busy') say((SB_NEW ? 'Флюс есть. ' : 'Флюс уже есть. ') + (g.st === 'wire' ? 'Теперь положи провод на площадку.' : 'Прижми жало и держи.')); return; } g.st = 'busy'; $('#flux').classList.remove('go');
   say(K('Капаем <b>флюс</b> на каждую площадку - с ним припой хорошо растекается.', 'Шприц с флюсом: капаем <b>по капле на каждую площадку</b>. Флюс снимает окисел, и припой растечётся ровно.'));
   var d = camDir(), pd = g.left.clone().multiplyScalar(.45).add(V(0, 1, 0)).add(d.f.clone().multiplyScalar(-.15)).normalize(), pen = makePen(); pen.quaternion.setFromUnitVectors(V(0, 1, 0), pd); IF.add(pen);
   var start = W(g.pads[0].p).add(pd.clone().multiplyScalar(4)), T0 = 0; pen.position.copy(start);

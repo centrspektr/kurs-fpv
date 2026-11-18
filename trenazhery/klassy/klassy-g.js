@@ -188,6 +188,7 @@ var cmp = el('div', 'bf glass'); cmp.hidden = true; ui.appendChild(cmp);
 var cmpCss = document.createElement('style'); cmpCss.textContent = '@media (max-width:759px){.bf{top:auto!important;bottom:72px;transform:translateX(-50%)!important;padding:8px 10px}}'; document.head.appendChild(cmpCss);
 function bubble(h, cls) { bub.className = 'bub glass' + (cls ? ' ' + cls : ''); bub.innerHTML = h; bub.hidden = false; }
 function actions(list) { bar.innerHTML = ''; list.forEach(function (a) { var b = el('button', 'tb' + (a.cls ? ' ' + a.cls : ''), a.t); b.onclick = function () { a.f(b); }; bar.appendChild(b); }); }
+var KL_NEW = false; try { KL_NEW = /\/new\.html$/.test(parent.location.pathname); } catch (e) {}
 function say(s) { if (window.GOLOS && GOLOS.on) GOLOS.say(window.VSLUH ? VSLUH(s) : s.replace(/<[^>]+>/g, '')); } /* VSLUH (../vsluh.js): единицы, дроби и ударения для голоса */
 var PARTS = ['Знакомство', 'Сравни'], part = 0, MODE = 'learn', seen = {};
 function progress() { bars.innerHTML = PARTS.map(function (p, i) { var k = i < part ? 1 : i > part ? 0 : (part === 0 ? Object.keys(seen).length / DR.length : qz.i / qz.list.length);
@@ -210,7 +211,7 @@ function show(d) { seen[d.id] = 1; var p = innerWidth < innerHeight;
   DR.forEach(function (x) { x.rule.visible = x === d; });
   var n = Object.keys(seen).length;
   bubble('<span class="chip">' + d.name.toUpperCase() + '</span><br>' + (KID ? d.kid : d.big), '');
-  say(d.name + '. ' + (KID ? d.kid : d.big));
+  say((KL_NEW ? '' : d.name + '. ') + (KID ? d.kid : d.big));   /* 18.11 проба new.html: название дрона на экране, вслух - записанное описание */
   var acts = [{ t: '← Все три', f: function () { DR.forEach(function (x) { x.rule.visible = false; }); wide(); } }];
   if (d.id === 'mark5') acts.push({ t: mark.m.userData.gopro.visible ? 'Снять экшн-камеру' : 'Поставить экшн-камеру', f: function (b) { var g = mark.m.userData.gopro; g.visible = !g.visible; b.textContent = g.visible ? 'Снять экшн-камеру' : 'Поставить экшн-камеру';
     if (g.visible) bubble('<span class="chip">ЭКШН-КАМЕРА</span><br>' + (KID ? 'На большой дрон ставят камеру для красивого видео. Пилот смотрит в свою маленькую камеру, а эта снимает.' : 'На 5" сверху ставят экшн-камеру для чистого видео в 4K. Пилот летит по своей FPV-камере, экшн-камера только пишет. Она добавляет 100-150 г.'), ''); } });
