@@ -73,7 +73,8 @@ body:has(.k-card:not([hidden])) #nextb,body.k-focus #nextb{display:none}
 </style></head><body>
 <canvas id="c"></canvas>
 <div id="ui">
-  <div class="top"><button class="ic" id="back" title="Назад">←</button><div class="ttl"><small>МОДУЛЬ 3</small><b>Аккумуляторная</b></div><button class="ic" id="snd" title="Звук">🔊</button><input id="vol" type="range" min="0" max="100" step="5" title="Громкость" aria-label="Громкость"></div>
+  <div class="top"><button class="ic" id="back" title="Назад">←</button><div class="ttl"><small>МОДУЛЬ 3</small><b>Аккумуляторная</b></div><button class="ic" id="snd" title="Звук">🔊</button><input id="vol" type="range" min="0" max="100" step="5" title="Громкость" aria-label="Громкость"><button class="ic" id="muzB" type="button" title="Голос и музыка" aria-label="Громкость голоса и музыки" hidden>⚙</button></div>
+  <script>/* 18.11: ⚙ - ползунки "Голос Леры" и "Музыка" курса (muzyka.js на странице курса); без неё кнопки нет */ (function(){ var b=document.getElementById('muzB'); try{ if(parent!==window&&parent.MUZYKA){ b.hidden=false; b.onclick=function(){ parent.MUZYKA.toggle(); }; document.addEventListener('pointerdown',function(e){ if(e.target!==b&&parent.MUZYKA.close) parent.MUZYKA.close(); },true); } }catch(e){} })();</script>
   <div id="hint">Проведи пальцем - осмотрись · нажми на пол - иди · нажми на предмет - подойди</div>
   <script>if (matchMedia("(pointer:fine)").matches) document.getElementById("hint").textContent = "W A S D - идти · Shift - бегом · пробел - прыжок · мышь или тачпад - осмотреться · стрелки ← → - повернуться (если тачпад залипает) · E или Enter - подойти и открыть";</script>
   <div id="nextb" hidden><span>ДАЛЬШЕ</span><b></b><button>Идти</button></div>
