@@ -997,6 +997,8 @@ function refresh(){ LV.forEach(function(L){ L.nodes.forEach(function(n){ var s=n
 
 /* ---- состояние и полёт (как в "Иртыше") ---- */
 var st='gate', gp=0, mix=0, mixT=0, roll=0, rollT=0, cur=null, curL=null, back=[], acc=0;
+/* проба 18.11: где ученик - для фоновой музыки (muzyka.js): 'gorod' или 'modul' */
+window.KURS_MESTO=function(){ return st==='room'||(curL&&curL!==LK)?'modul':'gorod'; };
 var spin=0; /* поворот города пальцем/мышью вбок */
 function PZ(){ return curL&&curL.pz!=null?curL.pz:CZ; }
 function rotC(v,a){ var z0=PZ(), x=v.x, z=v.z-z0, c=Math.cos(a), s=Math.sin(a); v.x=x*c+z*s; v.z=z0-x*s+z*c; return v; }
@@ -1419,7 +1421,7 @@ function codeLogin(){ lsS(CFG.meKey+'_guest',null); lsS(VKEY,'plain'); location.
 /* шестерёнка: открыть/закрыть меню; нажатие на пункт или мимо - меню закрывается */
 function gearSet(on){ document.body.classList.toggle('gear',on); $('cityG').setAttribute('aria-expanded',on?'true':'false'); }
 $('cityG').onclick=function(e){ e.stopPropagation(); gearSet(!document.body.classList.contains('gear')); };
-addEventListener('pointerdown',function(e){ if(document.body.classList.contains('gear')&&!e.target.closest('#cityG,#plainB,#tourB,#autoB')) gearSet(false); },true);
+addEventListener('pointerdown',function(e){ if(document.body.classList.contains('gear')&&!e.target.closest('#cityG,#plainB,#tourB,#autoB,#muzP')) gearSet(false); },true);
 ['plainB','tourB','autoB'].forEach(function(id){ $(id).addEventListener('click',function(){ setTimeout(function(){ gearSet(false); },150); }); });
 $('tourB').onclick=function(){ if(tour) return; if(st==='node'||st==='over') tourStart(); };
 if($('autoB')){ autoUI(); $('autoB').onclick=function(){ AUTO=!AUTO; lsS(AKEY,AUTO?'1':null); autoUI(); if(AUTO) guideSoon(300); }; }
