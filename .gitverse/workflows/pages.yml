@@ -5,6 +5,9 @@
 # Включается в GitVerse: Настройки -> Страницы -> Источник: публикация из workflow (вместо "Ветка").
 # Откат: Источник обратно "Ветка", main, / (root) - этот файл тогда можно удалить.
 name: Pages (хранение 1 день)
+# 18.11: с 13.11 этот файл ни разу не сработал - действий gitverse/upload-pages-artifact и gitverse/deploy-pages нет
+# ("Repository not found"). Сайт всё это время публиковала встроенная сборка GitVerse. Имена взяты из её лога:
+# https://gitverse.ru/actions/upload-pages-artifact@v1 и https://gitverse.ru/actions/deploy-pages@v1.
 
 on:
   push:
@@ -30,7 +33,7 @@ jobs:
           du -sh ../_site
           mv ../_site ./_site
       - name: Upload artifact
-        uses: gitverse/upload-pages-artifact@v1.0.0
+        uses: actions/upload-pages-artifact@v1
         with:
           path: _site
           retention-days: 1
@@ -39,4 +42,4 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Deploy
-        uses: gitverse/deploy-pages@v1.0.0
+        uses: actions/deploy-pages@v1
