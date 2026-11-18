@@ -15,7 +15,7 @@ var V2 = !/[?&]pobeg=0\b/.test(location.search);   /* 17.11 вечер по "с�
 /* 17.11 ночь (проба new.html, ?zahvat=1 - проверить в другом месте): камера на тачпаде упиралась в край экрана вместе со стрелкой.
    Как в "Побеге": щелчок по сцене или первая клавиша ходьбы захватывает курсор - камера крутится без края, Esc возвращает стрелку;
    когда стрелка подходит к краю - подсказка. При "ставь" убрать условие V3. */
-var V3 = !/[?&]zahvat=0\b/.test(location.search);   /* 18.11 (проба, потом главная): захват курсора везде; ?zahvat=0 - без захвата */
+var V3 = !/[?&]zahvat=0\b/.test(location.search);   /* 18.11 по "ставь": захват мыши везде; ?zahvat=0 - без него (откат otkat/fps-upr-1811s.js) */
 function mouseHelp(h) {   /* h: { canvas, locked(), lock(), walk() } */
   if (!V3 || TOUCH || !h.canvas.requestPointerLock) return;
   var tip = document.createElement('div'), tipT = 0, tipLast = -1e9;
