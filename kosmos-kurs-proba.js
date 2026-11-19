@@ -32,7 +32,12 @@ function plain(why){ location.replace(PLAIN+(why?(PLAIN.indexOf('?')<0?'?':'&')+
 /* 12.11: Edge держал испорченные копии файлов в кэше - недостающее качаем заново мимо кэша, прежде чем уходить в обычный вид */
 if(!K||!I){ [['VZ_KURS','zadaniya-new.js'],['VZ_KURS_INFO','moduli.js']].forEach(function(p){ if(window[p[0]]) return; try{ var x=new XMLHttpRequest(); x.open('GET',p[1]+'?r='+Date.now(),false); x.send(); if(x.status===200&&x.responseText.length>1000) (0,eval)(x.responseText); }catch(e){} });
   K=window.VZ_KURS; I=window.VZ_KURS_INFO; }
-if(!K||!I||!window.THREE){ var RK='kurs_retry3d'; try{ if(!sessionStorage.getItem(RK)){ sessionStorage.setItem(RK,'1'); location.reload(); return; } sessionStorage.removeItem(RK); }catch(e){} plain(!window.THREE?('three'+(typeof define==='function'&&define.amd?'-amd':typeof module==='object'&&module?'-cjs':'')):!K?'kurs':'info'); return; }
+/* 19.11: пока сайт на GitVerse был пустой, телефоны запомнили вместо файлов страницу "не найдена" (GitVerse отдаёт её без запрета кэша) и уходили в обычный вид.
+   Теперь перед повтором перекачиваем все скрипты страницы мимо памяти браузера (cache:'reload' обновляет и сам кэш), потом перезагружаем. */
+function zFresh(){ var L=[].slice.call(document.scripts).map(function(s){ return s.src; }).filter(function(u){ return u&&u.indexOf(location.origin)===0; });
+  if(!window.fetch||!window.Promise) return Promise.resolve(); var t=new Promise(function(r){ setTimeout(r,8000); });
+  return Promise.race([t,Promise.all(L.map(function(u){ return fetch(u,{cache:'reload'}).catch(function(){}); }))]); }
+if(!K||!I||!window.THREE){ var RK='kurs_retry3d'; try{ if(!sessionStorage.getItem(RK)){ sessionStorage.setItem(RK,'1'); zFresh().then(function(){ location.reload(); }); return; } sessionStorage.removeItem(RK); }catch(e){} plain(!window.THREE?('three'+(typeof define==='function'&&define.amd?'-amd':typeof module==='object'&&module?'-cjs':'')):!K?'kurs':'info'); return; }
 try{ sessionStorage.removeItem('kurs_retry3d'); }catch(e){}
 if(!force&&(lsG(VKEY)==='plain'||weak)){ plain(weak?'weak':'vid'); return; }
 var cv=document.getElementById('c'), R;
