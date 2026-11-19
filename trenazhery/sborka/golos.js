@@ -44,9 +44,12 @@ function dev(t,o){ return G.dev(t,o); }
    Фразы записаны по предложениям: текст режем на предложения, ключ каждого - parent.GOLOS.key(предложение). Есть все - играем подряд, нет хоть одного - голос устройства. */
 function zP(){ try{ var P=parent!==window&&parent.GOLOS; if(P&&P.key&&P.zmap&&P.zdir&&P.zmap()) return P; }catch(e){} return null; }
 function zSent(t){ return (String(t).match(/[^.!?…]+(?:[.!?…]+|$)\s*/g)||[]).map(function(x){ return x.trim(); }).filter(Boolean); }
-function zSay(text,o){ var P=zP(); if(!P) return false; var L=P.zmap(), dir=P.zdir(), parts=zSent(text), au=[];
-  for(var j=0;j<parts.length;j++){ var f=L[P.key(parts[j])]; if(!f) return false; var a=new Audio(dir+f); a.preload='auto'; au.push(a); }
-  if(!au.length) return false; var tok={}, i=0, done=false; G.zt=tok;
+function zSay(text,o){ var P=zP(); if(!P) return false; var L=P.zmap(), dir=P.zdir(), parts=zSent(text), fs=[];
+  for(var j=0;j<parts.length;j++){ var f=L[P.key(parts[j])]; if(!f) return false; fs.push(f); }
+  if(!fs.length) return false; var wt={}; G.zt=wt; /* 19.11: записи упакованы - адреса даёт главная страница (GOLOS.zget) */
+  (P.zget?P.zget(fs):Promise.resolve(fs.map(function(x){ return dir+x; }))).then(function(u){ if(G.zt===wt) zSay1(text,o,parts,u); }); return true; }
+function zSay1(text,o,parts,urls){ var au=urls.map(function(x){ var a=new Audio(x); a.preload='auto'; return a; });
+  var tok={}, i=0, done=false; G.zt=tok;
   function end(ok){ if(done) return; done=true; if(G.zt===tok) G.zt=null; G.au=null; o.onend&&o.onend(ok); }
   function bad(){ if(G.zt!==tok||done) return; done=true; G.zt=null; G.au=null; dev(parts.slice(Math.max(0,i-1)).join(' '),o); } /* файл не играет - остаток голосом устройства */
   function next(){ if(G.zt!==tok) return; if(i>=au.length) return end(true); var a=G.au=au[i++]; a.volume=G.vol; a.onended=next; a.onerror=bad; var pr=a.play(); if(pr&&pr.catch) pr.catch(bad); }

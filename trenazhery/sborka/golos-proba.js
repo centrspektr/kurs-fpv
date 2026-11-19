@@ -50,9 +50,12 @@ function zP(){ try{ var P=parent!==window&&parent.GOLOS; if(P&&P.key&&P.zmap&&P.
 function zSent(t){ return (String(t).match(/[^.!?…]+(?:[.!?…]+|$)\s*/g)||[]).map(function(x){ return x.trim(); }).filter(Boolean); }
 G.miss=[]; function zMiss(t){ if(G.miss.indexOf(t)<0){ G.miss.push(t); try{ console.info('GOLOS: нет записи -', t); }catch(e){} } }
 var ZWAIT=null; function zGesture(fn){ ZWAIT=fn; if(zGesture.on) return; zGesture.on=1; var go=function(){ var f=ZWAIT; ZWAIT=null; if(f) f(); }; ['pointerdown','keydown','touchstart'].forEach(function(e){ addEventListener(e,go,true); }); }
-function zSay(text,o){ var P=zP(); if(!P) return false; var L=P.zmap(), dir=P.zdir(), parts=zSent(text), au=[];
-  for(var j=0;j<parts.length;j++){ var f=L[P.key(parts[j])]; if(!f) return false; var a=new Audio(dir+f); a.preload='auto'; au.push(a); }
-  if(!au.length) return false; var tok={}, i=0, done=false; G.zt=tok;
+function zSay(text,o){ var P=zP(); if(!P) return false; var L=P.zmap(), dir=P.zdir(), parts=zSent(text), fs=[];
+  for(var j=0;j<parts.length;j++){ var f=L[P.key(parts[j])]; if(!f) return false; fs.push(f); }
+  if(!fs.length) return false; var wt={}; G.zt=wt; /* 19.11: записи упакованы - адреса даёт главная страница (GOLOS.zget) */
+  (P.zget?P.zget(fs):Promise.resolve(fs.map(function(x){ return dir+x; }))).then(function(u){ if(G.zt===wt) zSay1(text,o,parts,u); }); return true; }
+function zSay1(text,o,parts,urls){ var au=urls.map(function(x){ var a=new Audio(x); a.preload='auto'; return a; });
+  var tok={}, i=0, done=false; G.zt=tok;
   function end(ok){ if(done) return; done=true; if(G.zt===tok) G.zt=null; G.au=null; o.onend&&o.onend(ok); }
   function bad(e){ if(G.zt!==tok||done) return; if(e&&e.name==='NotAllowedError'){ var a=au[i-1]; zGesture(function(){ if(G.zt===tok&&!done){ var pr=a.play(); if(pr&&pr.catch) pr.catch(function(){ end(false); }); } }); return; } end(false); } /* браузер не дал играть без нажатия - ждём нажатия; файл не открылся - молчим, без робота */
   function next(){ if(G.zt!==tok) return; if(i>=au.length) return end(true); var a=G.au=au[i++]; a.volume=G.vol; a.onended=next; a.onerror=bad; var pr=a.play(); if(pr&&pr.catch) pr.catch(bad); }

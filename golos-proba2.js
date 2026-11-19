@@ -114,9 +114,27 @@ var EL=null, SIL='data:audio/mpeg;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjYwLjE
 function zEl(){ if(!EL){ EL=new Audio(); EL.preload='auto'; } return EL; }
 (function(){ var un=function(){ var e=zEl(); if(e._ok||G.zt||G.au===e) return; e.onended=e.onerror=e.ontimeupdate=null; var s0=e.src; e.muted=true; e.src=SIL; var pr=e.play(); var fin=function(){ e._ok=1; e.muted=false; }; if(pr&&pr.then) pr.then(fin,function(){}); else fin(); };
   ['touchstart','pointerdown','keydown'].forEach(function(ev){ addEventListener(ev,un,{capture:true,passive:true}); }); })();
+/* 19.11.2026: записи голоса упакованы в 16 файлов zvuk/p/0.mp3 ... zvuk/p/f.mp3 вместо 2830 отдельных - GitVerse не успевал их выкладывать и оставлял сайт пустым.
+   zvuk/paket.json = { v: метка, f: { "3/g-xxx.mp3": [начало, длина] } } (делает .github/zvuk-paket.py). Запись берём из пакета запросом части файла (Range),
+   сервер отдал пакет целиком - режем у себя. Нет paket.json - играем отдельные файлы, как раньше. Окна модулей и тренажёров берут записи у главной (общий кэш). */
+var PK=null, PKwait=null, PKurl={}, PKbuf={};
+G.zget=function(files){ try{ if(parent!==window&&parent.GOLOS&&parent.GOLOS.zget) return parent.GOLOS.zget(files); }catch(e){}
+  var dir=G.zdir(); if(!window.fetch||!window.Blob||!window.URL||!URL.createObjectURL) return Promise.resolve(files.map(function(x){ return dir+x; }));
+  if(!PKwait) PKwait=fetch(dir+'paket.json',{cache:'no-store'}).then(function(r){ return r.ok?r.json():null; }).then(function(j){ PK=j&&j.f?j:null; },function(){ PK=null; });
+  return PKwait.then(function(){ return Promise.all(files.map(function(x){ return zOne(dir,x); })); }); };
+function zOne(dir,x){ var e=PK&&PK.f[x]; if(!e) return Promise.resolve(dir+x); if(PKurl[x]) return Promise.resolve(PKurl[x]);
+  var p=x.charAt(0), url=dir+'p/'+p+'.mp3?v='+PK.v, a=e[0], n=e[1];
+  function mk(b){ return PKurl[x]=URL.createObjectURL(new Blob([b],{type:'audio/mpeg'})); }
+  function whole(){ if(!PKbuf[p]){ PKbuf[p]=fetch(url).then(function(r){ if(!r.ok) throw 0; return r.arrayBuffer(); }); PKbuf[p].catch(function(){ delete PKbuf[p]; }); }
+    return PKbuf[p].then(function(b){ return mk(b.slice(a,a+n)); }); }
+  if(PKbuf[p]) return whole().catch(function(){ return dir+x; });
+  return fetch(url,{headers:{Range:'bytes='+a+'-'+(a+n-1)}}).then(function(r){
+    if(r.status===206) return r.arrayBuffer().then(function(b){ return b.byteLength===n?mk(b):whole(); });
+    if(!r.ok) throw 0; PKbuf[p]=r.arrayBuffer(); return whole(); }).catch(function(){ return whole().catch(function(){ return dir+x; }); }); }
 function zSay(text,o){ if(!ZL) return false; var files=zFiles(text); if(!files) return false;
-  var f=G.fix(text), i=0, done=false, tok={}, a=zEl(), dir=G.zdir(); G.zt=tok;
-  /* следующие предложения заранее в кэш браузера */ files.slice(1).forEach(function(x){ try{ fetch(dir+x).catch(function(){}); }catch(e){} });
+  var wt={}; G.zt=wt; G.zget(files).then(function(u){ if(G.zt===wt) zSay1(text,o,u); }); return true; }
+function zSay1(text,o,files){ /* files - готовые адреса записей (из пакета) */
+  var f=G.fix(text), i=0, done=false, tok={}, a=zEl(), dir=''; G.zt=tok;
   function end(ok){ if(done) return; done=true; if(G.zt===tok) G.zt=null; if(G.au===a) G.au=null; o.onend&&o.onend(ok); }
   function back(){ if(done||G.zt!==tok) return; end(false); } /* файл не открылся - молчим, без голоса устройства */
   function prog(){ if(!o.onb||!a.duration) return; var u=(i-1+a.currentTime/a.duration)/files.length; o.onb(f.back(Math.min(f.s.length,Math.round(f.s.length*u)))); }
