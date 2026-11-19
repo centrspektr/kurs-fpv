@@ -22,8 +22,8 @@ var V3 = !/[?&]zahvat=0\b/.test(location.search);   /* 18.11 по "ставь": 
       Теперь первые 150 мс после захвата движение не берём, а одиночные скачки режем (не больше 90 точек за событие).
    2) Windows по умолчанию глушит тачпад, пока нажата клавиша (защита от касания ладонью при наборе). Пока держишь W, тачпад молчит,
       отпустил - камера догоняет рывком. Код это не обойдёт: замечаем такое и подсказываем - стрелки ← → или настройка Windows.
-   При "ставь" убрать условие V4. */
-var V4 = (function () { if (/[?&]tach=0\b/.test(location.search)) return false; if (/[?&]tach=1\b/.test(location.search)) return true; try { return /\/new\.html$/.test(window.top.location.pathname); } catch (e) { return false; } })();
+   19.11 по "ставь" - на главной. */
+var V4 = !/[?&]tach=0\b/.test(location.search);   /* 19.11 по "ставь": везде; ?tach=0 - как раньше (откат otkat/fps-upr-1911a.js) */
 var lockT = -1e9; document.addEventListener('pointerlockchange', function () { lockT = performance.now(); });
 /* движение мыши/тачпада для поворота камеры: [dx, dy] в точках или null - событие пропустить */
 function mv(e) { var mx = e.movementX || 0, my = e.movementY || 0;
