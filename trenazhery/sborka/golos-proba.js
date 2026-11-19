@@ -20,6 +20,9 @@ var V0=parseFloat(lsG(KEY+'_vol')); /* громкость 0..1, помнится
 function speakFrom(sp){ var off=sp.pos, u=new SpeechSynthesisUtterance(sp.s.slice(off)); u.lang='ru-RU'; u.voice=G.cur(); u.rate=1; u.pitch=1; u.volume=G.vol;
   u.onboundary=function(e){ if(e.charIndex==null) return; sp.pos=off+e.charIndex; if(sp.o.onb) sp.o.onb(sp.back(off+e.charIndex+(e.charLength||6))); };
   u.onend=u.onerror=function(){ if(sp.u===u) sp.end(); }; sp.u=u; syn.speak(u); }
+/* 18.11 (проба new.html): один голос на весь курс - новая фраза здесь останавливает голос города и других окон (и наоборот). Только когда главная - проба (GOLOS.one). */
+function ONE(){ try{ return !!(window.top.GOLOS&&window.top.GOLOS.one); }catch(e){ return false; } }
+function hush(){ if(!ONE()) return; var seen=[]; (function walk(w){ try{ if(!w||seen.indexOf(w)>=0) return; seen.push(w); if(w!==window&&w.GOLOS&&w.GOLOS.stop) w.GOLOS.stop(); for(var i=0;i<w.frames.length;i++) walk(w.frames[i]); }catch(e){} })(window.top); }
 var G=window.GOLOS={ on:lsG(KEY)!=='off', vol:isNaN(V0)?1:Math.max(0,Math.min(1,V0)), tm:0, list:list, live:live,
   can:function(){ return !!syn&&list().length>0; },
   cur:function(){ var r=list(), nm=lsG(KEY+'_v'); return r.find(function(v){ return v.name===nm; })||r[0]||null; },
@@ -29,13 +32,13 @@ var G=window.GOLOS={ on:lsG(KEY)!=='off', vol:isNaN(V0)?1:Math.max(0,Math.min(1,
     var sp=G.sp; if(sp&&syn){ clearTimeout(G.vt); G.vt=setTimeout(function(){ if(G.sp!==sp) return; sp.u=null; syn.cancel(); if(G.vol>0) speakFrom(sp); else sp.end(); },250); } },
   setOn:function(b){ G.on=!!b; lsS(KEY,b?'on':'off'); if(!b) G.stop(); },
   stop:function(){ G.zt=null; clearTimeout(G.tm); clearTimeout(G.vt); if(syn) syn.cancel(); if(G.au){ G.au.onended=G.au.onerror=null; G.au.pause(); G.au=null; } },
-  play:function(file,o){ o=o||{}; G.stop(); if(!G.on){ o.onend&&o.onend(false); return false; }
+  play:function(file,o){ o=o||{}; G.stop(); hush(); if(!G.on){ o.onend&&o.onend(false); return false; }
     var au=G.au=new Audio((window.ZVUK_DIR||'zvuk/')+file), done=false; au.volume=G.vol;
     function end(ok){ if(done) return; done=true; if(G.au===au) G.au=null; o.onend&&o.onend(ok); }
-    function back(){ if(done) return; if(G.au===au) G.au=null; done=true; if(o.text) G.say(o.text,o); else o.onend&&o.onend(false); } /* нет файла - голос устройства */
+    function back(){ if(done) return; if(ONE()&&G.au!==au){ done=true; return; } /* 18.11: фразу уже остановили - запасной текст не читаем */ if(G.au===au) G.au=null; done=true; if(o.text) G.say(o.text,o); else o.onend&&o.onend(false); } /* нет файла - голос устройства */
     au.onended=function(){ end(true); }; au.onerror=back; var pr=au.play(); if(pr&&pr.catch) pr.catch(back); return true; },
   /* 17.11 (проба): внутри курса - только записи Леры. Нет записи - молчим (текст на экране), фраза в GOLOS.miss. Голос устройства - только если игра открыта сама по себе, без курса. */
-  say:function(text,o){ o=o||{}; G.stop(); if(G.on&&zSay(text,o)) return true; if(G.on&&zP()){ zMiss(text); o.onend&&o.onend(false); return false; } return dev(text,o); },
+  say:function(text,o){ o=o||{}; G.stop(); if(G.on) hush(); if(G.on&&zSay(text,o)) return true; if(G.on&&zP()){ zMiss(text); o.onend&&o.onend(false); return false; } return dev(text,o); },
   dev:function(text,o){ if(!G.on||!G.can()){ o.onend&&o.onend(false); return false; }
     var f={s:text,back:function(i){ return i; }}, done=false, sp={s:f.s,back:f.back,o:o,pos:0};
     sp.end=function(){ if(done) return; done=true; if(G.sp===sp) G.sp=null; o.onend&&o.onend(true); };
@@ -47,9 +50,12 @@ function zP(){ try{ var P=parent!==window&&parent.GOLOS; if(P&&P.key&&P.zmap&&P.
 function zSent(t){ return (String(t).match(/[^.!?…]+(?:[.!?…]+|$)\s*/g)||[]).map(function(x){ return x.trim(); }).filter(Boolean); }
 G.miss=[]; function zMiss(t){ if(G.miss.indexOf(t)<0){ G.miss.push(t); try{ console.info('GOLOS: нет записи -', t); }catch(e){} } }
 var ZWAIT=null; function zGesture(fn){ ZWAIT=fn; if(zGesture.on) return; zGesture.on=1; var go=function(){ var f=ZWAIT; ZWAIT=null; if(f) f(); }; ['pointerdown','keydown','touchstart'].forEach(function(e){ addEventListener(e,go,true); }); }
-function zSay(text,o){ var P=zP(); if(!P) return false; var L=P.zmap(), dir=P.zdir(), parts=zSent(text), au=[];
-  for(var j=0;j<parts.length;j++){ var f=L[P.key(parts[j])]; if(!f) return false; var a=new Audio(dir+f); a.preload='auto'; au.push(a); }
-  if(!au.length) return false; var tok={}, i=0, done=false; G.zt=tok;
+function zSay(text,o){ var P=zP(); if(!P) return false; var L=P.zmap(), dir=P.zdir(), parts=zSent(text), fs=[];
+  for(var j=0;j<parts.length;j++){ var f=L[P.key(parts[j])]; if(!f) return false; fs.push(f); }
+  if(!fs.length) return false; var wt={}; G.zt=wt; /* 19.11: записи упакованы - адреса даёт главная страница (GOLOS.zget) */
+  (P.zget?P.zget(fs):Promise.resolve(fs.map(function(x){ return dir+x; }))).then(function(u){ if(G.zt===wt) zSay1(text,o,parts,u); }); return true; }
+function zSay1(text,o,parts,urls){ var au=urls.map(function(x){ var a=new Audio(x); a.preload='auto'; return a; });
+  var tok={}, i=0, done=false; G.zt=tok;
   function end(ok){ if(done) return; done=true; if(G.zt===tok) G.zt=null; G.au=null; o.onend&&o.onend(ok); }
   function bad(e){ if(G.zt!==tok||done) return; if(e&&e.name==='NotAllowedError'){ var a=au[i-1]; zGesture(function(){ if(G.zt===tok&&!done){ var pr=a.play(); if(pr&&pr.catch) pr.catch(function(){ end(false); }); } }); return; } end(false); } /* браузер не дал играть без нажатия - ждём нажатия; файл не открылся - молчим, без робота */
   function next(){ if(G.zt!==tok) return; if(i>=au.length) return end(true); var a=G.au=au[i++]; a.volume=G.vol; a.onended=next; a.onerror=bad; var pr=a.play(); if(pr&&pr.catch) pr.catch(bad); }

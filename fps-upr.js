@@ -17,6 +17,37 @@ var V2 = !/[?&]pobeg=0\b/.test(location.search);   /* 17.11 вечер по "с�
    Как в "Побеге": щелчок по сцене или первая клавиша ходьбы захватывает курсор - камера крутится без края, Esc возвращает стрелку;
    когда стрелка подходит к краю - подсказка. При "ставь" убрать условие V3. */
 var V3 = !/[?&]zahvat=0\b/.test(location.search);   /* 18.11 по "ставь": захват мыши везде; ?zahvat=0 - без него (откат otkat/fps-upr-1811s.js) */
+/* 18.11 вечер (проба new.html, Alexandr на ноутбуке с тачпадом: "жму вперёд и веду тачпадом - поворачивает криво, с торможениями"):
+   1) в момент захвата курсора (он включается первой клавишей ходьбы) браузер присылает ложный скачок движения - камера дёргалась вбок.
+      Теперь первые 150 мс после захвата движение не берём, а одиночные скачки режем (не больше 90 точек за событие).
+   2) Windows по умолчанию глушит тачпад, пока нажата клавиша (защита от касания ладонью при наборе). Пока держишь W, тачпад молчит,
+      отпустил - камера догоняет рывком. Код это не обойдёт: замечаем такое и подсказываем - стрелки ← → или настройка Windows.
+   19.11 по "ставь" - на главной. */
+var V4 = !/[?&]tach=0\b/.test(location.search);   /* 19.11 по "ставь": везде; ?tach=0 - как раньше (откат otkat/fps-upr-1911a.js) */
+var lockT = -1e9; document.addEventListener('pointerlockchange', function () { lockT = performance.now(); });
+/* движение мыши/тачпада для поворота камеры: [dx, dy] в точках или null - событие пропустить */
+function mv(e) { var mx = e.movementX || 0, my = e.movementY || 0;
+  if (Math.abs(mx) > 250 || Math.abs(my) > 250) return null; /* браузер иногда присылает ложный рывок */
+  if (V4) { if (performance.now() - lockT < 150) return null; var L = 90; mx = Math.max(-L, Math.min(L, mx)); my = Math.max(-L, Math.min(L, my)); }
+  return [mx, my]; }
+/* подсказка про тачпад: шёл клавишей дольше секунды, перед этим и сразу после водил тачпадом, а пока шёл - ни одного движения. Два раза так - показываем */
+if (V4 && !TOUCH) (function () {
+  var WK = /^(Key[WASD]|Arrow(Up|Down))$/, held = {}, n = 0, t0 = 0, lastMv = -1e9, during = 0, before = false, sus = 0, wait = 0, shown = false, tip = null;
+  function cnt() { var c = 0; for (var k in held) if (held[k]) c++; return c; }
+  function show() { if (shown) return; shown = true; var K = 'kurs_tach_tip', m = 0; try { m = +localStorage.getItem(K) || 0; if (m >= 3) return; localStorage.setItem(K, String(m + 1)); } catch (e) {}
+    tip = document.createElement('div');
+    tip.style.cssText = 'position:fixed;left:50%;top:14%;transform:translateX(-50%);max-width:min(94vw,560px);padding:12px 18px 12px 16px;border-radius:14px;background:rgba(8,11,28,.92);border:1px solid rgba(255,211,110,.6);color:#fff;font:600 14px/1.4 system-ui,sans-serif;text-align:left;z-index:61;pointer-events:auto';
+    tip.innerHTML = '<b style="color:#ffd36e">Тачпад не крутит камеру, пока держишь W?</b><br>Это Windows выключает тачпад, пока нажата клавиша. ' +
+      'Поворачивай стрелками <b>←</b> <b>→</b> (их можно жать вместе с W) или мышкой.<br>Или в Windows: Параметры → Bluetooth и устройства → Сенсорная панель → Касания → ' +
+      'Чувствительность сенсорной панели: <b>"Самая высокая"</b>.<div style="text-align:right;margin-top:6px"><button type="button" style="font:700 13px system-ui,sans-serif;padding:6px 14px;border-radius:10px;border:0;background:#ffd36e;color:#1a1300;cursor:pointer">Понятно</button></div>';
+    tip.querySelector('button').onclick = function () { tip.remove(); };
+    document.body.appendChild(tip); setTimeout(function () { if (tip && tip.parentNode) tip.remove(); }, 20000); }
+  addEventListener('mousemove', function (e) { if (!(e.movementX || e.movementY)) return; var t = performance.now(); lastMv = t; if (cnt()) during++;
+    if (wait && t - wait < 500) { wait = 0; if (++sus >= 2) show(); } });
+  addEventListener('keydown', function (e) { if (!WK.test(e.code) || held[e.code]) return; if (!cnt()) { t0 = performance.now(); during = 0; before = t0 - lastMv < 500; wait = 0; } held[e.code] = 1; }, true);
+  function up(e) { if (!held[e.code]) return; held[e.code] = 0; if (cnt()) return; var t = performance.now(); if (t - t0 > 1000 && before && during === 0 && document.pointerLockElement) wait = t; }
+  addEventListener('keyup', up, true); addEventListener('blur', function () { held = {}; wait = 0; });
+})();
 function mouseHelp(h) {   /* h: { canvas, locked(), lock(), walk() } */
   if (!V3 || TOUCH || !h.canvas.requestPointerLock) return;
   var tip = document.createElement('div'), tipT = 0, tipLast = -1e9;
@@ -69,8 +100,8 @@ function create(o) {
   document.body.classList.toggle('fps-touch', TOUCH);
   document.addEventListener('pointerlockchange', function () { document.body.classList.toggle('fps-lock', U.locked()); });
   /* мышь в захвате: поворот как в игре */
-  if (!o.noMouse) addEventListener('mousemove', function (e) { if (!o.walk() || TOUCH) return; if (!U.locked() && (e.buttons || e.target !== cv)) return; var mx = e.movementX || 0, my = e.movementY || 0;
-    if (Math.abs(mx) > 250 || Math.abs(my) > 250) return; /* браузер иногда присылает ложный рывок */ U.ax -= mx * .0022; U.ay -= my * .0022; });
+  if (!o.noMouse) addEventListener('mousemove', function (e) { if (!o.walk() || TOUCH) return; if (!U.locked() && (e.buttons || e.target !== cv)) return; var m = mv(e); if (!m) return;
+    U.ax -= m[0] * .0022; U.ay -= m[1] * .0022; });
   /* 13.11: тачпад присылает движение неровно - копим и отдаём камере плавно, по кадрам (без заиканий) */
   U.ax = 0; U.ay = 0; var smT = 0; (function sm(t) { requestAnimationFrame(sm); var dt = smT ? Math.min(.1, (t - smT) / 1000) : .016; smT = t; if (Math.abs(U.ax) + Math.abs(U.ay) < 1e-5) { U.ax = U.ay = 0; return; } var k = 1 - Math.exp(-dt * 22), x = U.ax * k, y = U.ay * k; U.ax -= x; U.ay -= y; if (o.walk()) o.look(x, y); else U.ax = U.ay = 0; })(0);
   /* следим, чтобы захват снимался, когда открыто окно задания или нельзя ходить */
@@ -96,7 +127,7 @@ function create(o) {
   return U;
 }
 /* 17.11 (v2): прыжок, тяжесть, скорость шага и бега - как в "Побеге"; на главной прежние числа */
-window.FPSUPR = { create: create, mouseHelp: mouseHelp, touch: TOUCH, v2: V2, v3: V3, JV: V2 ? 6.5 : 3.6, G: V2 ? 22 : 11, WALK: V2 ? 4.4 : 2.6, RUN: V2 ? 7.4 : 5.2,
+window.FPSUPR = { create: create, mouseHelp: mouseHelp, mv: mv, touch: TOUCH, v2: V2, v3: V3, v4: V4, JV: V2 ? 6.5 : 3.6, G: V2 ? 22 : 11, WALK: V2 ? 4.4 : 2.6, RUN: V2 ? 7.4 : 5.2,
   /* поворот перетаскиванием (палец или мышь с нажатой кнопкой): как в "Побеге" камера идёт за пальцем и по горизонтали, и по вертикали */
   dragK: V2 ? .005 : 0, pitchSign: V2 ? -1 : 1 };
 })();
