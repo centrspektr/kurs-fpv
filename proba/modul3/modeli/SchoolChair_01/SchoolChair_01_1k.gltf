@@ -1,155 +1,174 @@
 {
-  "asset": {
-    "generator": "Khronos glTF Blender I/O v1.6.16",
-    "version": "2.0"
+ "asset": {
+  "generator": "glTF-Transform v4.5.1",
+  "version": "2.0"
+ },
+ "accessors": [
+  {
+   "type": "SCALAR",
+   "componentType": 5123,
+   "count": 15216,
+   "bufferView": 0,
+   "byteOffset": 0
   },
-  "scene": 0,
-  "scenes": [
-    {
-      "name": "Scene",
-      "nodes": [
-        0
-      ]
-    }
-  ],
-  "nodes": [
-    {
-      "mesh": 0,
-      "name": "SchoolChair_01"
-    }
-  ],
-  "materials": [
-    {
-      "doubleSided": true,
-      "name": "SchoolChair_01",
-      "normalTexture": {
-        "index": 0
-      },
-      "pbrMetallicRoughness": {
-        "baseColorTexture": {
-          "index": 1
-        },
-        "metallicRoughnessTexture": {
-          "index": 2
-        }
-      }
-    }
-  ],
-  "meshes": [
-    {
-      "name": "Mesh",
-      "primitives": [
-        {
-          "attributes": {
-            "POSITION": 0,
-            "NORMAL": 1,
-            "TEXCOORD_0": 2
-          },
-          "indices": 3,
-          "material": 0
-        }
-      ]
-    }
-  ],
-  "textures": [
-    {
-      "sampler": 0,
-      "source": 0
+  {
+   "type": "VEC3",
+   "componentType": 5122,
+   "count": 3265,
+   "max": [
+    18430,
+    32767,
+    21994
+   ],
+   "min": [
+    -18430,
+    -32767,
+    -21994
+   ],
+   "normalized": true,
+   "bufferView": 1,
+   "byteOffset": 0
+  },
+  {
+   "type": "VEC3",
+   "componentType": 5122,
+   "count": 3265,
+   "normalized": true,
+   "bufferView": 1,
+   "byteOffset": 8
+  },
+  {
+   "type": "VEC2",
+   "componentType": 5123,
+   "count": 3265,
+   "normalized": true,
+   "bufferView": 1,
+   "byteOffset": 16
+  }
+ ],
+ "bufferViews": [
+  {
+   "buffer": 0,
+   "byteOffset": 0,
+   "byteLength": 30432,
+   "target": 34963
+  },
+  {
+   "buffer": 0,
+   "byteOffset": 30432,
+   "byteLength": 65300,
+   "byteStride": 20,
+   "target": 34962
+  }
+ ],
+ "samplers": [
+  {
+   "magFilter": 9729,
+   "minFilter": 9987,
+   "wrapS": 10497,
+   "wrapT": 10497
+  }
+ ],
+ "textures": [
+  {
+   "source": 1,
+   "sampler": 0
+  },
+  {
+   "source": 0,
+   "sampler": 0
+  },
+  {
+   "source": 2,
+   "sampler": 0
+  }
+ ],
+ "images": [
+  {
+   "name": "SchoolChair_01_nor_gl",
+   "mimeType": "image/jpeg",
+   "uri": "textures/SchoolChair_01_nor_gl_1k.jpg"
+  },
+  {
+   "name": "SchoolChair_01_diff",
+   "mimeType": "image/jpeg",
+   "uri": "textures/SchoolChair_01_diff_1k.jpg"
+  },
+  {
+   "name": "SchoolChair_01_metallic-SchoolChair_01_roughness",
+   "mimeType": "image/jpeg",
+   "uri": "textures/SchoolChair_01_arm_1k.jpg"
+  }
+ ],
+ "buffers": [
+  {
+   "uri": "SchoolChair_01-q.bin",
+   "byteLength": 95732
+  }
+ ],
+ "materials": [
+  {
+   "name": "SchoolChair_01",
+   "doubleSided": true,
+   "pbrMetallicRoughness": {
+    "baseColorTexture": {
+     "index": 0
     },
-    {
-      "sampler": 0,
-      "source": 1
-    },
-    {
-      "sampler": 0,
-      "source": 2
+    "metallicRoughnessTexture": {
+     "index": 2
     }
-  ],
-  "images": [
+   },
+   "normalTexture": {
+    "index": 1
+   }
+  }
+ ],
+ "meshes": [
+  {
+   "name": "Mesh",
+   "primitives": [
     {
-      "mimeType": "image/jpeg",
-      "name": "SchoolChair_01_nor_gl",
-      "uri": "textures/SchoolChair_01_nor_gl_1k.jpg"
-    },
-    {
-      "mimeType": "image/jpeg",
-      "name": "SchoolChair_01_diff",
-      "uri": "textures/SchoolChair_01_diff_1k.jpg"
-    },
-    {
-      "mimeType": "image/jpeg",
-      "name": "SchoolChair_01_metallic-SchoolChair_01_roughness",
-      "uri": "textures/SchoolChair_01_arm_1k.jpg"
+     "attributes": {
+      "POSITION": 1,
+      "NORMAL": 2,
+      "TEXCOORD_0": 3
+     },
+     "mode": 4,
+     "material": 0,
+     "indices": 0
     }
-  ],
-  "accessors": [
-    {
-      "bufferView": 0,
-      "componentType": 5126,
-      "count": 3265,
-      "max": [
-        0.28292661905288696,
-        1.0043269395828247,
-        0.33762744069099426
-      ],
-      "min": [
-        -0.28292667865753174,
-        -0.001708600320853293,
-        -0.33762744069099426
-      ],
-      "type": "VEC3"
-    },
-    {
-      "bufferView": 1,
-      "componentType": 5126,
-      "count": 3265,
-      "type": "VEC3"
-    },
-    {
-      "bufferView": 2,
-      "componentType": 5126,
-      "count": 3265,
-      "type": "VEC2"
-    },
-    {
-      "bufferView": 3,
-      "componentType": 5123,
-      "count": 15216,
-      "type": "SCALAR"
-    }
-  ],
-  "bufferViews": [
-    {
-      "buffer": 0,
-      "byteLength": 39180,
-      "byteOffset": 0
-    },
-    {
-      "buffer": 0,
-      "byteLength": 39180,
-      "byteOffset": 39180
-    },
-    {
-      "buffer": 0,
-      "byteLength": 26120,
-      "byteOffset": 78360
-    },
-    {
-      "buffer": 0,
-      "byteLength": 30432,
-      "byteOffset": 104480
-    }
-  ],
-  "samplers": [
-    {
-      "magFilter": 9729,
-      "minFilter": 9987
-    }
-  ],
-  "buffers": [
-    {
-      "byteLength": 134912,
-      "uri": "SchoolChair_01.bin"
-    }
-  ]
+   ]
+  }
+ ],
+ "nodes": [
+  {
+   "name": "SchoolChair_01",
+   "translation": [
+    -2.9802322387695312e-08,
+    0.5013091696309857,
+    0
+   ],
+   "scale": [
+    0.503017769951839,
+    0.503017769951839,
+    0.503017769951839
+   ],
+   "mesh": 0
+  }
+ ],
+ "scenes": [
+  {
+   "name": "Scene",
+   "nodes": [
+    0
+   ]
+  }
+ ],
+ "scene": 0,
+ "extensionsUsed": [
+  "KHR_mesh_quantization"
+ ],
+ "extensionsRequired": [
+  "KHR_mesh_quantization"
+ ]
 }
