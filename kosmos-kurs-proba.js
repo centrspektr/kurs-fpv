@@ -1020,13 +1020,15 @@ var camP=V(0,0,46), camL=V(0,0,-30), fly=null, speed=0, diveBack=null, guideT=0;
 function viewOf(n){ var p=n.g.position; if(n.zone){ var f=n.from==='me'?n.L.me:n.L.by[n.from].g.position, dz=V(f.x-p.x,0,f.z-p.z); if(dz.lengthSq()<1) dz.set(0,0,1); dz.normalize();
     var l=V(p.x,PY+3.5,p.z); if(n.scr){ var sp=n.scr.getWorldPosition(V()); l.lerp(sp.setY(PY+4.5),.4); } /* в кадре и зона, и её экран */
     return {p:V(p.x+dz.x*(n.scr?19:17),PY+9.5,p.z+dz.z*(n.scr?19:17)),l:l}; }
+  if(n.city&&n.kind==='mod'&&n.L===LK&&carEl) return presView(n); /* 20.11: листалка - модуль видно изнутри города, дома не закрывают */
   if(n.city){ var d=V(p.x,0,p.z-CZ).normalize(); if(!isFinite(d.x)) d.set(0,0,1); var H=TOPH[n.st0]||n.h, D=Math.max(15,H*1.25+8); return {p:V(p.x+d.x*D,PY+Math.max(8,H*.8),p.z+d.z*D),l:V(p.x,PY+H*.5,p.z)}; }
   return {p:V(p.x,p.y+n.s*1.1,p.z+n.s*(n.kind==='center'||n.kind==='mod'?7:6.5)),l:p.clone()}; }
 function startFly(toP,toL,curve,dur,done,rev){ fly={a:camP.clone(),al:camL.clone(),b:toP,bl:toL,cv:curve,rev:!!rev,t:0,d:red?.6:dur,done:done}; guideUI(); return fly; }
 function ease(t){ return t<.5?4*t*t*t:1-Math.pow(-2*t+2,3)/2; }
 var UP=V(0,1,0), tq=V(0,0,0), tt=V(0,0,0), tl=V(0,0,0);
 function stepFly(dt){ var o=camP.clone(); fly.t=Math.min(1,fly.t+dt/fly.d); var e=(fly.ez||ease)(fly.t);
-  if(fly.cv){ /* камера идёт за точкой нити, чуть сзади и выше, и смотрит вперёд по нити */
+  if(fly.orb){ orbStep(e); }
+  else if(fly.cv){ /* камера идёт за точкой нити, чуть сзади и выше, и смотрит вперёд по нити */
     var u=fly.rev?1-e:e; fly.cv.getPoint(u,tq); fly.cv.getTangent(u,tt); if(fly.rev) tt.negate();
     tq.addScaledVector(tt,-7).addScaledVector(UP,fly.up||2.2); var ws=Math.max(0,1-e/.22), we=Math.max(0,(e-.75)/.25); camP.copy(tq).lerp(fly.a,ws*ws).lerp(fly.b,we);
     fly.cv.getPoint(Math.max(0,Math.min(1,u+(fly.rev?-.15:.15))),tl); camL.copy(fly.al).lerp(tl,Math.min(1,e/.3)).lerp(fly.bl,we); }
@@ -1052,12 +1054,12 @@ function capTxt(n){ var s=n.st;
   if(s==='wait') return 'Педагог проверяет. Нажми ещё раз - <b>войти</b>';
   if(s==='done') return 'Пройдено. Нажми ещё раз - <b>повторить</b>';
   return n.kind==='mod'?'Нажми ещё раз - <b>войти в модуль</b>':'Нажми ещё раз - <b>начать</b>'; }
-function showCap(n){ $('capT').textContent=n.n; $('capS').textContent=n.sub||''; $('capP').innerHTML=capTxt(n); cap.style.setProperty('--pc',n.c); cap.classList.toggle('lock',n.st==='lock'); cap.classList.add('on'); }
+function showCap(n){ if(carEl&&n.kind==='mod'&&n.L===LK){ cap.classList.remove('on'); return; } $('capT').textContent=n.n; $('capS').textContent=n.sub||''; $('capP').innerHTML=capTxt(n); cap.style.setProperty('--pc',n.c); cap.classList.toggle('lock',n.st==='lock'); cap.classList.add('on'); }
 function hideCap(){ cap.classList.remove('on'); mbOff(); }
 $('capT').onclick=function(){ if(cur) tapNode(cur.id); };
 function shake(){ if(cap.animate) cap.animate([{transform:'translate(-50%,0)'},{transform:'translate(calc(-50% - 8px),0)'},{transform:'translate(calc(-50% + 8px),0)'},{transform:'translate(-50%,0)'}],{duration:350}); }
 function arrive(n,via){ cur=n; acc=0; st='node'; showCap(n); guideUI(); if(n._go){ n._go=0; enter(n); return; } if(tour){ clearTimeout(tourT); tourT=setTimeout(tourNext,red?900:1900); return; }
-  if(via&&n.kind==='mod'&&curL===LK) modBrief(n,!MB_SAID[n.id]); }
+  if(n.kind==='mod'&&curL===LK){ if(carEl){ var ci=carMods().indexOf(n); if(ci>=0) CI=ci; carInit=true; carUI(); if(via) carVoice(n); return; } if(via) modBrief(n,!MB_SAID[n.id]); } }
 /* рассказ о модуле (23.10): подлетели к зданию модуля - голос говорит, чему научишься, слева печатается список заданий.
    Голос - один раз за заход на каждый модуль (дальше только список, "Ещё раз" - повторить). "Войти", повторное нажатие на здание или "Пропустить и войти" - сразу внутрь, голос замолкает.
    Озвучка файлом zvuk/mod-<id модуля>.mp3 (общий сценарий озвучки); нет файла - голос устройства читает текст: поле say модуля в zadaniya.js, нет его - sub */
@@ -1083,7 +1085,7 @@ var TKEY=(CFG.store||'kursy')+'_tour', tour=null, tourT=0;
 function tourStart(){ if(curL!==LK||fly) return; tour=[mods[0]&&LK.by[mods[0].id]].concat(['prog','code','bug','shp','trn'].map(function(id){ return LK.by[id]; })).filter(Boolean); tourNext(); }
 function tourNext(){ if(!tour||st==='win'||curL!==LK) { tour=null; return; } var n=tour.shift(); if(!n){ tourEnd(); return; } goTo(n); }
 function tourEnd(){ tour=null; clearTimeout(tourT); lsS(TKEY,'1'); back=[]; if(cur) showCap(cur); guideUI(); guideSoon(400); }
-function tapNode(id,now){ if(fly||(st!=='over'&&st!=='node')||(curL&&curL.kviz)) return; if(tour){ tour=null; clearTimeout(tourT); lsS(TKEY,'1'); } var n=curL.by[id]; if(!n) return; if(cur===n) enter(n); else { if(now&&n.st!=='lock') n._go=1; goTo(n); } }
+function tapNode(id,now){ if(fly||(st!=='over'&&st!=='node')||(curL&&curL.kviz)) return; if(tour){ tour=null; clearTimeout(tourT); lsS(TKEY,'1'); } var n=curL.by[id]; if(!n) return; if(carEl&&curL===LK&&n.kind==='mod'&&cur!==n){ carSel(carMods().indexOf(n)); return; } if(cur===n) enter(n); else { if(now&&n.st!=='lock') n._go=1; goTo(n); } }
 function goTo(n,isBack){ if(topOn){ topOn=false; topUI(); } hideCap(); if(!isBack) back.push(cur?cur.id:null);
   /* летим плавной дугой прямо к точке обзора узла, не повторяя изгибы нити: так камера не дёргается */
   var B=viewOf(n), fwd=cur&&n.from===cur.id;
@@ -1155,7 +1157,7 @@ function roadTour(L){ if(red||!L.pts||L.kviz){ flyOver(L,true); return; }
   camP.set(0,PY+9,30); camL.copy(P[1]); st='fly';
   var f=startFly(e.clone().addScaledVector(tg,-18).add(V(0,13,0)),e.clone().add(V(0,8,0)),cv, /* встаём перед финишем: вывеска "ФИНИШ" видна впереди */ Math.min(9,cv.getLength()/34),function(){
     var p0=camP.clone(); startFly(p0.clone().add(V(0,3,0)),e.clone().addScaledVector(tg,-40).setY(PY+2),null,1.4,function(){ flyOver(L,true); }).skip=1; }); f.skip=1; f.up=11; }
-function modTrans(n){ var kind=red?'':MOD_TRANS[mods.findIndex(function(m){ return m.id===n.mid; })+1], p=n.g.position.clone(), bp=V(n.p[0],PY,n.p[2]);
+function modTrans(n){ if(carEl){ zasvIn(n); return; } var kind=red?'':MOD_TRANS[mods.findIndex(function(m){ return m.id===n.mid; })+1], p=n.g.position.clone(), bp=V(n.p[0],PY,n.p[2]);
   /* 12.11: в здание-помещение не ныряем сквозь стены (было видно пустоту): подлетаем к воротам, они поднимаются, у порога - затемнение и комната */
   if(!red&&n.door&&window.KURS_KOMNATY&&KURS_KOMNATY[n.mid]){ var dW=V(), dq=new THREE.Quaternion(); n.door.updateWorldMatrix(true,false); n.door.getWorldPosition(dW); n.door.getWorldQuaternion(dq);
     var dOut=V(0,0,1).applyQuaternion(dq).setY(0).normalize(), dEye=dW.clone().setY(dW.y+n.doorH*.45), d0=n.door.position.y, dH=n.doorH;
@@ -1260,7 +1262,7 @@ function roomIn(n,col){ hideCap(); st='room'; hud.classList.remove('on'); backB.
       exit:function(){ roomOut(n); } });
     flashOff(); }); }
 /* для проверки и ссылок: войти в узел города по id (модуль m2 - сразу в его здание) */
-window.KURS_GOROD={ where:function(){ return (curL&&curL.id)+'|'+st; }, cam:function(p,l){ st='cam'; fly=null; camP.fromArray(p); camL.fromArray(l); }, /* для снимков: поставить камеру */ pos:function(id){ var n=LK&&LK.by[id]; return n?n.p.concat([TOPH[n.st0]||n.h||0]):null; }, enter:function(id){ var n=LK&&LK.by[id]; if(n){ refresh(); arrive(n); enter(n); } } };
+window.KURS_GOROD={ where:function(){ return (curL&&curL.id)+'|'+st; }, sel:function(i){ carSel(i); }, /* 20.11: листалка - выбрать модуль по номеру с 0 */ cam:function(p,l){ st='cam'; fly=null; camP.fromArray(p); camL.fromArray(l); }, /* для снимков: поставить камеру */ pos:function(id){ var n=LK&&LK.by[id]; return n?n.p.concat([TOPH[n.st0]||n.h||0]):null; }, enter:function(id){ var n=LK&&LK.by[id]; if(n){ refresh(); arrive(n); enter(n); } } };
 function roomOut(n){ flashOn(n.c+'dd',function(){ if(ROOM) ROOM.close(); ROOM=null; refresh(); lvlStars(); setLevel(LK); var B=viewOf(n); camP.copy(B.p); camL.copy(B.l); hud.classList.add('on'); backB.classList.add('on'); arrive(n); flashOff(); }); }
 function closeWin(after){ if(!winOn) return; var c=cur?cur.c+'cc':null; clearInterval(bTm); if(GL) GL.stop(); scrBack(cur); flashOn(c,function(){ win.classList.remove('on'); winOn=false; LIVE=false; document.body.classList.remove('livebg'); refresh(); lvlStars();
   if(ROOM){ var rn=cur; flashOff(); if(after) after(); else ROOM.back(rn&&rn.tid,!wasDone&&rn&&rn.st==='done'); return; }
@@ -1283,15 +1285,68 @@ document.addEventListener('kurs-save',function(){ if(!winOn) refresh(); });
 
 /* ---- строка "Дальше" и указатель к следующему узлу ---- */
 var gTxt=$('gTxt'), gBtn=$('gBtn');
-function guideUI(){ var show=!fly&&!winOn&&curL&&(st==='over'||st==='node'); if($('autoB')&&(!curL||winOn)) $('autoB').hidden=true; topB.classList.toggle('on',!!curL&&!winOn&&st!=='falling'&&st!=='free'); if($('flyB')) $('flyB').classList.toggle('on',!!(curL&&curL.open)&&!winOn&&!fly&&(st==='over'||st==='node')); guide.classList.toggle('on',!!show); if(!show) return;
+function guideUI(){ carUI(); var show=!fly&&!winOn&&curL&&(st==='over'||st==='node'); if($('autoB')&&(!curL||winOn)) $('autoB').hidden=true; topB.classList.toggle('on',!!curL&&!winOn&&st!=='falling'&&st!=='free'); if($('flyB')) $('flyB').classList.toggle('on',!!(curL&&curL.open)&&!winOn&&!fly&&(st==='over'||st==='node')); guide.classList.toggle('on',!!show); if(!show) return;
   $('tourB').hidden=curL!==LK; if($('autoB')) $('autoB').hidden=false;
   if(tour){ gTxt.innerHTML='Знакомство с курсом: <b>что где</b>'; gBtn.textContent='Пропустить'; gBtn.onclick=tourEnd; gBtn.hidden=false; return; }
+  if(carEl&&curL===LK){ guide.classList.remove('on'); return; }
   var t=target=targetOf(curL);
   if(t&&t!==cur){ gTxt.innerHTML='Дальше: <b>'+esc(t.kind==='mod'?t.n+'. '+t.sub:t.n)+'</b>'; gBtn.textContent='Лететь ›'; gBtn.onclick=function(){ if(!fly) goTo(t); }; gBtn.hidden=false; return; }
   if(t&&t===cur){ gTxt.innerHTML='Ты на месте: <b>'+esc(t.n)+'</b>'; gBtn.textContent=t.kind==='mod'?'Войти ›':'Начать ›'; gBtn.onclick=function(){ if(!fly) enter(t); }; gBtn.hidden=false; return; }
   var nx=I.next();
   if(curL!==LK){ var md=I.mod(curL.mid)==='done', nn=nx?esc((mods.find(function(m){ return m.id===nx.m; })||{}).n):''; gTxt.innerHTML=md?(nx?'Модуль пройден! Дальше: <b>модуль '+nn+'</b>':'<b>Модуль пройден!</b>'):(nx?'Сейчас по курсу: <b>модуль '+nn+'</b>':'Задания откроются по порядку'); gBtn.textContent='К карте курса'; gBtn.onclick=function(){ if(!fly) goUp(); }; gBtn.hidden=false; return; }
   gTxt.innerHTML=mods.every(function(m){ return I.mod(m.id)==='done'; })?'<b>Курс пройден!</b> Ты молодец':'Следующий модуль откроет педагог'; gBtn.hidden=true; }
+/* ---- 20.11 листалка модулей (просьба Alexandr): в городе внизу карточка модуля - стрелки ‹ ›, свайп, цифры 1-6, клавиши ←/→.
+   Листаем - камера облетает город к зданию модуля и смотрит на него изнутри города (дома не закрывают), голос Леры коротко рассказывает, о чём модуль.
+   "Войти" (или повторное нажатие на здание) - сразу белое засветление и модуль, без пролёта сквозь стены. После выхода из модуля карточка сразу снова тут. ---- */
+var carEl=$('car'), CI=0, carInit=false;
+function carMods(){ return LK.order.map(function(id){ return LK.by[id]; }).filter(function(n){ return n&&n.kind==='mod'; }); }
+function carMod(n){ return mods.find(function(x){ return x.id===n.mid; }); }
+function carCan(){ return curL===LK&&!winOn&&!tour&&(st==='over'||st==='node'||(st==='fly'&&!!fly&&!!fly.orb)); }
+function carUI(){ if(!carEl) return; var on=carCan(); carEl.classList.toggle('on',on); if(!on) return;
+  if(!carInit){ carInit=true; var t=targetOf(LK), i=t?carMods().indexOf(t):0; CI=i>=0?i:0; } carDraw(); }
+function carDraw(){ var M=carMods(), n=M[CI], m=n&&carMod(n); if(!m) return; var s=n.st||I.mod(n.mid), nx=targetOf(LK), dn=m.tasks.filter(function(t){ return I.task(t)==='done'; }).length;
+  carEl.style.setProperty('--pc',n.c);
+  $('carN').textContent='МОДУЛЬ '+m.n+' ИЗ '+M.length;
+  var chip=s==='done'?'Пройден ✓':s==='lock'?'🔒 Откроет педагог':s==='wait'?'Ждёт проверки':n===nx?'Сейчас по курсу':'Открыт';
+  $('carS').textContent=chip; $('carS').className='s-'+s+(n===nx?' s-now':'');
+  $('carT').textContent=m.t; $('carX').textContent=m.say||m.sub||'';
+  $('carP2').textContent='Заданий: '+m.tasks.length+(dn?' · пройдено '+dn:'');
+  var g=$('carGo'); g.disabled=s==='lock'; g.textContent=s==='lock'?'Закрыт':s==='done'?'Войти снова ›':'Войти ›';
+  var D=$('carD'); if(D.children.length!==M.length){ D.innerHTML=M.map(function(q,i){ return '<button type="button" aria-label="Модуль '+(i+1)+'">'+(i+1)+'</button>'; }).join('');
+    [].forEach.call(D.children,function(b,i){ b.onclick=function(){ carSel(i); }; }); }
+  [].forEach.call(D.children,function(b,i){ var q=M[i]; b.className=(i===CI?'on ':'')+'s-'+(q.st||'open'); b.style.setProperty('--dc',q.c); }); }
+function carStep(k){ carSel(CI+k); }
+function carSel(i){ if(!carCan()) return; var M=carMods(); i=((i%M.length)+M.length)%M.length; CI=i; carInit=true; carDraw(); var n=M[i];
+  if(cur===n&&st==='node') return; if(GL) GL.stop(); carEl.classList.remove('talk'); if(topOn){ topOn=false; topUI(); }
+  clearTimeout(guideT); hideCap(); goTo(n); back=[]; if(fly){ fly.orb=1; fly.d=red?.4:1.25; } carUI(); }
+/* голос Леры: о чём модуль - один раз за заход на каждый модуль, кнопка 🔊 - ещё раз */
+function carVoice(n,force){ var m=carMod(n); if(!m||!GL||red) return; if(!force&&(MB_SAID[n.id]||!GL.on)) return; if(force&&!GL.on) GL.setOn(true); MB_SAID[n.id]=1;
+  var x=m.say||(m.sub?m.sub.replace(/[.!?]*$/,'.'):''), full='Модуль '+m.n+'. '+m.t+'. '+x+' В модуле '+m.tasks.length+' '+zad(m.tasks.length)+'.'+(n.st==='lock'?' Этот модуль откроет педагог.':'');
+  var ok=GL.play('mod-'+m.id+'.mp3',{text:full,onend:function(){ carEl.classList.remove('talk'); }}); carEl.classList.toggle('talk',!!ok); }
+/* вид на здание модуля: камера внутри кольца города, смотрит наружу на здание, чуть сверху; здание - в верхней части кадра (внизу карточка) */
+function presView(n){ var p=n.g.position, H=TOPH[n.st0]||n.h||10, d=V(p.x,0,p.z-CZ); if(d.lengthSq()<1) d.set(0,0,1); d.normalize();
+  var D=Math.min(44,Math.max(26,H*1.3+14)), cy=PY+H*.6+11;
+  return {p:V(p.x-d.x*D,cy,p.z-d.z*D),l:V(p.x,PY+H*(H>20?.34:.18)-(innerHeight<470?3:0),p.z)}; } /* на телефоне карточка выше в доле экрана - здание поднимаем */
+/* облёт: камера идёт по дуге вокруг центра города (а не напрямую сквозь дома), посередине чуть поднимается */
+function polarOf(v){ return {a:Math.atan2(v.x,v.z-CZ),r:Math.hypot(v.x,v.z-CZ)}; }
+function orbStep(e){ var A=polarOf(fly.a), B=polarOf(fly.b), da=B.a-A.a; while(da>Math.PI) da-=Math.PI*2; while(da<-Math.PI) da+=Math.PI*2;
+  var a=A.a+da*e, r=A.r+(B.r-A.r)*e, lift=Math.min(10,Math.abs(da)*6)*Math.sin(e*Math.PI);
+  camP.set(Math.sin(a)*r,fly.a.y+(fly.b.y-fly.a.y)*e+lift,CZ+Math.cos(a)*r);
+  var LA=polarOf(fly.al), LB=polarOf(fly.bl), dl=LB.a-LA.a; while(dl>Math.PI) dl-=Math.PI*2; while(dl<-Math.PI) dl+=Math.PI*2;
+  var la=LA.a+dl*e, lr=LA.r+(LB.r-LA.r)*e; camL.set(Math.sin(la)*lr,fly.al.y+(fly.bl.y-fly.al.y)*e,CZ+Math.cos(la)*lr); }
+/* вход в модуль: камера чуть подаётся к зданию, экран плавно белеет, под белым открывается модуль, белое уходит */
+var zasv=$('zasv');
+function zasvIn(n){ if(!zasv){ modIn(n); return; } carEl.classList.remove('on','talk'); if(GL) GL.stop(); var H=TOPH[n.st0]||10, bp=V(n.p[0],PY+H*.45,n.p[2]);
+  zasv.style.transition='opacity '+(red?.15:.5)+'s ease-in'; zasv.style.opacity=1;
+  startFly(camP.clone().lerp(bp,.5),bp,null,red?.2:.55,function(){ modIn(n,'rgba(255,255,255,1)');
+    setTimeout(function(){ zasv.style.transition='opacity '+(red?.2:.9)+'s ease-out'; zasv.style.opacity=0; },red?300:450); }); }
+if(carEl){ $('carPv').onclick=function(){ carStep(-1); }; $('carNx').onclick=function(){ carStep(1); };
+  $('carGo').onclick=function(){ if(!carCan()) return; var n=carMods()[CI]; if(!n||n.st==='lock') return; clearTimeout(guideT); fly=null; enter(n); };
+  $('carV').onclick=function(){ var n=carMods()[CI]; if(n) carVoice(n,true); };
+  /* свайп по карточке: влево - следующий, вправо - предыдущий */
+  var cx0=null; carEl.addEventListener('pointerdown',function(e){ cx0=e.clientX; });
+  carEl.addEventListener('pointerup',function(e){ if(cx0==null) return; var dx=e.clientX-cx0; cx0=null; if(Math.abs(dx)>45&&!e.target.closest('#carD,#carGo,#carV,#carPv,#carNx')) carStep(dx<0?1:-1); });
+  carEl.addEventListener('pointercancel',function(){ cx0=null; }); }
 function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
 
 /* ---- вход и выход через портал ---- */
@@ -1345,14 +1400,15 @@ function exitToGate(){ introStop(); hideCap(); backB.classList.remove('on'); hud
 /* листание: у портала - приближаемся; на карте вниз - дальше по порядку, вверх - нить тянет назад */
 function scrollBy(dy){
   if(st==='gate'){ gp=Math.max(0,Math.min(1,gp+dy*.0011)); wel.classList.toggle('on',gp<.05); ttl.style.opacity=gp<.05?1:0; if(gp>=1) fall(); return; }
+  if(carEl&&curL===LK){ if(!carCan()) return; acc+=dy; if(acc>260){ acc=0; carStep(1); } else if(acc<-260){ acc=0; carStep(-1); } return; }
   if(st!=='over'&&st!=='node') return;
   acc+=dy; if(acc>260){ acc=0; var o=curL.order, i=cur?o.indexOf(cur.id)+1:0; if(i<o.length) goTo(curL.by[o[i]]); }
   else if(acc<-260){ acc=0; goBack(); } }
 addEventListener('wheel',function(e){ if(winOn||st==='free') return; e.preventDefault(); if(curL&&(st==='over'||st==='node')){ zoomCity(Math.exp(e.deltaY*.0012)); return; } scrollBy(e.deltaY); },{passive:false});
-var ty=null, tx=null, moved=0, yaw=0;
-cv.addEventListener('pointerdown',function(e){ ty=e.clientY; tx=e.clientX; moved=0; if(fly&&(fly.ez===easeOut||fly.skip)&&fly.d>1){ fly.d*=.4; fly.skip=0; } });
+var ty=null, tx=null, moved=0, yaw=0, swX=0;
+cv.addEventListener('pointerdown',function(e){ ty=e.clientY; tx=e.clientX; moved=0; swX=0; if(fly&&(fly.ez===easeOut||fly.skip)&&fly.d>1){ fly.d*=.4; fly.skip=0; } });
 addEventListener('pointermove',function(e){ if(ty===null||winOn||st==='free') return; var dy=ty-e.clientY, dx=e.clientX-tx; ty=e.clientY; tx=e.clientX; moved+=Math.abs(dy)+Math.abs(dx);
-  if(curL&&(st==='over'||st==='node')){ if(pts2.length>1) return; turnCity(-dx*.006); tiltCity(-dy*.004); return; }
+  if(curL&&(st==='over'||st==='node')){ if(pts2.length>1) return; if(carEl&&curL===LK&&st==='node'){ swX+=dx; tiltCity(-dy*.004); return; } turnCity(-dx*.006); tiltCity(-dy*.004); return; }
   scrollBy(dy*2.2); if(curL!==LK&&(st==='over'||st==='node')) yaw=Math.max(-.5,Math.min(.5,yaw+dx*.002)); });
 /* поворот города: в обзоре крутится точка обзора, у здания камера облетает центр города */
 function turnCity(a){ if(st==='over') spin+=a; else { rotC(camP,a); rotC(camL,a); } }
@@ -1366,7 +1422,7 @@ addEventListener('pointermove',function(e){ if(!pts2[e.pointerId]) return; pts2[
   var ks=Object.keys(pts2).filter(function(k){ return k!=='length'; }), a=pts2[ks[0]], b=pts2[ks[1]], d=Math.hypot(a[0]-b[0],a[1]-b[1]); if(pinchD) zoomCity(pinchD/d); pinchD=d; moved+=20; });
 addEventListener('pointerup',function(e){ delete pts2[e.pointerId]; pts2.length=Math.max(0,Object.keys(pts2).length-1); pinchD=0; });
 addEventListener('pointercancel',function(e){ delete pts2[e.pointerId]; pts2.length=Math.max(0,Object.keys(pts2).length-1); pinchD=0; });
-addEventListener('pointerup',function(e){ var was=moved; ty=null; if(was>=8||e.target!==cv||winOn||st==='free') return;
+addEventListener('pointerup',function(e){ var was=moved; ty=null; if(carEl&&curL===LK&&st==='node'&&Math.abs(swX)>50&&!winOn){ var sx=swX; swX=0; carStep(sx<0?1:-1); return; } swX=0; if(was>=8||e.target!==cv||winOn||st==='free') return;
   var r=new THREE.Raycaster(), m=new THREE.Vector2(e.clientX/innerWidth*2-1,-(e.clientY/innerHeight)*2+1); r.setFromCamera(m,C);
   if(st==='gate'){ if(r.intersectObject(hit).length) fall(); return; }
   if(!curL) return; var h=r.intersectObjects(curL.hits,false)[0]; if(h) tapNode(h.object.userData.id,h.object.userData.scr); });
@@ -1418,7 +1474,7 @@ addEventListener('blur',function(){ fk={}; });
   var mv=function(e){ if(e.pointerId!==pid) return; var dx=(e.clientX-o[0])/o[2], dy=(e.clientY-o[1])/o[2], l=Math.hypot(dx,dy); if(l>1){ dx/=l; dy/=l; } kn.style.transform='translate('+dx*o[2]*.8+'px,'+dy*o[2]*.8+'px)'; fT[id==='fsL'?'l':'r']=[dx,dy]; };
   el.addEventListener('pointermove',mv); el.addEventListener('pointerup',up); el.addEventListener('pointercancel',up); });
 if($('flyB')) $('flyB').onclick=freeStart; if($('fhX')) $('fhX').onclick=freeStop;
-addEventListener('keydown',function(e){ if(winOn||st==='free') return; if(e.key==='ArrowDown'||e.key===' '){ e.preventDefault(); scrollBy(300); } if(e.key==='ArrowUp') scrollBy(-300); if(curL&&(e.key==='ArrowLeft'||e.key==='ArrowRight')) turnCity(e.key==='ArrowLeft'?.25:-.25); if(e.key==='Escape'||e.key==='Backspace') goBack(); if(e.key==='Enter'&&st==='gate') fall(); else if(e.key==='Enter'&&cur) tapNode(cur.id); });
+addEventListener('keydown',function(e){ if(winOn||st==='free') return; if(e.key==='ArrowDown'||e.key===' '){ e.preventDefault(); scrollBy(300); } if(e.key==='ArrowUp') scrollBy(-300); if(curL&&(e.key==='ArrowLeft'||e.key==='ArrowRight')){ if(carEl&&curL===LK) carStep(e.key==='ArrowLeft'?-1:1); else turnCity(e.key==='ArrowLeft'?.25:-.25); } if(e.key==='Escape'||e.key==='Backspace') goBack(); if(e.key==='Enter'&&st==='gate') fall(); else if(e.key==='Enter'&&cur) tapNode(cur.id); });
 
 /* приветствие: имя ученика, если вошёл по коду (только имя) */
 function codeLogin(){ lsS(CFG.meKey+'_guest',null); lsS(VKEY,'plain'); location.href=PLAIN; }

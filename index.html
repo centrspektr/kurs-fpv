@@ -262,6 +262,33 @@
   }
   @media (pointer:coarse){ body.free .fs{display:block} body.free #fhKeys,body.free #fhPad{display:none} #fh{top:calc(14px + env(safe-area-inset-top,0px));bottom:auto;padding:6px 12px;max-width:62vw} #fhX{min-height:30px} }
   body.free #labels,body.free #leads,body.free #guide,body.free #hud,body.free #arrow,body.free #ptr,body.free #cap,body.free #stars,body.free #mb{opacity:0!important;pointer-events:none!important}
+
+  /* 20.11 листалка модулей в городе */
+  #car{position:fixed;left:50%;bottom:calc(12px + env(safe-area-inset-bottom,0px));transform:translate(-50%,14px);z-index:6;width:min(calc(100vw - 24px),680px);display:flex;align-items:stretch;gap:8px;opacity:0;pointer-events:none;transition:opacity .35s,transform .35s;touch-action:pan-y}
+  #car.on{opacity:1;pointer-events:auto;transform:translate(-50%,0)}
+  .carA{flex:none;width:52px;border-radius:16px;border:1px solid color-mix(in srgb,var(--pc,#7cf3ff) 60%,transparent);background:rgba(14,12,40,.72);color:#fff;font:700 34px/1 var(--body);cursor:pointer;-webkit-tap-highlight-color:transparent}
+  .carA:active{transform:scale(.94)}
+  #carC{flex:1;min-width:0;padding:10px 14px 10px;border-radius:18px;background:rgba(10,10,32,.78);border:1px solid color-mix(in srgb,var(--pc,#7cf3ff) 65%,transparent);box-shadow:0 0 26px color-mix(in srgb,var(--pc,#7cf3ff) 30%,transparent);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}
+  #car .ch{display:flex;align-items:center;gap:8px;font:800 11px var(--body);letter-spacing:.14em;color:var(--pc,#7cf3ff)}
+  #carS{font:700 11px var(--body);letter-spacing:.02em;padding:2px 9px;border-radius:99px;border:1px solid currentColor;color:var(--dim)}
+  #carS.s-now{color:#facc15}#carS.s-done{color:#4ade80}#carS.s-wait{color:#facc15}#carS.s-lock{color:#a7acd2;border-style:dashed}
+  #carV{margin-left:auto;flex:none;width:34px;height:30px;border-radius:99px;border:1px solid var(--line);background:transparent;color:var(--fg);font-size:14px;cursor:pointer}
+  #car.talk #carV{border-color:var(--pc);box-shadow:0 0 12px var(--pc)}
+  #carT{margin:4px 0 2px;font:700 20px var(--display);color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #carX{margin:0;font-size:13.5px;line-height:1.38;color:var(--dim);display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+  #car .cf{display:flex;align-items:center;gap:10px;margin-top:8px}
+  #carD{display:flex;gap:6px;flex:none}
+  #carD button{width:30px;height:30px;border-radius:50%;border:1.5px solid var(--dc,#7cf3ff);background:transparent;color:#fff;font:800 13px var(--body);cursor:pointer;padding:0;opacity:.75}
+  #carD button.s-done{background:color-mix(in srgb,var(--dc) 35%,transparent)}
+  #carD button.s-lock{border-style:dashed;opacity:.45}
+  #carD button.on{background:var(--dc);color:#0b0820;opacity:1;transform:scale(1.12);box-shadow:0 0 12px var(--dc)}
+  #carP2{flex:1;min-width:0;font-size:12px;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #carGo{flex:none;min-height:42px;padding:0 20px;border-radius:99px;border:0;background:linear-gradient(135deg,#7cf3ff,#a78bfa 55%,#ff7ce0);color:#0b0820;font:800 15px var(--body);cursor:pointer}
+  #carGo:disabled{background:rgba(255,255,255,.12);color:var(--dim);cursor:default}
+  @media (max-height:460px){#car{bottom:calc(6px + env(safe-area-inset-bottom,0px));width:min(calc(100vw - 24px),620px)}#carC{padding:6px 12px 7px;border-radius:14px}#car .ch{font-size:10px}#carS{font-size:10px;padding:1px 7px}#carV{width:30px;height:26px}#carT{font-size:15px;margin:1px 0 0}#carX{font-size:12px;line-height:1.3;-webkit-line-clamp:2}#car .cf{margin-top:4px}#carD button{width:25px;height:25px;font-size:11.5px}#carP2{display:none}#carGo{min-height:34px;padding:0 16px;font-size:14px}.carA{width:42px;font-size:26px;border-radius:14px}}
+  @media (max-width:600px){#carP2{display:none}#carD{gap:4px}}
+  #zasv{position:fixed;inset:0;background:#fff;opacity:0;pointer-events:none;z-index:31}
+  body.intro #car,body.free #car{opacity:0!important;pointer-events:none!important}
 </style>
 </head>
 <body>
@@ -298,6 +325,12 @@
 <div id="ptr"><i>▼</i>сюда</div>
 <button id="arrow" type="button" aria-label="К следующему заданию">➜</button>
 <div id="guide" role="status"><div id="gTxt"></div><button id="gBtn" type="button"></button></div>
+<div id="car" aria-live="polite" aria-label="Модули курса"><button id="carPv" class="carA" type="button" aria-label="Предыдущий модуль">‹</button>
+  <div id="carC"><div class="ch"><span id="carN"></span><span id="carS"></span><button id="carV" type="button" aria-label="Голос: о чём модуль">🔊</button></div>
+    <h3 id="carT"></h3><p id="carX"></p>
+    <div class="cf"><div id="carD"></div><span id="carP2"></span><button id="carGo" type="button">Войти ›</button></div></div>
+  <button id="carNx" class="carA" type="button" aria-label="Следующий модуль">›</button></div>
+<div id="zasv" aria-hidden="true"></div>
 
 <div id="win" role="dialog" aria-modal="true" aria-labelledby="winT">
   <div class="wbg" id="wbg"></div>
@@ -340,6 +373,6 @@ document.getElementById('hudC').textContent = (window.KURSY && KURSY.name) || '�
 <script src="komnaty.js?v=1911r" defer></script>   <!-- проба 09.11: модули-помещения (модуль 3 - комната от первого лица) -->
 <script src="kryshi/bloom.js?v=1911r" defer></script>   <!-- проба 10.11: свечение огней на крышах (three.js r128, MIT) -->
 <script src="kryshi-proba.js?v=1911r" defer></script>   <!-- проба 10.11: новые крыши модулей 1, 4, 6 -->
-<script src="kosmos-kurs-proba.js?v=1911r" defer></script>   <!-- проба 17.11: камера полёта на телефоне горизонтально; кнопка "Вход по коду" после входа открывает обычный вид (сменить код) -->
+<script src="kosmos-kurs-proba.js?v=2011c" defer></script>   <!-- проба 17.11: камера полёта на телефоне горизонтально; кнопка "Вход по коду" после входа открывает обычный вид (сменить код) -->
 </body>
 </html>
