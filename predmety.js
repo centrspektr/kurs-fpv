@@ -81,7 +81,7 @@ function ruki(o) {
   H.take = function (it, mesh) { attach(); var same = H.mesh === mesh; H.o = it; if (H.mesh && !same) holder.remove(H.mesh); H.mesh = mesh; clearTimeout(sayT);
     if (!same) { mesh.position.set(0, 0, 0); mesh.rotation.set(0, 0, 0); mesh.scale.setScalar(1); mesh.updateMatrixWorld(true); var bb = new T.Box3().setFromObject(mesh), sz = bb.getSize(new T.Vector3()), k = .2 / Math.max(sz.x, sz.y, sz.z, .01);
       mesh.scale.setScalar(Math.min(1.6, k)); mesh.traverse(function (m) { if (m.isMesh) { m.castShadow = false; m.renderOrder = 5; } }); holder.add(mesh); }
-    hud.innerHTML = '✋ В руках: <b></b><small></small>'; hud.querySelector('b').textContent = it.name; hud.querySelector('small').textContent = it.where ? 'Отнеси: ' + it.where + '. Подойди и нажми E.' : '';
+    hud.innerHTML = '✋ В руках: <b></b><small></small>'; hud.querySelector('b').textContent = it.name; hud.querySelector('small').textContent = it.where ? 'Отнеси: ' + it.where + (it.tail != null ? it.tail : '. Подойди и нажми E.') : '';
     hud.classList.add('on'); if (same) return; var y0 = -.32; anim(.35, function (u) { holder.position.y = y0 + (-.2 - y0) * u; }); };
   H.put = function () { var it = H.o; clearTimeout(sayT); if (H.mesh) { holder.remove(H.mesh); H.mesh.scale.setScalar(1); H.mesh.traverse(function (m) { if (m.isMesh) { m.castShadow = true; m.renderOrder = 0; } }); } H.o = null; H.mesh = null; hud.classList.remove('on'); return it; };
   var sayT = 0; /* короткое сообщение в той же плашке (для этажей модулей 3 и 5, где нет своей подсказки) */

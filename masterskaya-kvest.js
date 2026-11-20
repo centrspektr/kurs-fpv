@@ -11,6 +11,8 @@
 'use strict';
 if (!window.PREDMETY) return;
 var KEY = ((window.KURSY || {}).store || 'kursy') + '_m2_kvest';
+/* 20.11: авто-взятие и авто-укладка - пока только в пробе new.html (или ?avto=1); при "ставь" - убрать условие */
+var AUTO = /new\.html$/.test(location.pathname) || /[?&]avto=1/.test(location.search);
 window.KOMNATA_KVEST = window.KOMNATA_KVEST || {};
 window.KOMNATA_KVEST.m2 = function (X) {
   var T = X.T, P = window.PREDMETY, D = 17, W = 24, PI = Math.PI;
@@ -48,7 +50,7 @@ window.KOMNATA_KVEST.m2 = function (X) {
       return { sm: 'ПРЕДМЕТ · ДЛЯ СТОЛА СБОРКИ', h: it.name, p: it.sub, acts: busy ? '<button class="k-b dis" data-a="lock">Руки заняты: ' + H.o.name + '</button>' : '<button class="k-b pri" data-a="q:take">✋ Взять</button>' }; } }, item: it };
     if (it.open !== false) X.CLICK.push(it.c); }
   function take(it) { if (H.o) return; var i = X.CLICK.indexOf(it.c); if (i >= 0) X.CLICK.splice(i, 1); X.S.remove(it.mesh);
-    it.where = 'на стол сборки в центре зала'; H.take(it, P.model(it.kind)); X.unsel(); hint('Взял: ' + it.name + '. Отнеси на стол сборки в центре и нажми E.', 4500); }
+    it.where = 'на стол сборки в центре зала'; it.tail = AUTO ? '. Подойди - положится сам.' : null; H.take(it, P.model(it.kind)); X.unsel(); hint('Взял: ' + it.name + (AUTO ? '. Неси на стол сборки в центре - положится сам.' : '. Отнеси на стол сборки в центре и нажми E.'), 4500); }
 
   /* 18.11: в открытом шкафу кнопка "Взять" сразу в карточке шкафа - E берёт предмет, а не закрывает дверцу */
   function takeBtns(ids) { if (H.o) return '<button class="k-b dis" data-a="lock">Руки заняты: ' + H.o.name + '</button>';
@@ -117,6 +119,20 @@ window.KOMNATA_KVEST.m2 = function (X) {
     LS.set('ПОДГОТОВЬ СТОЛ СБОРКИ', ITEMS.map(function (it) { return { ok: !!st[it.id], t: it.name, w: H.o === it ? 'неси на стол в центре' : SRC[it.id][3] }; }));
     if (H.o) { BC.at(TB.g.position.x, 1.1, TB.g.position.z); return; }
     var nx = null; ITEMS.forEach(function (it) { if (!nx && !st[it.id]) nx = it; }); if (nx) { var q = SRC[nx.id]; BC.at(q[0], q[1], q[2]); } });
+  /* 20.11 (проба new.html, просьба Alexandr): без кнопок подтверждения - подошёл к предмету и взял, подошёл к столу и положил.
+     Шкаф с нужной вещью открывается сам, когда подходишь с пустыми руками. Кнопки и E тоже работают, как раньше. */
+  if (AUTO && !done()) { var a0 = null, cool = 0, RT = 2.5, RS = 1.5;
+    var CAB = [{ c: shC, x: SX, z: SZ, r: 2.7, ids: ['payalnik', 'otvertki'], open: function () { return sh.userData.open; } }, { c: bC, x: BX, z: BZ, r: 2.9, ids: ['akb'], open: function () { return bOpen; } }];
+    X.TICK.push(function (t) { if (done()) return; if (a0 == null) a0 = t; if (t - a0 < 1.5 || t < cool || !X.root.classList.contains('on')) return;
+      var cp = X.CAM.position;
+      if (H.o) { if (ITEMS.indexOf(H.o) < 0) return;
+        var g = TB.g, ry = g.rotation.y, dx = cp.x - g.position.x, dz = cp.z - g.position.z, lx = Math.abs(dx * Math.cos(ry) - dz * Math.sin(ry)), lz = Math.abs(dx * Math.sin(ry) + dz * Math.cos(ry));
+        if (Math.hypot(Math.max(0, lx - 1.7), Math.max(0, lz - .8)) < RS) { cool = t + .8; Q.act('put', null); }
+        return; }
+      var best = null, bd = RT; ITEMS.forEach(function (it) { if (st[it.id] || !it.c || !it.mesh || !it.mesh.parent || X.CLICK.indexOf(it.c) < 0) return; var d = Math.hypot(it.c.look[0] - cp.x, it.c.look[2] - cp.z); if (d < bd) { bd = d; best = it; } });
+      if (best) { cool = t + .8; take(best); return; }
+      CAB.forEach(function (k) { if (k.open() || Math.hypot(k.x - cp.x, k.z - cp.z) > k.r) return; if (!k.ids.some(function (id) { return !st[id]; })) return; cool = t + .9; k.c.q.act('open'); });
+    }); }
   return Q;
 };
 })();
