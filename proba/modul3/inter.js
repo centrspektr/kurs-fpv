@@ -375,7 +375,7 @@ function create(o) {
     G.add(g); return g; };
 
   /* ---------- окно с видом на летающий город ---------- */
-  var cityTex = null;
+  var cityTex = null, skies = {};
   function cityMap() { if (cityTex) return cityTex; cityTex = ctex(2048, 1024, function (c, w, h) {
       var g = c.createLinearGradient(0, 0, 0, h); g.addColorStop(0, '#05041a'); g.addColorStop(.45, '#1c1150'); g.addColorStop(.72, '#7a2f9c'); g.addColorStop(.86, '#ff7eb6'); g.addColorStop(1, '#ffc48a'); c.fillStyle = g; c.fillRect(0, 0, w, h);
       var rnd = (function (s) { return function () { s = (s * 16807) % 2147483647; return s / 2147483647; }; })(7);
@@ -394,7 +394,10 @@ function create(o) {
     [-1, 1].forEach(function (k) { g.add(G.box(fw, hh + fw * 2, dep, M.frame, k * (len / 2 + fw / 2), 0, dep / 2 - .05)); });
     var n = Math.max(1, Math.round(len / 1.5)); for (var i = 1; i < n; i++) g.add(G.box(.045, hh, .06, M.frame, -len / 2 + i * len / n, 0, dep / 2));
     var gl = G.box(len, hh, .012, M.glass, 0, 0, dep / 2); gl.userData.noShadow = true; g.add(gl);
-    var sky = new T.Mesh(new T.PlaneGeometry(150, 60), new T.MeshBasicMaterial({ map: cityMap(), color: new T.Color(1.5, 1.5, 1.5), fog: false })); sky.position.set(0, 14, 46); sky.rotation.y = Math.PI; sky.userData.noShadow = true; sky.userData.noMirror = true; g.add(sky); /* 13.11: без отражения - перевёрнутая копия неба вставала в то же окно, и при повороте здания мигали */
+    /* 20.11 (проба, window.AKB_OKNO1): одно небо на стену. Раньше каждое окно ставило своё полотно неба на 46 м, и у двух окон одной стены они ложились в одну плоскость со сдвигом - здания за окном дрожали и прыгали при повороте камеры (z-fighting) */
+    var skyKey = o.axis + '|' + o.c + '|' + (o.out > 0 ? 1 : -1), skyOne = !!window.AKB_OKNO1;
+    if (!skyOne || !skies[skyKey]) { skies[skyKey] = 1;
+    var sky = new T.Mesh(new T.PlaneGeometry(150, 60), new T.MeshBasicMaterial({ map: cityMap(), color: new T.Color(1.5, 1.5, 1.5), fog: false })); sky.position.set(0, 14, 46); sky.rotation.y = Math.PI; sky.userData.noShadow = true; sky.userData.noMirror = true; g.add(sky); } /* 13.11: без отражения - перевёрнутая копия неба вставала в то же окно, и при повороте здания мигали */
     G.add(g, { shadow: false }); return g; };
 
   /* ---------- большая цифра на стене у двери ---------- */
