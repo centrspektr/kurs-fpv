@@ -1318,7 +1318,7 @@ function carDraw(){ var M=carMods(), n=M[CI], m=n&&carMod(n); if(!m) return; var
 function carStep(k){ carSel(CI+k); }
 function carSel(i){ if(!carCan()) return; var M=carMods(); i=((i%M.length)+M.length)%M.length; CI=i; carInit=true; carDraw(); var n=M[i];
   if(cur===n&&st==='node') return; if(GL) GL.stop(); carEl.classList.remove('talk'); if(topOn){ topOn=false; topUI(); }
-  clearTimeout(guideT); hideCap(); goTo(n); back=[]; if(fly){ fly.orb=1; fly.d=red?.4:1.25; } }
+  clearTimeout(guideT); hideCap(); goTo(n); back=[]; if(fly){ fly.orb=1; fly.d=red?.4:1.25; } carUI(); }
 /* голос Леры: о чём модуль - один раз за заход на каждый модуль, кнопка 🔊 - ещё раз */
 function carVoice(n,force){ var m=carMod(n); if(!m||!GL||red) return; if(!force&&(MB_SAID[n.id]||!GL.on)) return; if(force&&!GL.on) GL.setOn(true); MB_SAID[n.id]=1;
   var x=m.say||(m.sub?m.sub.replace(/[.!?]*$/,'.'):''), full='Модуль '+m.n+'. '+m.t+'. '+x+' В модуле '+m.tasks.length+' '+zad(m.tasks.length)+'.'+(n.st==='lock'?' Этот модуль откроет педагог.':'');
@@ -1336,7 +1336,7 @@ function orbStep(e){ var A=polarOf(fly.a), B=polarOf(fly.b), da=B.a-A.a; while(d
   var la=LA.a+dl*e, lr=LA.r+(LB.r-LA.r)*e; camL.set(Math.sin(la)*lr,fly.al.y+(fly.bl.y-fly.al.y)*e,CZ+Math.cos(la)*lr); }
 /* вход в модуль: камера чуть подаётся к зданию, экран плавно белеет, под белым открывается модуль, белое уходит */
 var zasv=$('zasv');
-function zasvIn(n){ if(!zasv){ modIn(n); return; } carEl.classList.remove('on'); if(GL) GL.stop(); var H=TOPH[n.st0]||10, bp=V(n.p[0],PY+H*.45,n.p[2]);
+function zasvIn(n){ if(!zasv){ modIn(n); return; } carEl.classList.remove('on','talk'); if(GL) GL.stop(); var H=TOPH[n.st0]||10, bp=V(n.p[0],PY+H*.45,n.p[2]);
   zasv.style.transition='opacity '+(red?.15:.5)+'s ease-in'; zasv.style.opacity=1;
   startFly(camP.clone().lerp(bp,.5),bp,null,red?.2:.55,function(){ modIn(n,'rgba(255,255,255,1)');
     setTimeout(function(){ zasv.style.transition='opacity '+(red?.2:.9)+'s ease-out'; zasv.style.opacity=0; },red?300:450); }); }
