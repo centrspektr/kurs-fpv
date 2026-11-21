@@ -51,7 +51,7 @@ var Q = window.KACHESTVO = {
 /* ---- строка "Графика" в панели шестерёнки (#muzP из muzyka.js) ---- */
 var NM = { auto: 'Авто', low: 'Низкая', mid: 'Средняя', high: 'Высокая' }, row = null;
 var css = document.createElement('style');
-css.textContent = '#kchR{margin:2px 0 8px}#kchR>span{display:flex;justify-content:space-between}#kchR b{color:#7cf3ff;font-weight:700}' +
+css.textContent = '#kchR{margin:2px 0 10px}#kchR>span{display:flex;justify-content:space-between}#kchR b{color:#7cf3ff;font-weight:700}' +
   '#kchR .kch-b{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;margin-top:6px}#kchR button{min-height:30px;padding:0 2px;border-radius:9px;border:1px solid rgba(255,255,255,.25);background:rgba(255,255,255,.06);color:#fff;font:700 11px system-ui,sans-serif;cursor:pointer}' +
   '#kchR button.on{background:#7cf3ff;color:#06101e;border-color:#7cf3ff}#kchR small{display:block;margin-top:5px;font-weight:500;font-size:11px;opacity:.7;line-height:1.3}';
 (document.head || document.documentElement).appendChild(css);
@@ -62,7 +62,13 @@ function mount() { var pn = document.getElementById('muzP'); if (!pn || row) ret
   row = document.createElement('div'); row.id = 'kchR';
   row.innerHTML = '<span>🖥 Графика <b></b></span><div class="kch-b">' + ['auto', 'low', 'mid', 'high'].map(function (k) { return '<button type="button" data-q="' + k + '">' + NM[k] + '</button>'; }).join('') + '</div>' +
     '<small>Тормозит - выбери "Низкая". В модулях-помещениях новое качество - со следующего входа.</small>';
-  pn.appendChild(row); row.addEventListener('click', function (e) { var b = e.target.closest('button'); if (b) Q.set(b.dataset.q); });
+  var labs = pn.querySelectorAll(':scope > label'); if (labs.length) labs[labs.length - 1].insertAdjacentElement('afterend', row); else pn.appendChild(row); row.addEventListener('click', function (e) { var b = e.target.closest('button'); if (b) Q.set(b.dataset.q); });
   upd(); return true; }
 if (!mount()) { var n = 0, iv = setInterval(function () { if (mount() || ++n > 120) clearInterval(iv); }, 250); }
+
+/* ---- счётчик кадров для проверки: ?fps в адресе ---- */
+if (/[?&]fps\b/.test(location.search)) (function () { var d = document.createElement('div'), fr = 0, t0 = performance.now(), worst = 0, lt = 0;
+  d.style.cssText = 'position:fixed;left:8px;bottom:8px;z-index:99;padding:4px 8px;border-radius:8px;background:rgba(0,0,0,.65);color:#7cf3ff;font:700 12px/1.3 monospace;pointer-events:none;white-space:pre';
+  function add() { if (document.body) document.body.appendChild(d); else setTimeout(add, 100); } add();
+  (function k(t) { requestAnimationFrame(k); fr++; if (lt) worst = Math.max(worst, t - lt); lt = t; if (t - t0 >= 1000) { d.textContent = Math.round(fr * 1000 / (t - t0)) + ' к/с  (худший кадр ' + Math.round(worst) + ' мс)\nкачество: ' + NM[level].toLowerCase() + (manual ? '' : ' (авто)'); fr = 0; t0 = t; worst = 0; } })(0); })();
 })();

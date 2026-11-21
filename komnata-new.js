@@ -262,12 +262,20 @@ function make(cfg) {
         cx.fillStyle = '#cfd7ff'; cx.font = '600 40px ' + FONT; wrap(cx, s.p, 60, Math.max(ch * .48, y + 110), cw * .45, 54, 6);
         if (s.pic) svgImg(s.pic, function (im) { if (list[MON.k] !== s) return; cx.globalAlpha = a; var iw = cw * .44, ih = iw * 420 / 720; cx.drawImage(im, cw * .53, (ch - ih) / 2 + 10, iw, ih); tx.needsUpdate = true; });
         cx.globalAlpha = 1; for (var j = 0; j < list.length; j++) { cx.fillStyle = j === i ? MC : 'rgba(255,255,255,.18)'; cx.fillRect(60 + j * 64, ch - 54, 52, 8); }
-        if (MON.talk) { cx.fillStyle = MC; for (j = 0; j < 5; j++) { var hh = 10 + Math.abs(Math.sin(Date.now() / 160 + j)) * 26; cx.fillRect(cw - 110 + j * 14, ch - 46 - hh, 8, hh); } }
-        cx.strokeStyle = 'rgba(255,255,255,.035)'; cx.lineWidth = 1; for (j = 0; j < ch; j += 4) { cx.beginPath(); cx.moveTo(0, j); cx.lineTo(cw, j); cx.stroke(); }
+        if (MON.talk && !BYSTRO) { cx.fillStyle = MC; for (j = 0; j < 5; j++) { var hh = 10 + Math.abs(Math.sin(Date.now() / 160 + j)) * 26; cx.fillRect(cw - 110 + j * 14, ch - 46 - hh, 8, hh); } }
+        if (BYSTRO) { if (!MON.scan) { MON.scan = document.createElement('canvas'); MON.scan.width = 4; MON.scan.height = 4; var sx = MON.scan.getContext('2d'); sx.fillStyle = 'rgba(255,255,255,.035)'; sx.fillRect(0, 0, 4, 1); MON.scanP = cx.createPattern(MON.scan, 'repeat'); }
+          cx.fillStyle = MON.scanP; cx.fillRect(0, 0, cw, ch); }   /* 21.11: строки экрана - одним узором, а не 200 линиями */
+        else { cx.strokeStyle = 'rgba(255,255,255,.035)'; cx.lineWidth = 1; for (j = 0; j < ch; j += 4) { cx.beginPath(); cx.moveTo(0, j); cx.lineTo(cw, j); cx.stroke(); } }
         tx.needsUpdate = true;
       },
-      go: function (k) { MON.k = (k + list.length) % list.length; MON.t0 = 0; MON.a = .1; MON.said = -1; if (window.GOLOS && MON.talk) { MON.talk = false; GOLOS.stop(); } }
+      go: function (k) { MON.k = (k + list.length) % list.length; MON.t0 = 0; MON.a = .1; MON.said = -1; if (window.GOLOS && MON.talk) { MON.talk = false; GOLOS.stop(); } if (BYSTRO) { MON.draw(1); sc.material.color.setScalar(.1); } }
     };
+    /* 21.11 (проба): экран теории перерисовывается только при смене слайда; появление - яркостью экрана, "эквалайзер" голоса - маленьким
+       отдельным экраном. Раньше весь экран 1600 точек перерисовывался и заново отправлялся в видеокарту 6 раз в секунду - отсюда заикание */
+    MON.sc = sc;
+    if (BYSTRO) { var et = tex(128, 64), eq = new T.Mesh(new T.PlaneGeometry(.62, .31), new T.MeshBasicMaterial({ map: et, transparent: true, toneMapped: false, depthWrite: false }));
+      eq.position.set(w / 2 - .5, -h / 2 + .32, .02); eq.visible = false; eq.userData.noMerge = true; g.add(eq); MON.eq = eq;
+      MON.eqDraw = function () { var x = et.userData.x; x.clearRect(0, 0, 128, 64); x.fillStyle = MC; for (var j = 0; j < 5; j++) { var hh = 8 + Math.abs(Math.sin(Date.now() / 160 + j)) * 40; x.fillRect(14 + j * 22, 58 - hh, 14, hh); } et.needsUpdate = true; }; }
     MON.draw(1);
     var at = fwd(o.ry || 0, Math.max(5, w * .75), o.x, o.z);
     CLICK.push({ o: g, kind: 'mon', at: at, look: [o.x, o.y - .2, o.z] });
@@ -275,7 +283,9 @@ function make(cfg) {
   /* монитор: листает сам, голос читает слайд, если ученик рядом и голос включён */
   function monTick(t, dt) {
     if (!MON) return;
-    if (MON.a < 1) { MON.a = Math.min(1, MON.a + dt * 2); MON.draw(MON.a); }
+    if (BYSTRO) { if (MON.a < 1) { MON.a = Math.min(1, MON.a + dt * 2); MON.sc.material.color.setScalar(MON.a); }
+      if (MON.eq) { MON.eq.visible = !!MON.talk; if (MON.talk && Math.floor(t * 8) !== MON.tb) { MON.tb = Math.floor(t * 8); MON.eqDraw(); } } }
+    else if (MON.a < 1) { MON.a = Math.min(1, MON.a + dt * 2); MON.draw(MON.a); }
     else if (MON.talk && Math.floor(t * 6) !== MON.tb) { MON.tb = Math.floor(t * 6); MON.draw(1); }
     var G = window.GOLOS, near = (OKN ? !!SIT : pos.distanceTo(MON.g.position) < 11) && !paused && !anim, can = G && G.on && G.can && G.can();
     if (can && near && MON.said !== MON.k && !SPEAK) { var s = MON.list[MON.k]; MON.said = MON.k; MON.talk = true; G.say(s.say || (s.h + '. ' + s.p), { onend: function () { MON.talk = false; MON.draw(1); setTimeout(function () { if (on && !paused && MON.said === MON.k) MON.go(MON.k + 1); }, 1800); } }); return; }
