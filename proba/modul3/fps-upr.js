@@ -31,7 +31,7 @@ var V4 = !/[?&]tach=0\b/.test(location.search);   /* 19.11 по "ставь": в
       что тачпад молчит всю ходьбу, и подсказка почти не появлялась); в подсказке кнопка, которая сразу открывает настройку тачпада Windows;
    2) там, где код мешал сам: быстрый взмах больше не обрезается до 90 точек (резкий поворот "тормозил"), камера догоняет палец
       почти без задержки (сглаживание в 2 раза короче), а после захвата курсора пропускаем 80 мс вместо 150. */
-var V5 = (function () { var q = location.search; if (/[?&]tach5=0\b/.test(q)) return false; if (/[?&](tach5=1|new)\b/.test(q) || /\/new\.html$/.test(location.pathname)) return true;
+var V5 = (function () { var q = location.search; if (/[?&]tach5=0\b/.test(q)) return false; return true; /* 21.11 на главной: для всех */
   try { return parent !== window && /\/new\.html$/.test(parent.location.pathname); } catch (e) { return false; } })();
 var SM = V5 ? 45 : 22;   /* скорость, с которой камера догоняет палец (больше - быстрее) */
 var lockT = -1e9; document.addEventListener('pointerlockchange', function () { lockT = performance.now(); });

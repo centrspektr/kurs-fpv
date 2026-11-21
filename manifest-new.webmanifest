@@ -3,7 +3,7 @@
   "short_name": "Курс FPV",
   "description": "Курс FPV по модулям: материал, тренажёры, проверки, окно педагога. Автор курса: Александр Наумов, клуб \"Взлёт\", 2026",
   "id": "./",
-  "start_url": "new.html",
+  "start_url": "./",
   "scope": "./",
   "display": "fullscreen",
   "display_override": ["fullscreen", "standalone"],

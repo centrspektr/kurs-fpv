@@ -32,7 +32,7 @@ self.addEventListener('fetch', function (e) {
   /* остальное - сеть (до 8 с на страницу), без сети - с устройства */
   var net = fetch(req).then(function (n) { if (req.cache !== 'no-store' || /\.json$/.test(u.pathname)) put(req, n); return n; });
   e.respondWith((req.mode === 'navigate' ? timeout(net, 8000) : net).catch(function () { return fromCache(req).then(function (r) { if (r) return r;
-    if (req.mode === 'navigate') return caches.open(C).then(function (c) { return c.match(BASE + 'new.html').then(function (x) { return x || c.match(BASE); }); });
+    if (req.mode === 'navigate') return caches.open(C).then(function (c) { return c.match(BASE).then(function (x) { return x || c.match(BASE + 'index.html'); }).then(function (x) { return x || c.match(BASE + 'new.html'); }); });
     return Response.error(); }); }));
 });
 
