@@ -138,6 +138,10 @@ R.frame(function () { var p = R.camera.position, rg = region(p.x, p.z), r = room
     /* комнаты, куда сейчас не заглянуть, не рисуем (быстрее на телефоне) */
     ROOMS.forEach(function (q) { G.show(q.shell, q.id === rg || rg === 'C' || (rg === 'L' && q.i === 0) || !!(r && Math.abs(q.i - r.i) <= 0 && q !== r)); });
     G.show(SHELLS.L, rg === 'L' || rg === 'C' || !!(r && r.i < 2)); }
+  /* 21.11 проба (window.AKB_TENI): в коридоре и холле тени на всю область сразу и не двигаются - раньше свет переезжал каждые 2 м,
+     и тени дверей на краю области теней появлялись и пропадали кусками */
+  if (window.AKB_TENI && G.lightBox && !r) { if (lightAt[0] !== rg) { lightAt = [rg, 0];
+      if (rg === 'C') G.lightBox(LX - .4, CZ0 - .45, W + .2, CZ1 + .45, H); else G.lightBox(-.2, -.2, LX + .2, D + .2, H); } return; }
   var lx = r ? r.dx : Math.round(p.x / 2) * 2, lz = r ? (r.z0 + r.z1) / 2 : Math.round(p.z / 2) * 2;
   if (lx !== lightAt[0] || lz !== lightAt[1]) { lightAt = [lx, lz]; G.lightRoom(lx, lz, H); } });
 
