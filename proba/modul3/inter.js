@@ -290,8 +290,26 @@ function create(o) {
   if (Q !== 'low') { key.castShadow = true; var ms = Q === 'high' ? 2048 : 1024; key.shadow.mapSize.set(ms, ms); key.shadow.radius = 5; key.shadow.bias = -.0006; key.shadow.normalBias = .02;
     var kc = key.shadow.camera; kc.left = -6.5; kc.right = 6.5; kc.top = 6.5; kc.bottom = -6.5; kc.near = .5; kc.far = 14; }
   /* ключевой свет стоит над той комнатой, где ученик */
+  var boxMode = false; /* 21.11: G.lightBox ставит неподвижную область теней под длинный коридор/холл */
+  function shadowMap(w, h) { var z = key.shadow.mapSize; if (z.x === w && z.y === h) return; z.set(w, h); if (key.shadow.map) { key.shadow.map.dispose(); key.shadow.map = null; } }
   G.lightRoom = function (cx, cz, H, half) { key.position.set(cx + 1.2, (H || 3.2) + 5, cz + 1.8); key.target.position.set(cx, 0, cz); key.target.updateMatrixWorld();
+    if (boxMode && key.castShadow) { boxMode = false; shadowMap(ms, ms); var c0 = key.shadow.camera; c0.up.set(0, 1, 0); c0.left = -6.5; c0.right = 6.5; c0.top = 6.5; c0.bottom = -6.5; c0.near = .5; c0.far = 14; c0.updateProjectionMatrix(); }
     if (half && key.castShadow) { var c = key.shadow.camera; if (c.right !== half) { c.left = -half; c.right = half; c.top = half; c.bottom = -half; c.far = (H || 3.2) + 9; c.updateProjectionMatrix(); } } };
+  /* 21.11: тени на всю область x0..x1, z0..z1 сразу и неподвижно - при ходьбе по коридору тени дверей больше не появляются и не пропадают кусками.
+     Число точек карты теней то же, что было (ms*ms), только карта вытянута вдоль коридора. */
+  G.lightBox = function (x0, z0, x1, z1, H) { H = H || 3.2; var cx = (x0 + x1) / 2, cz = (z0 + z1) / 2;
+    key.position.set(cx + 1.2, H + 5, cz + 1.8); key.target.position.set(cx, 0, cz); key.target.updateMatrixWorld();
+    if (!key.castShadow) return; boxMode = true;
+    var c = key.shadow.camera; c.up.set(0, 0, 1); /* так карта теней лежит вдоль мировых осей x/z, а не по диагонали - точки не тратятся впустую */
+    var m = new T.Matrix4().lookAt(key.position, key.target.position, c.up); m.setPosition(key.position); m.invert();
+    var a = [1e9, -1e9, 1e9, -1e9, 1e9, -1e9], v = new T.Vector3();
+    [x0, x1].forEach(function (x) { [0, H].forEach(function (y) { [z0, z1].forEach(function (z) { v.set(x, y, z).applyMatrix4(m);
+      a[0] = Math.min(a[0], v.x); a[1] = Math.max(a[1], v.x); a[2] = Math.min(a[2], v.y); a[3] = Math.max(a[3], v.y); a[4] = Math.min(a[4], -v.z); a[5] = Math.max(a[5], -v.z); }); }); });
+    var pad = .3; c.left = a[0] - pad; c.right = a[1] + pad; c.bottom = a[2] - pad; c.top = a[3] + pad; c.near = Math.max(.1, a[4] - 1); c.far = a[5] + 1; c.updateProjectionMatrix();
+    var asp = (c.right - c.left) / (c.top - c.bottom), w = ms, h = ms;
+    while (asp >= 2 && w < Math.min(4096, ms * 4) && h > 256) { w *= 2; h /= 2; asp /= 4; }
+    while (asp <= .5 && h < Math.min(4096, ms * 4) && w > 256) { h *= 2; w /= 2; asp *= 4; }
+    shadowMap(w, h); };
 
   /* ---------- дверь: портал, раздвижные створки, табличка ---------- */
   G.door = function (d) { /* d: { x, z, axis:'x'|'z' (вдоль какой оси стена), w, h, th (толщина стены), no, title, state } */
