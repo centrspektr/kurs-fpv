@@ -30,14 +30,14 @@ window.KOMNATA_KVEST.m2 = function (X) {
   var TOP = .95; /* высота столешницы */
   /* на столе из "Собери дрон" (SBStol) уже стоит паяльная станция: прячем её, пока ученик не принесёт свою */
   var STN = null; TB.g.children.forEach(function (c) { if (Math.abs(c.scale.x - .02) < 1e-4) c.traverse(function (o) { if (!STN && o.isGroup && o.position.x === 24 && o.position.z === -14) STN = o; }); });
-  if (STN && !st.payalnik) STN.visible = false;
-  function onTable(it) { if (it.id === 'payalnik' && STN) { STN.visible = true; if (it.ghost) it.ghost.visible = false; return; } var m = P.model(it.kind); m.scale.setScalar(it.s); m.position.set(it.spot[0], TOP, it.spot[1]); m.rotation.y = it.spot[2]; TB.g.add(m); it.placed = m; if (it.ghost) it.ghost.visible = false; }
+  if (STN) STN.userData.noMerge = true; if (STN && !st.payalnik) STN.visible = false;
+  function onTable(it) { if (it.id === 'payalnik' && STN) { STN.visible = true; if (it.ghost) it.ghost.visible = false; return; } var m = P.model(it.kind); m.scale.setScalar(it.s); m.position.set(it.spot[0], TOP, it.spot[1]); m.rotation.y = it.spot[2]; m.userData.noMerge = true; TB.g.add(m); it.placed = m; if (it.ghost) it.ghost.visible = false; }
 
   /* силуэты на столе: где чего не хватает */
   ITEMS.forEach(function (it) { if (st[it.id]) return;
     var g = new T.Group(), m = P.model(it.kind), bb = new T.Box3().setFromObject(m), sz = bb.getSize(new T.Vector3());
     var e = new T.LineSegments(new T.EdgesGeometry(new T.BoxGeometry(sz.x * it.s, sz.y * it.s, sz.z * it.s)), new T.LineBasicMaterial({ color: '#7cf3ff', transparent: true, opacity: .8, toneMapped: false }));
-    e.position.y = sz.y * it.s / 2; g.add(e); g.position.set(it.spot[0], TOP, it.spot[1]); g.rotation.y = it.spot[2]; TB.g.add(g); it.ghost = g; });
+    e.position.y = sz.y * it.s / 2; g.add(e); g.position.set(it.spot[0], TOP, it.spot[1]); g.rotation.y = it.spot[2]; g.userData.noMerge = true; TB.g.add(g); it.ghost = g; });
   X.TICK.push(function (t) { ITEMS.forEach(function (it) { if (it.ghost && it.ghost.visible) it.ghost.children[0].material.opacity = .45 + Math.sin(t * 3) * .35; }); });
   ITEMS.forEach(function (it) { if (st[it.id]) onTable(it); });
 

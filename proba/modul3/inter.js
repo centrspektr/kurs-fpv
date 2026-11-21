@@ -45,7 +45,7 @@ function create(o) {
   var G = { S: S, style: o.style || 'A', accent: ACC, quality: Q, mat: {}, frames: [], pairs: [], lamps: [] };
   var world = new T.Group(), mirror = new T.Group(); mirror.scale.y = -1; sc.add(world); sc.add(mirror);
   G.world = world; G.mirrorGroup = mirror;
-  var MIRROR = Q !== 'low' && S.mirror > 0, MIR = new WeakMap();
+  var MIRROR = Q !== 'low' && S.mirror > 0 && o.mirror !== false, MIR = new WeakMap(), MIRS = [];   /* 21.11: o.mirror = false - без отражения в полу (среднее качество) */
   G.mirrorOf = function (o) { return MIR.get(o) || null; };
   G.show = function (o, on) { o.visible = on; var c = MIR.get(o); if (c) c.visible = on; };
 
@@ -123,7 +123,7 @@ function create(o) {
   /* ---------- добавить предмет (и его отражение в полу) ---------- */
   G.add = function (obj, opt) { opt = opt || {}; world.add(obj);
     if (opt.shadow !== false) obj.traverse(function (m) { if (m.isMesh && !m.userData.noShadow && !(m.material && m.material.transparent)) { m.castShadow = true; m.receiveShadow = true; } });
-    if (MIRROR && opt.mirror !== false) { var c = mclone(obj); mirror.add(c); if (opt.live) G.pairs.push([obj, c]); MIR.set(obj, c); }
+    if (MIRROR && opt.mirror !== false) { var c = mclone(obj); mirror.add(c); if (opt.live) G.pairs.push([obj, c]); MIR.set(obj, c); MIRS.push([obj, !!opt.live]); }
     return obj; };
   /* копия для отражения: та же геометрия и материалы, без данных и без нажатий */
   function noRay() {}
@@ -136,7 +136,12 @@ function create(o) {
     obj.traverse(function (m) { if (!m.isMesh || !m.material || m.userData.adopted) return; m.userData.adopted = true; var mt = m.material;
       if (mt.isMeshStandardMaterial) { if (!mt.transparent && !m.userData.noShadow) { m.castShadow = true; m.receiveShadow = true; } mt.envMapIntensity = S.env; }
       else if (mt.isMeshBasicMaterial && mt.map && !mt.transparent && !mt.userData.boost && composer) { mt.userData.boost = true; mt.color.multiplyScalar(1.15); } });
-    if (MIRROR && opt.mirror !== false && !MIR.get(obj)) { var c = mclone(obj); mirror.add(c); G.pairs.push([obj, c]); MIR.set(obj, c); } };
+    if (MIRROR && opt.mirror !== false && !MIR.get(obj)) { var c = mclone(obj); mirror.add(c); G.pairs.push([obj, c]); MIR.set(obj, c); MIRS.push([obj, true]); } };
+  /* 21.11: после склейки (skleyka.js) отражение собираем заново из новых объектов */
+  G.remirror = function () { if (!MIRROR) return; for (var i = mirror.children.length - 1; i >= 0; i--) mirror.remove(mirror.children[i]); G.pairs.length = 0; MIR = new WeakMap();
+    MIRS.forEach(function (e) { var obj = e[0]; if (!obj.parent) return; var c = mclone(obj); mirror.add(c); if (e[1]) G.pairs.push([obj, c]); MIR.set(obj, c); }); };
+  /* 21.11: шаг анимаций без рисования (для склейки: заметить, что движется) */
+  G.step = function (dt) { tAll += dt; for (var i = 0; i < G.frames.length; i++) G.frames[i](dt, tAll); };
   function mesh(geo, mat, x, y, z) { var m = new T.Mesh(geo, mat); m.position.set(x || 0, y || 0, z || 0); return m; }
   G.box = function (w, h, d, mat, x, y, z) { return mesh(new T.BoxGeometry(w, h, d), mat, x, y, z); };
   /* коробка со скруглёнными рёбрами */
