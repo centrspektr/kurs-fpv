@@ -1,250 +1,252 @@
 {
-  "asset": {
-    "generator": "Khronos glTF Blender I/O v3.2.40",
-    "version": "2.0"
+ "asset": {
+  "generator": "glTF-Transform v4.5.1",
+  "version": "2.0"
+ },
+ "accessors": [
+  {
+   "type": "SCALAR",
+   "componentType": 5123,
+   "count": 67794,
+   "bufferView": 0,
+   "byteOffset": 0
   },
-  "scene": 0,
-  "scenes": [
-    {
-      "name": "Scene",
-      "nodes": [
-        0
-      ]
+  {
+   "type": "SCALAR",
+   "componentType": 5123,
+   "count": 4512,
+   "bufferView": 0,
+   "byteOffset": 135588
+  },
+  {
+   "type": "VEC3",
+   "componentType": 5122,
+   "count": 17533,
+   "max": [
+    7404,
+    32767,
+    22534
+   ],
+   "min": [
+    -7404,
+    -32767,
+    -22534
+   ],
+   "normalized": true,
+   "bufferView": 1,
+   "byteOffset": 0
+  },
+  {
+   "type": "VEC3",
+   "componentType": 5122,
+   "count": 17533,
+   "normalized": true,
+   "bufferView": 1,
+   "byteOffset": 8
+  },
+  {
+   "type": "VEC2",
+   "componentType": 5123,
+   "count": 17533,
+   "normalized": true,
+   "bufferView": 1,
+   "byteOffset": 16
+  },
+  {
+   "type": "VEC3",
+   "componentType": 5122,
+   "count": 973,
+   "max": [
+    3324,
+    28203,
+    -11125
+   ],
+   "min": [
+    -1428,
+    21326,
+    -16337
+   ],
+   "normalized": true,
+   "bufferView": 2,
+   "byteOffset": 0
+  },
+  {
+   "type": "VEC3",
+   "componentType": 5122,
+   "count": 973,
+   "normalized": true,
+   "bufferView": 2,
+   "byteOffset": 8
+  },
+  {
+   "type": "VEC2",
+   "componentType": 5123,
+   "count": 973,
+   "normalized": true,
+   "bufferView": 2,
+   "byteOffset": 16
+  }
+ ],
+ "bufferViews": [
+  {
+   "buffer": 0,
+   "byteOffset": 0,
+   "byteLength": 144612,
+   "target": 34963
+  },
+  {
+   "buffer": 0,
+   "byteOffset": 144612,
+   "byteLength": 350660,
+   "byteStride": 20,
+   "target": 34962
+  },
+  {
+   "buffer": 0,
+   "byteOffset": 495272,
+   "byteLength": 19460,
+   "byteStride": 20,
+   "target": 34962
+  }
+ ],
+ "samplers": [
+  {
+   "magFilter": 9729,
+   "minFilter": 9987,
+   "wrapS": 10497,
+   "wrapT": 10497
+  }
+ ],
+ "textures": [
+  {
+   "source": 1,
+   "sampler": 0
+  },
+  {
+   "source": 0,
+   "sampler": 0
+  },
+  {
+   "source": 2,
+   "sampler": 0
+  }
+ ],
+ "images": [
+  {
+   "name": "desk_lamp_arm_01_nor_gl",
+   "mimeType": "image/jpeg",
+   "uri": "textures/desk_lamp_arm_01_nor_gl_1k.jpg"
+  },
+  {
+   "name": "desk_lamp_arm_01_diff",
+   "mimeType": "image/jpeg",
+   "uri": "textures/desk_lamp_arm_01_diff_1k.jpg"
+  },
+  {
+   "name": "desk_lamp_arm_01_metal-desk_lamp_arm_01_rough",
+   "mimeType": "image/jpeg",
+   "uri": "textures/desk_lamp_arm_01_arm_1k.jpg"
+  }
+ ],
+ "buffers": [
+  {
+   "uri": "desk_lamp_arm_01-q.bin",
+   "byteLength": 514732
+  }
+ ],
+ "materials": [
+  {
+   "name": "desk_lamp_arm_01",
+   "doubleSided": true,
+   "pbrMetallicRoughness": {
+    "baseColorTexture": {
+     "index": 0
+    },
+    "metallicRoughnessTexture": {
+     "index": 2
     }
-  ],
-  "nodes": [
-    {
-      "mesh": 0,
-      "name": "desk_lamp_arm_01"
+   },
+   "normalTexture": {
+    "index": 1
+   }
+  },
+  {
+   "name": "desk_lamp_arm_01_light",
+   "doubleSided": true,
+   "pbrMetallicRoughness": {
+    "baseColorTexture": {
+     "index": 0
+    },
+    "metallicRoughnessTexture": {
+     "index": 2
     }
-  ],
-  "materials": [
+   },
+   "emissiveFactor": [
+    1,
+    0.9837890267372131,
+    0.649111270904541
+   ],
+   "normalTexture": {
+    "index": 1
+   }
+  }
+ ],
+ "meshes": [
+  {
+   "name": "Box.001",
+   "primitives": [
     {
-      "doubleSided": true,
-      "name": "desk_lamp_arm_01",
-      "normalTexture": {
-        "index": 0
-      },
-      "pbrMetallicRoughness": {
-        "baseColorTexture": {
-          "index": 1
-        },
-        "metallicRoughnessTexture": {
-          "index": 2
-        }
-      }
+     "attributes": {
+      "POSITION": 2,
+      "NORMAL": 3,
+      "TEXCOORD_0": 4
+     },
+     "mode": 4,
+     "material": 0,
+     "indices": 0
     },
     {
-      "doubleSided": true,
-      "emissiveFactor": [
-        1,
-        0.9837890267372131,
-        0.649111270904541
-      ],
-      "name": "desk_lamp_arm_01_light",
-      "normalTexture": {
-        "index": 3
-      },
-      "pbrMetallicRoughness": {
-        "baseColorTexture": {
-          "index": 4
-        },
-        "metallicRoughnessTexture": {
-          "index": 5
-        }
-      }
+     "attributes": {
+      "POSITION": 5,
+      "NORMAL": 6,
+      "TEXCOORD_0": 7
+     },
+     "mode": 4,
+     "material": 1,
+     "indices": 1
     }
-  ],
-  "meshes": [
-    {
-      "name": "Box.001",
-      "primitives": [
-        {
-          "attributes": {
-            "POSITION": 0,
-            "NORMAL": 1,
-            "TEXCOORD_0": 2
-          },
-          "indices": 3,
-          "material": 0
-        },
-        {
-          "attributes": {
-            "POSITION": 4,
-            "NORMAL": 5,
-            "TEXCOORD_0": 6
-          },
-          "indices": 7,
-          "material": 1
-        }
-      ]
-    }
-  ],
-  "textures": [
-    {
-      "sampler": 0,
-      "source": 0
-    },
-    {
-      "sampler": 0,
-      "source": 1
-    },
-    {
-      "sampler": 0,
-      "source": 2
-    },
-    {
-      "sampler": 0,
-      "source": 0
-    },
-    {
-      "sampler": 0,
-      "source": 1
-    },
-    {
-      "sampler": 0,
-      "source": 2
-    }
-  ],
-  "images": [
-    {
-      "mimeType": "image/jpeg",
-      "name": "desk_lamp_arm_01_nor_gl",
-      "uri": "textures/desk_lamp_arm_01_nor_gl_1k.jpg"
-    },
-    {
-      "mimeType": "image/jpeg",
-      "name": "desk_lamp_arm_01_diff",
-      "uri": "textures/desk_lamp_arm_01_diff_1k.jpg"
-    },
-    {
-      "mimeType": "image/jpeg",
-      "name": "desk_lamp_arm_01_metal-desk_lamp_arm_01_rough",
-      "uri": "textures/desk_lamp_arm_01_arm_1k.jpg"
-    }
-  ],
-  "accessors": [
-    {
-      "bufferView": 0,
-      "componentType": 5126,
-      "count": 17533,
-      "max": [
-        0.08325615525245667,
-        0.8046169281005859,
-        0.3172350823879242
-      ],
-      "min": [
-        -0.11847317218780518,
-        -0.08799377083778381,
-        -0.29663750529289246
-      ],
-      "type": "VEC3"
-    },
-    {
-      "bufferView": 1,
-      "componentType": 5126,
-      "count": 17533,
-      "type": "VEC3"
-    },
-    {
-      "bufferView": 2,
-      "componentType": 5126,
-      "count": 17533,
-      "type": "VEC2"
-    },
-    {
-      "bufferView": 3,
-      "componentType": 5123,
-      "count": 67794,
-      "type": "SCALAR"
-    },
-    {
-      "bufferView": 4,
-      "componentType": 5126,
-      "count": 973,
-      "max": [
-        0.027660036459565163,
-        0.7424256801605225,
-        -0.1412101536989212
-      ],
-      "min": [
-        -0.03705751523375511,
-        0.6487915515899658,
-        -0.21220247447490692
-      ],
-      "type": "VEC3"
-    },
-    {
-      "bufferView": 5,
-      "componentType": 5126,
-      "count": 973,
-      "type": "VEC3"
-    },
-    {
-      "bufferView": 6,
-      "componentType": 5126,
-      "count": 973,
-      "type": "VEC2"
-    },
-    {
-      "bufferView": 7,
-      "componentType": 5123,
-      "count": 4512,
-      "type": "SCALAR"
-    }
-  ],
-  "bufferViews": [
-    {
-      "buffer": 0,
-      "byteLength": 210396,
-      "byteOffset": 0
-    },
-    {
-      "buffer": 0,
-      "byteLength": 210396,
-      "byteOffset": 210396
-    },
-    {
-      "buffer": 0,
-      "byteLength": 140264,
-      "byteOffset": 420792
-    },
-    {
-      "buffer": 0,
-      "byteLength": 135588,
-      "byteOffset": 561056
-    },
-    {
-      "buffer": 0,
-      "byteLength": 11676,
-      "byteOffset": 696644
-    },
-    {
-      "buffer": 0,
-      "byteLength": 11676,
-      "byteOffset": 708320
-    },
-    {
-      "buffer": 0,
-      "byteLength": 7784,
-      "byteOffset": 719996
-    },
-    {
-      "buffer": 0,
-      "byteLength": 9024,
-      "byteOffset": 727780
-    }
-  ],
-  "samplers": [
-    {
-      "magFilter": 9729,
-      "minFilter": 9987
-    }
-  ],
-  "buffers": [
-    {
-      "byteLength": 736804,
-      "uri": "desk_lamp_arm_01.bin"
-    }
-  ]
+   ]
+  }
+ ],
+ "nodes": [
+  {
+   "name": "desk_lamp_arm_01",
+   "translation": [
+    -0.017608508467674255,
+    0.35831157863140106,
+    0.01029878854751587
+   ],
+   "scale": [
+    0.4463053494691849,
+    0.4463053494691849,
+    0.4463053494691849
+   ],
+   "mesh": 0
+  }
+ ],
+ "scenes": [
+  {
+   "name": "Scene",
+   "nodes": [
+    0
+   ]
+  }
+ ],
+ "scene": 0,
+ "extensionsUsed": [
+  "KHR_mesh_quantization"
+ ],
+ "extensionsRequired": [
+  "KHR_mesh_quantization"
+ ]
 }

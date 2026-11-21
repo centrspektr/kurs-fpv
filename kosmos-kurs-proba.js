@@ -43,7 +43,11 @@ if(!force&&(lsG(VKEY)==='plain'||weak)){ plain(weak?'weak':'vid'); return; }
 var cv=document.getElementById('c'), R;
 try{ R=new THREE.WebGLRenderer({canvas:cv,antialias:!mob,powerPreference:'high-performance'}); }catch(e){ plain('webgl'); return; }
 document.getElementById('plainB').onclick=function(){ lsS(VKEY,'plain'); location.href=PLAIN; };
-var DPR=Math.min(devicePixelRatio||1,mob?1.25:1.75), DPRMIN=mob?.8:1; R.setPixelRatio(DPR); /* если кадры долгие - DPR снижаем (см. tune в frame) */
+var DPR=Math.min(devicePixelRatio||1,mob?1.25:1.75), DPRMIN=mob?.8:1; R.setPixelRatio(DPR);
+/* 21.11 (проба new.html, kachestvo.js): качество графики из шестерёнки - резкость и "лёгкий" город */
+if(window.KACHESTVO){ DPR=KACHESTVO.dpr(mob); DPRMIN=Math.min(DPRMIN,DPR); R.setPixelRatio(DPR);
+  KACHESTVO.on(function(q){ DPR=KACHESTVO.dpr(mob); DPRMIN=Math.min(mob?.8:1,DPR); R.setPixelRatio(DPR); try{ size(); }catch(e){} if(q==='low'&&!LITE&&LK) lite(); });
+  if(KACHESTVO.level==='low') (function w(){ setTimeout(function(){ if(typeof LK!=='undefined'&&LK&&LK.drones) lite(); else w(); },800); })(); } /* если кадры долгие - DPR снижаем (см. tune в frame) */
 var S=new THREE.Scene(), C=new THREE.PerspectiveCamera(62,1,.4,2600); /* ближняя плоскость .4 (было .1): точнее глубина, крыши не мерцают полосками */
 var BG_A=new THREE.Color('#04050d'), BG_B=new THREE.Color('#0c0420'); S.background=BG_A.clone();
 var bgT=BG_A.clone(), galT=new THREE.Color('#ffffff');
@@ -865,7 +869,7 @@ function cityRoads(){ function gp(n){ return V(n.p[0],PY,n.p[2]); }
   mods.forEach(function(m){ var n=LK.by[m.id], b=gp(n), a=prev?gp(prev):me.clone(), mid=a.clone().lerp(b,.5), out=V(mid.x,0,mid.z-CZ);
     if(prev&&out.lengthSq()>.01) mid.addScaledVector(out.normalize(),6);
     if(!prev) a.addScaledVector(b.clone().sub(a).normalize(),7);
-    var rcv=new THREE.QuadraticBezierCurve3(a,mid,b); (LK.rc=LK.rc||[]).push(rcv); road(LK,rcv,n.c,1.6); prev=n; });
+    var rcv=new THREE.QuadraticBezierCurve3(a,mid,b); (LK.rc=LK.rc||[]).push(rcv); (LK.rcn=LK.rcn||[]).push([prev,n]); road(LK,rcv,n.c,1.6); prev=n; });
   LK.nodes.forEach(function(n){ if(n.kind!=='tab') return; var b=gp(n), a=me.clone(); a.addScaledVector(b.clone().sub(a).normalize(),7); var mid=a.clone().lerp(b,.5); mid.z-=4;
     road(LK,new THREE.QuadraticBezierCurve3(a,mid,b),n.c,.55); }); }
 cityRoads();
@@ -887,13 +891,63 @@ cityRoads();
     rings.forEach(function(rg,j){ rg.rotation.x=t*(.5+j*.3); rg.rotation.y=t*(.3-j*.2); });
     lines.forEach(function(q){ q.t=(q.t+dt*(q.n.st==='lock'?.08:.25))%1; q.sp.position.copy(q.a).addScaledVector(q.d,q.l*q.t); q.sp.material.opacity=q.n.st==='lock'?.25:Math.min(1,(1-q.t)*4); });
     sparks.forEach(function(q){ q.y+=dt*q.v; if(q.y>22){ q.y=0; q.a=Math.random()*6.283; } q.a+=dt*.4; q.sp.position.set(Math.cos(q.a)*q.r,q.y,Math.sin(q.a)*q.r); q.sp.material.opacity=Math.max(0,1-q.y/22); }); };
-  /* роботы-доставщики: катаются по дороге от модуля к модулю, мигают огоньком */
-  LK.bots=[]; (LK.rc||[]).forEach(function(cv,j){ if(j===0) return; for(var k=0;k<(mob?1:2);k++){ var g=new THREE.Group(), col=MC[(j+k)%MC.length];
-    var bd=new THREE.Mesh(new THREE.BoxGeometry(1.1,.7,1.5),new LM({color:0xd6dcf0,emissive:new THREE.Color(col),emissiveIntensity:.25})); bd.position.y=.75; g.add(bd);
-    var box=new THREE.Mesh(new THREE.BoxGeometry(.8,.5,.8),new LM({color:0x8a6a3a})); box.position.set(0,1.35,-.15); g.add(box);
-    [[-.55,.45],[.55,.45],[-.55,-.45],[.55,-.45]].forEach(function(q){ var wh=new THREE.Mesh(new THREE.CylinderGeometry(.3,.3,.2,10),new LM({color:0x1a1f33})); wh.rotation.z=Math.PI/2; wh.position.set(q[0],.3,q[1]); g.add(wh); });
-    var lamp=new THREE.Sprite(new THREE.SpriteMaterial({map:glowTex('#ff9f5a'),blending:THREE.AdditiveBlending,depthWrite:false})); lamp.scale.setScalar(1.4); lamp.position.set(0,1.9,.4); g.add(lamp);
-    G.add(g); LK.bots.push({g:g,cv:cv,t:Math.random(),dir:k?-1:1,sp:.05+Math.random()*.04,lamp:lamp,ph:Math.random()*6}); } }); })();
+  /* роботы-доставщики (правка 21.11): шестиколёсные роботы с крышкой-багажником, глазами-экраном и флажком на антенне.
+     Ездят по дороге между модулями и въезжают в здание через ворота-шлюз со шторкой (раньше проезжали сквозь стены). Ворота и роботов строим при первом кадре: см. botsInit */
+  LK.bots=[]; LK.botsNew=true; })();
+/* общие детали роботов (одни на всех - бережём телефон) */
+var BOTG=null;
+function botParts(){ if(BOTG) return BOTG; var Q={};
+  Q.body=new THREE.BoxGeometry(1.2,.62,1.6); Q.lid=new THREE.BoxGeometry(1.08,.14,1.2); Q.band=new THREE.BoxGeometry(1.26,.12,1.66); Q.face=new THREE.BoxGeometry(.9,.36,.04);
+  Q.eye=new THREE.BoxGeometry(.18,.1,.02); Q.wheel=new THREE.CylinderGeometry(.24,.24,.18,12); Q.hub=new THREE.CylinderGeometry(.1,.1,.2,8); Q.mast=new THREE.CylinderGeometry(.025,.025,1.3,5); Q.flag=new THREE.BoxGeometry(.02,.22,.34);
+  Q.wheel.rotateZ(Math.PI/2); Q.hub.rotateZ(Math.PI/2);
+  Q.white=new LM({color:0xe8ecf8}); Q.dark=new LM({color:0x1a1f33}); Q.hubm=new LM({color:0x8892b0}); Q.scr=new THREE.MeshBasicMaterial({color:0x0b1022}); Q.eyem=new THREE.MeshBasicMaterial({color:0x7cf3ff}); Q.flagm=new THREE.MeshBasicMaterial({color:0xff9f5a,side:THREE.DoubleSide});
+  /* ворота-шлюз: стойки, перекладина со светящейся полосой, крыша и стены короткого тоннеля, рулонная шторка */
+  Q.post=new THREE.BoxGeometry(.4,2.5,.6); Q.beam=new THREE.BoxGeometry(4.9,.5,.7); Q.strip=new THREE.BoxGeometry(4.2,.12,.04); Q.wall=new THREE.BoxGeometry(.25,2.3,3); Q.roof=new THREE.BoxGeometry(4.6,.25,3.2); Q.back=new THREE.BoxGeometry(4.4,2.3,.2);
+  Q.door=new THREE.PlaneGeometry(3.9,2.25); Q.door.translate(0,-1.125,0);
+  Q.gm=new LM({color:0x8892b0,emissive:0x2a3358,emissiveIntensity:.4}); Q.inn=new THREE.MeshBasicMaterial({color:0x070a16});
+  var dt=tex(function(x,w,h){ x.fillStyle='#3a4670'; x.fillRect(0,0,w,h); for(var y=0;y<h;y+=8){ x.fillStyle='#55648f'; x.fillRect(0,y,w,3); } x.fillStyle='#ffd36e'; for(var k=0;k<w;k+=32){ x.beginPath(); x.moveTo(k,h-14); x.lineTo(k+16,h-14); x.lineTo(k+8,h); x.fill(); } },128,128);
+  Q.doorm=new THREE.MeshLambertMaterial({map:dt,side:THREE.DoubleSide});
+  return BOTG=Q; }
+function mkBot(col){ var Q=botParts(), g=new THREE.Group(), c=new THREE.Color(col), cm=new THREE.MeshBasicMaterial({color:c});
+  function add(geo,m,x,y,z){ var o=new THREE.Mesh(geo,m); o.position.set(x,y,z); g.add(o); return o; }
+  add(Q.body,Q.white,0,.62,0); add(Q.band,cm,0,.42,0); add(Q.lid,new LM({color:0xd6dcf0,emissive:c,emissiveIntensity:.35}),0,1,-.12);
+  add(Q.face,Q.scr,0,.72,.81); var e1=add(Q.eye,Q.eyem,-.2,.74,.835), e2=add(Q.eye,Q.eyem,.2,.74,.835);
+  var wh=[]; [-.62,.62].forEach(function(x){ [-.55,0,.55].forEach(function(z){ wh.push(add(Q.wheel,Q.dark,x,.26,z)); add(Q.hub,Q.hubm,x,.26,z); }); });
+  add(Q.mast,Q.hubm,-.45,1.3,-.68); add(Q.flag,Q.flagm,-.45,1.82,-.85);
+  var lamp=new THREE.Sprite(new THREE.SpriteMaterial({map:glowTex('#ff9f5a'),blending:THREE.AdditiveBlending,depthWrite:false})); lamp.scale.setScalar(1.1); lamp.position.set(-.45,1.98,-.68); g.add(lamp);
+  return {g:g,lamp:lamp,wh:wh,eyes:[e1,e2]}; }
+function mkGate(col){ var Q=botParts(), g=new THREE.Group(), cm=new THREE.MeshBasicMaterial({color:new THREE.Color(col)});
+  function add(geo,m,x,y,z){ var o=new THREE.Mesh(geo,m); o.position.set(x,y,z); g.add(o); return o; }
+  add(Q.post,Q.gm,-2.25,1.25,0); add(Q.post,Q.gm,2.25,1.25,0); add(Q.beam,Q.gm,0,2.6,0); add(Q.strip,cm,0,2.6,.37);
+  add(Q.wall,Q.gm,-2.1,1.15,-1.6); add(Q.wall,Q.gm,2.1,1.15,-1.6); add(Q.roof,Q.gm,0,2.42,-1.6); add(Q.back,Q.inn,0,1.15,-3.05);
+  var door=add(Q.door,Q.doorm,0,2.35,-.15), ls=[];
+  [-2.25,2.25].forEach(function(x){ var q=new THREE.Sprite(new THREE.SpriteMaterial({map:glowTex('#ffd36e'),blending:THREE.AdditiveBlending,depthWrite:false})); q.scale.setScalar(1); q.position.set(x,2.95,.1); g.add(q); ls.push(q); });
+  return {g:g,door:door,ls:ls,o:0}; }
+/* где дорога выходит из здания модуля: коробка по деталям здания (без огоньков и надписей), запас .3 */
+function bldBox(n){ var B=new THREE.Box3(), b2=new THREE.Box3(); if(!n||!n.bld) return null; n.bld.updateMatrixWorld(true);
+  n.bld.traverse(function(o){ if(o.isMesh&&o.geometry&&!(o.material&&o.material.blending===THREE.AdditiveBlending)){ if(!o.geometry.boundingBox) o.geometry.computeBoundingBox(); b2.copy(o.geometry.boundingBox).applyMatrix4(o.matrixWorld); B.union(b2); } });
+  if(B.isEmpty()) return null; B.expandByScalar(.3); return B; }
+function botsInit(){ LK.botsNew=false; var P=V(0,0,0), T=V(0,0,0);
+  (LK.rc||[]).forEach(function(cv,j){ if(j===0||!LK.rcn||!LK.rcn[j]) return; var A=LK.rcn[j][0], Bn=LK.rcn[j][1], bA=bldBox(A), bB=bldBox(Bn), len=cv.getLength(), N=200, t0=0, t1=1;
+    function inside(b,t){ if(!b) return false; cv.getPoint(t,P); cv.getTangent(t,T); T.y=0; T.normalize(); for(var k=-1;k<=1;k++){ var x=P.x-T.z*1.9*k, z=P.z+T.x*1.9*k; if(x>b.min.x&&x<b.max.x&&z>b.min.z&&z<b.max.z) return true; } return false; }
+    for(var i=0;i<=N;i++){ if(!inside(bA,i/N)){ t0=i/N; break; } } for(var i=N;i>=0;i--){ if(!inside(bB,i/N)){ t1=i/N; break; } }
+    if(!bA) t0=Math.min(.45,8/len); if(!bB) t1=Math.max(.55,1-8/len); if(t1-t0<.2) return;
+    var col=Bn.c, gs=[]; [[t0,1],[t1,-1]].forEach(function(e){ var q=mkGate(e[1]>0?A.c:col); cv.getPoint(e[0],P); cv.getTangent(e[0],T); T.y=0; T.normalize(); if(e[1]<0) T.negate();
+      q.g.position.set(P.x,PY,P.z); q.g.rotation.y=Math.atan2(T.x,T.z); LK.g.add(q.g); q.t=e[0]; gs.push(q); }); /* ворота смотрят наружу, тоннель уходит в здание */
+    var din=3.4/len; /* въезд на 3,4 ед. вглубь ворот - там робота уже не видно */
+    for(var k=0;k<(mob?1:2);k++){ var b=mkBot(MC[(j+k)%MC.length]); LK.g.add(b.g);
+      b.cv=cv; b.len=len; b.a=t0-din; b.b=t1+din; b.ga=gs[0]; b.gb=gs[1]; b.t=t0+(t1-t0)*(k?.7:.25); b.dir=k?-1:1; b.sp=(3.2+Math.random()*1.2)/len; b.ph=Math.random()*6; b.wait=0; LK.bots.push(b); }
+    (LK.bgates=LK.bgates||[]).push.apply(LK.bgates,gs); }); }
+var BOTN=new THREE.Vector3();
+function botsLife(L,dt){ if(L.botsNew) botsInit();
+  L.bots.forEach(function(q){ if(q.wait>0){ q.wait-=dt; if(q.wait<=0){ q.dir=-q.dir; q.g.visible=true; } else return; }
+    q.t+=dt*q.sp*q.dir; if(q.t>q.b){ q.t=q.b; q.wait=1.5+Math.random()*2; q.g.visible=false; } if(q.t<q.a){ q.t=q.a; q.wait=1.5+Math.random()*2; q.g.visible=false; }
+    var u=Math.max(0,Math.min(1,q.t)); q.cv.getPoint(u,q.g.position); q.cv.getTangent(u,tt); tt.y=0; tt.normalize(); if(u!==q.t) q.g.position.addScaledVector(tt,(q.t-u)*q.len); if(q.dir<0) tt.negate();
+    q.g.position.y=PY; q.g.position.addScaledVector(BOTN.set(-tt.z,0,tt.x),.9); q.g.rotation.y=Math.atan2(tt.x,tt.z);
+    for(var i=0;i<q.wh.length;i++) q.wh[i].rotation.x+=dt*q.sp*q.len/.24; q.lamp.material.opacity=Math.sin(tm*7+q.ph)>0?1:.2;
+    var bl=((tm+q.ph)%4)<.12?.15:1; q.eyes[0].scale.y=q.eyes[1].scale.y=bl; });
+  (L.bgates||[]).forEach(function(G){ var near=L.bots.some(function(q){ return (q.ga===G||q.gb===G)&&Math.abs(q.t-G.t)*q.len<3.8&&(q.g.visible||q.wait>0&&q.wait<.6); });
+    G.o+=Math.max(-dt*2.5,Math.min(dt*2.5,(near?1:0)-G.o)); G.door.scale.y=1-G.o*.94; var on=G.o>.02&&G.o<.98||near; G.ls.forEach(function(s,i){ s.material.opacity=on?(Math.sin(tm*9+i*3)>0?1:.15):.12; }); }); }
 /* окраины города (правка 22.10, "добавить движухи"): зарядные площадки, где дроны садятся заряжаться и взлетают, ветряки, антенны с мигающим огнём,
    энергостолбы с кольцом; низко вдоль края кружат дроны-патрульные. Всё это видно и снизу из открытых модулей (cityAround) */
 (function(){ var G=LK.g, mm=new LM({color:0x8892b0,emissive:0x2a3358,emissiveIntensity:.4}), dk=new LM({color:0x1b2246,emissive:0x7c5cff,emissiveIntensity:.2});
@@ -1482,8 +1536,7 @@ function life(L,dt){
   if(L.lamps){ var nl=L.lamps.length, hd2=(tm*14)%nl; for(var lk=0;lk<nl;lk++){ var dd=(hd2-lk+nl)%nl; L.lamps[lk].material.opacity=dd<6?1-dd/7:.18; } }
   if(L.crystal) L.crystal(tm,dt);
   if(L.tick) for(var ti=0;ti<L.tick.length;ti++) L.tick[ti](tm,dt);
-  if(L.bots) L.bots.forEach(function(q){ q.t+=dt*q.sp*q.dir; if(q.t>1){ q.t=1; q.dir=-1; } if(q.t<0){ q.t=0; q.dir=1; } q.cv.getPoint(q.t,q.g.position); q.cv.getTangent(q.t,tt); if(q.dir<0) tt.negate();
-    q.g.position.addScaledVector(GT3.set(-tt.z,0,tt.x).normalize(),.9); q.g.rotation.y=Math.atan2(tt.x,tt.z); q.lamp.material.opacity=Math.sin(tm*7+q.ph)>0?1:.2; });
+  if(L.bots) botsLife(L,dt);
   if(L.chase){ var cn=L.chase.length, ch=(tm*18)%cn; for(var ci=0;ci<cn;ci++){ var dc2=(ch-ci+cn)%cn; L.chase[ci].material.opacity=dc2<5?1-dc2/6:.15; } }
   if(L.hring){ L.hring.rotation.z=tm*.6; L.hring.scale.setScalar(1+.06*Math.sin(tm*2)); }
   if(L.spin) L.spin.forEach(function(q){ q.o.rotation.y=tm*q.v; });
@@ -1511,7 +1564,7 @@ function hoverPick(calm){ var h=null; if(calm&&curL&&mxy){ var r=new THREE.Rayca
   hov=calm?(hovEl||h):null; if(hov===cur) hov=null; cv.style.cursor=h?'pointer':''; }
 /* разгрузка (правка 22.10 вечер, п.1): каждые 2 с смотрим среднее время кадра; если телефон не успевает (меньше ~38 кадров в секунду) - рисуем чуть мельче (DPR), город не тормозит */
 var TN=0, TS=0, TW=0;
-function tune(raw){ if(document.hidden||raw>.5||winOn||st==='gate'||st==='falling'||document.body.classList.contains('intro')) return; /* 12.11: на подлёте к городу резкость не дёргаем - от этого был рывок при торможении */ TN++; TS+=raw; if(TS<2) return; var avg=TS/TN; TN=0; TS=0; if(avg>1/38&&(DPR>DPRMIN+.01||!LITE)){ if(++TW<2) return; TW=0; if(DPR>DPRMIN+.01){ DPR=Math.max(DPRMIN,DPR-.15); R.setPixelRatio(DPR); size(); } else lite(); } else TW=0; }
+function tune(raw){ if(document.hidden||raw>.5||winOn||st==='gate'||st==='falling'||document.body.classList.contains('intro')) return; /* 12.11: на подлёте к городу резкость не дёргаем - от этого был рывок при торможении */ TN++; TS+=raw; if(TS<2) return; var avg=TS/TN; TN=0; TS=0; if(avg>1/38&&(DPR>DPRMIN+.01||!LITE)){ if(++TW<2) return; TW=0; if(DPR>DPRMIN+.01){ DPR=Math.max(DPRMIN,DPR-.15); R.setPixelRatio(DPR); size(); } else { lite(); if(window.KACHESTVO) KACHESTVO.slow(); } } else TW=0; }
 /* совсем слабый телефон: убираем часть мелочей - половину дронов и роботов, они только для красоты */
 var LITE=false; function lite(){ LITE=true; (LK.drones||[]).forEach(function(q,i){ if(i%2) q.g.visible=false; }); (LK.bots||[]).forEach(function(q,i){ if(i%2) q.g.visible=false; }); }
 function frame(){ var raw=clock.getDelta(), dt=Math.min(raw,.05); tm+=dt; fc++; tune(raw);

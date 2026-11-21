@@ -97,7 +97,7 @@ window.AKB_G = G;
 var FPRB = (function () { try { return /\/((new|g|index)\.html)?$/.test(parent.location.pathname) || /[?&](new|g)\b/.test(location.search); } catch (e) { return false; } })(), fpsL = 0; /* 12.11: в пробе графика легчает уже при 40 кадрах (сначала резкость), чтобы поворот был плавным */
 var fpsN = 0, fpsT = 0, fpsWait = /[?&]q=/.test(location.search) ? 1e9 : 4;
 R.renderFn = function (dt) { G.render(dt); if (fpsWait > 0) { fpsWait -= dt; return; } fpsN++; fpsT += dt;
-  if (fpsN >= 70) { if (fpsT / fpsN > (FPRB ? (fpsL ? 1 / 26 : 1 / 40) : 1 / 21) && document.visibilityState === 'visible') { fpsL++; var st = G.lower(); if (st === 2) lsS('kursy_grafika', 'low'); fpsWait = 3; } fpsN = 0; fpsT = 0; } };
+  if (fpsN >= 70) { if (fpsT / fpsN > (FPRB ? (fpsL ? 1 / 26 : 1 / 40) : 1 / 21) && document.visibilityState === 'visible' && lsG('kursy_grafika_ruchn') !== '1') {   /* 21.11: качество выбрано вручную в шестерёнке - сами не снижаем */ fpsL++; var st = G.lower(); if (st === 2) lsS('kursy_grafika', 'low'); fpsWait = 3; } fpsN = 0; fpsT = 0; } };
 R.onResize = function (w, h) { G.resize(w, h, Math.min(window.devicePixelRatio || 1, QUAL === 'high' ? 2 : QUAL === 'mid' ? 1.5 : 1.25)); }; R.onResize(innerWidth, innerHeight);
 var TH = .24, DW = 1.6, DH = 2.3, HT = TH / 2;
 function blockRect(x0, z0, x1, z1) { R.block(x0, z0, x1, z1); }
@@ -138,6 +138,10 @@ R.frame(function () { var p = R.camera.position, rg = region(p.x, p.z), r = room
     /* комнаты, куда сейчас не заглянуть, не рисуем (быстрее на телефоне) */
     ROOMS.forEach(function (q) { G.show(q.shell, q.id === rg || rg === 'C' || (rg === 'L' && q.i === 0) || !!(r && Math.abs(q.i - r.i) <= 0 && q !== r)); });
     G.show(SHELLS.L, rg === 'L' || rg === 'C' || !!(r && r.i < 2)); }
+  /* 21.11 проба (window.AKB_TENI): в коридоре и холле тени на всю область сразу и не двигаются - раньше свет переезжал каждые 2 м,
+     и тени дверей на краю области теней появлялись и пропадали кусками */
+  if (window.AKB_TENI && G.lightBox && !r) { if (lightAt[0] !== rg) { lightAt = [rg, 0];
+      if (rg === 'C') G.lightBox(LX - .4, CZ0 - .45, W + .2, CZ1 + .45, H); else G.lightBox(-.2, -.2, LX + .2, D + .2, H); } return; }
   var lx = r ? r.dx : Math.round(p.x / 2) * 2, lz = r ? (r.z0 + r.z1) / 2 : Math.round(p.z / 2) * 2;
   if (lx !== lightAt[0] || lz !== lightAt[1]) { lightAt = [lx, lz]; G.lightRoom(lx, lz, H); } });
 

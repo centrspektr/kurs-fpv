@@ -115,8 +115,8 @@ function make(cfg) {
 
   /* ---------- помещение ---------- */
   var doorL, doorR, GX = null;
-  function gq() { var m = /[?&]q=(high|mid|low)/.exec(location.search); if (m) return m[1]; var s = lsG('kursy_grafika'); if (s) return s; var mem = navigator.deviceMemory || 4, cpu = navigator.hardwareConcurrency || 4; return MOB ? ((mem <= 3 || cpu <= 4) ? 'low' : 'mid') : 'high'; }
-  function gfit() { if (GX) GX.resize(innerWidth, innerHeight, Math.min(devicePixelRatio || 1, GX.quality === 'high' ? 2 : GX.quality === 'mid' ? 1.5 : 1.25)); }
+  function gq() { if (window.KACHESTVO) return KACHESTVO.level; /* 21.11 (проба): качество из шестерёнки или подобранное само */ var m = /[?&]q=(high|mid|low)/.exec(location.search); if (m) return m[1]; var s = lsG('kursy_grafika'); if (s) return s; var mem = navigator.deviceMemory || 4, cpu = navigator.hardwareConcurrency || 4; return MOB ? ((mem <= 3 || cpu <= 4) ? 'low' : 'mid') : 'high'; }
+  function gfit() { if (GX) GX.resize(innerWidth, innerHeight, Math.min(devicePixelRatio || 1, GX.quality === 'high' ? 2 : GX.quality === 'mid' ? (window.KACHESTVO ? 1.25 : 1.5) : (window.KACHESTVO ? 1 : 1.25))); }
   /* помещение в новой графике: зал, ворота, тамбур за воротами, окно на город */
   function roomG() { var gw = 3.2, gh = 3.5, lamps = [], ww = Math.min(14, D - 3), i, k;
     for (i = -1; i <= 1; i++) for (k = -1.5; k <= 1.5; k++) lamps.push([i * W / 3.2, k * D / 4.4, 1.35, 0]);
@@ -124,7 +124,7 @@ function make(cfg) {
     g.traverse(function (m) { if (m.userData.floor) FLOOR = m; });
     if (cfg.window !== false) GX.window({ axis: 'z', c: W / 2, a0: -1 - ww / 2, a1: -1 + ww / 2, y0: H - 3.3, y1: H - 1.0, out: 1 });
     GX.room({ x0: -gw / 2, z0: D / 2 + .24, x1: gw / 2, z1: D / 2 + 3.4, h: gh + .1, holes: { n: [[-gw / 2, gw / 2, gh]] }, lamps: [[0, D / 2 + 1.8, .8, 0]] });
-    var dg = GX.door({ x: 0, z: D / 2 + .12, axis: 'x', w: gw, h: gh, th: .24, auto: false, face: -1 });
+    var dg = GX.door({ x: 0, z: D / 2 + .12, axis: 'x', w: gw, h: gh, th: .24, auto: false, face: -1 }); dg.userData.noMerge = true;
     /* старый код двигает створки по position.x (0.8 закрыто .. 2.4 открыто) - переводим в долю открытия */
     var dx = .8; doorR = { position: { get x() { return dx; }, set x(v) { dx = v; dg.userData.setK((v - .8) / 1.6); } } }; doorL = { position: { x: -.8 } };
     block(0, -D / 2 - 1, W, 1); block(0, D / 2 + 1, W, 1); block(-W / 2 - 1, 0, 1, D); block(W / 2 + 1, 0, 1, D);
@@ -262,12 +262,20 @@ function make(cfg) {
         cx.fillStyle = '#cfd7ff'; cx.font = '600 40px ' + FONT; wrap(cx, s.p, 60, Math.max(ch * .48, y + 110), cw * .45, 54, 6);
         if (s.pic) svgImg(s.pic, function (im) { if (list[MON.k] !== s) return; cx.globalAlpha = a; var iw = cw * .44, ih = iw * 420 / 720; cx.drawImage(im, cw * .53, (ch - ih) / 2 + 10, iw, ih); tx.needsUpdate = true; });
         cx.globalAlpha = 1; for (var j = 0; j < list.length; j++) { cx.fillStyle = j === i ? MC : 'rgba(255,255,255,.18)'; cx.fillRect(60 + j * 64, ch - 54, 52, 8); }
-        if (MON.talk) { cx.fillStyle = MC; for (j = 0; j < 5; j++) { var hh = 10 + Math.abs(Math.sin(Date.now() / 160 + j)) * 26; cx.fillRect(cw - 110 + j * 14, ch - 46 - hh, 8, hh); } }
-        cx.strokeStyle = 'rgba(255,255,255,.035)'; cx.lineWidth = 1; for (j = 0; j < ch; j += 4) { cx.beginPath(); cx.moveTo(0, j); cx.lineTo(cw, j); cx.stroke(); }
+        if (MON.talk && !BYSTRO) { cx.fillStyle = MC; for (j = 0; j < 5; j++) { var hh = 10 + Math.abs(Math.sin(Date.now() / 160 + j)) * 26; cx.fillRect(cw - 110 + j * 14, ch - 46 - hh, 8, hh); } }
+        if (BYSTRO) { if (!MON.scan) { MON.scan = document.createElement('canvas'); MON.scan.width = 4; MON.scan.height = 4; var sx = MON.scan.getContext('2d'); sx.fillStyle = 'rgba(255,255,255,.035)'; sx.fillRect(0, 0, 4, 1); MON.scanP = cx.createPattern(MON.scan, 'repeat'); }
+          cx.fillStyle = MON.scanP; cx.fillRect(0, 0, cw, ch); }   /* 21.11: строки экрана - одним узором, а не 200 линиями */
+        else { cx.strokeStyle = 'rgba(255,255,255,.035)'; cx.lineWidth = 1; for (j = 0; j < ch; j += 4) { cx.beginPath(); cx.moveTo(0, j); cx.lineTo(cw, j); cx.stroke(); } }
         tx.needsUpdate = true;
       },
-      go: function (k) { MON.k = (k + list.length) % list.length; MON.t0 = 0; MON.a = .1; MON.said = -1; if (window.GOLOS && MON.talk) { MON.talk = false; GOLOS.stop(); } }
+      go: function (k) { MON.k = (k + list.length) % list.length; MON.t0 = 0; MON.a = .1; MON.said = -1; if (window.GOLOS && MON.talk) { MON.talk = false; GOLOS.stop(); } if (BYSTRO) { MON.draw(1); sc.material.color.setScalar(.1); } }
     };
+    /* 21.11 (проба): экран теории перерисовывается только при смене слайда; появление - яркостью экрана, "эквалайзер" голоса - маленьким
+       отдельным экраном. Раньше весь экран 1600 точек перерисовывался и заново отправлялся в видеокарту 6 раз в секунду - отсюда заикание */
+    MON.sc = sc;
+    if (BYSTRO) { var et = tex(128, 64), eq = new T.Mesh(new T.PlaneGeometry(.62, .31), new T.MeshBasicMaterial({ map: et, transparent: true, toneMapped: false, depthWrite: false }));
+      eq.position.set(w / 2 - .5, -h / 2 + .32, .02); eq.visible = false; eq.userData.noMerge = true; g.add(eq); MON.eq = eq;
+      MON.eqDraw = function () { var x = et.userData.x; x.clearRect(0, 0, 128, 64); x.fillStyle = MC; for (var j = 0; j < 5; j++) { var hh = 8 + Math.abs(Math.sin(Date.now() / 160 + j)) * 40; x.fillRect(14 + j * 22, 58 - hh, 14, hh); } et.needsUpdate = true; }; }
     MON.draw(1);
     var at = fwd(o.ry || 0, Math.max(5, w * .75), o.x, o.z);
     CLICK.push({ o: g, kind: 'mon', at: at, look: [o.x, o.y - .2, o.z] });
@@ -275,7 +283,9 @@ function make(cfg) {
   /* монитор: листает сам, голос читает слайд, если ученик рядом и голос включён */
   function monTick(t, dt) {
     if (!MON) return;
-    if (MON.a < 1) { MON.a = Math.min(1, MON.a + dt * 2); MON.draw(MON.a); }
+    if (BYSTRO) { if (MON.a < 1) { MON.a = Math.min(1, MON.a + dt * 2); MON.sc.material.color.setScalar(MON.a); }
+      if (MON.eq) { MON.eq.visible = !!MON.talk; if (MON.talk && Math.floor(t * 8) !== MON.tb) { MON.tb = Math.floor(t * 8); MON.eqDraw(); } } }
+    else if (MON.a < 1) { MON.a = Math.min(1, MON.a + dt * 2); MON.draw(MON.a); }
     else if (MON.talk && Math.floor(t * 6) !== MON.tb) { MON.tb = Math.floor(t * 6); MON.draw(1); }
     var G = window.GOLOS, near = (OKN ? !!SIT : pos.distanceTo(MON.g.position) < 11) && !paused && !anim, can = G && G.on && G.can && G.can();
     if (can && near && MON.said !== MON.k && !SPEAK) { var s = MON.list[MON.k]; MON.said = MON.k; MON.talk = true; G.say(s.say || (s.h + '. ' + s.p), { onend: function () { MON.talk = false; MON.draw(1); setTimeout(function () { if (on && !paused && MON.said === MON.k) MON.go(MON.k + 1); }, 1800); } }); return; }
@@ -506,20 +516,22 @@ function make(cfg) {
     if (T.RoomEnvironment) { var pm = new T.PMREMGenerator(R); S.environment = pm.fromScene(new T.RoomEnvironment(), .04).texture; }
     CAM = new T.PerspectiveCamera(64, innerWidth / innerHeight, .05, 200);
     if (window.INTER && cfg.grafika !== false) { var gs = (/[?&]s=([ABC])/.exec(location.search) || [])[1] || cfg.style || 'C';
-      try { GX = INTER.create({ renderer: R, scene: S, camera: CAM, style: gs, accent: gs === 'A' ? '#e0409a' : MC, quality: gq(), tex: cfg.tex || 'proba/modul3/tex/' }); gfit(); } catch (e) { GX = null; } }
+      try { GX = INTER.create({ renderer: R, scene: S, camera: CAM, style: gs, accent: gs === 'A' ? '#e0409a' : MC, quality: gq(), mirror: !window.KACHESTVO || gq() === 'high', tex: cfg.tex || 'proba/modul3/tex/' }); gfit(); } catch (e) { GX = null; } }
     var OKH = GX && window.KOMNATA_OKNO && KOMNATA_OKNO[cfg.mid]; if (OKH && OKH.pre) try { OKH.pre(cfg); } catch (e) { OKH = null; }   /* 18.11 (проба new.html): теория у большого окна - teoriya-okno.js */
     mats(); room();
     if (cfg.monitor) monitor(cfg.monitor);
     (cfg.stands || []).forEach(stand);
     if (cfg.table) table(cfg.table);
     (cfg.decor || []).forEach(decor);
+    var preK = new Set(S.children.concat(GX ? GX.world.children : []));
     if (window.KOMNATA_KVEST && KOMNATA_KVEST[cfg.mid]) try { QK = KOMNATA_KVEST[cfg.mid]({ T: T, S: S, CAM: CAM, root: root, CLICK: CLICK, TICK: TICK, TABLE: TABLE, box: box, cyl: cyl, grp: grp, M: M, glow: glow, block: block, fwd: fwd, ring: ring, hint: hint, toast: toast,
       sel: function () { return sel; }, arrived: function () { return arrived; }, recard: function () { if (sel) card(sel); }, go: function (c) { go(c); }, unsel: function () { sel = null; card(null); }, refresh: function () { refreshAll(); }, mats: { steel: mSteel, wood: mWood, dark: mDark, metal: mMetal } }); } catch (e) { QK = null; if (window.console) console.warn('kvest', e); }
+    S.children.concat(GX ? GX.world.children : []).forEach(function (o) { if (!preK.has(o)) o.userData.noMerge = true; });   /* 21.11: предметы квеста двигаются по нажатию - не склеиваем */
     if (OKH && OKH.build) try { OKN = OKH.build({ T: T, S: S, CAM: CAM, GX: GX, root: root, CLICK: CLICK, TICK: TICK, MON: MON, pos: pos, W: W, D: D, H: H, MC: MC, MOB: MOB, RED: RED, box: box, cyl: cyl, grp: grp, M: M, glow: glow, tex: tex, block: block, quad: quad, hint: hint, ring: ring,
       sitting: function () { return !!SIT; }, sit: function () { sit(); },
       anim: function () { return !!anim; }, view: function (p, l) { pos.copy(p); var v = aimAt(l); yaw = v[0]; pitch = v[1]; SIT = { uT: 1e9, y: yaw, p: pitch }; } });   /* view - для снимков: поставить камеру */ } catch (e) { OKN = null; if (window.console) console.warn('okno', e); }
     if (cfg.signs) cfg.signs.forEach(function (s) { label(s[0], s[1], s[2] || MC, s[3], s[4], s[5], s[6]); });
-    guideBuild(); adoptG(); if (GX) setTimeout(function () { adoptG(); try { GX.bakeEnv(0, 1.6, 0); } catch (e) {} }, 1500);
+    guideBuild(); adoptG(); if (GX) setTimeout(function () { if (FIN) return; adoptG(); try { GX.bakeEnv(0, 1.6, 0); } catch (e) {} }, 1500);
     addEventListener('resize', function () { if (!on) return; CAM.aspect = innerWidth / innerHeight; if (!anim) CAM.fov = fov0(); CAM.updateProjectionMatrix(); R.setSize(innerWidth, innerHeight); gfit(); });
     input(); built = true;
   }
@@ -536,7 +548,7 @@ function make(cfg) {
       if (MLOOK && e.pointerType === 'mouse') { if (locked()) interact(); else if (window.FPSUPR && FPSUPR.v3) { /* 17.11: как в "Побеге" - любой щелчок захватывает курсор, по предмету ещё и подходим */ var lk = function () { try { var r = cv.requestPointerLock(); if (r && r.catch) r.catch(function () {}); } catch (er) {} }; tap(e.clientX, e.clientY); if (!(sel && arrived)) lk(); } else { if (sel && arrived) tap(e.clientX, e.clientY); else { try { cv.requestPointerLock(); } catch (er) {} } } return; }
       tap(e.clientX, e.clientY); });
     if (MLOOK) { addEventListener('mousemove', function (e) { if (!on || anim || paused) return; if (!locked() && (e.buttons || e.target !== cv)) return; /* 12.11: как в "Побеге" - камера идёт за пальцем по тачпаду и без нажатия */ var m = window.FPSUPR && FPSUPR.mv ? FPSUPR.mv(e) : [e.movementX || 0, e.movementY || 0]; if (!m || Math.abs(m[0]) > 250 || Math.abs(m[1]) > 250) return; /* браузер иногда присылает ложный рывок; 18.11 (проба): и скачок в момент захвата */ lkX -= m[0] * .0023; lkY -= m[1] * .0023; lookAt = null; });
-      var lkX = 0, lkY = 0, lkT = 0; (function sm(t) { requestAnimationFrame(sm); var dt = lkT ? Math.min(.1, (t - lkT) / 1000) : .016; lkT = t; if (!on || (Math.abs(lkX) + Math.abs(lkY) < 1e-5)) { lkX = lkY = 0; return; } var k = 1 - Math.exp(-dt * 22), x = lkX * k, y = lkY * k; lkX -= x; lkY -= y; yaw += x; pitch = Math.max(-1.1, Math.min(.85, pitch + y)); })(0);
+      var lkX = 0, lkY = 0, lkT = 0; (function sm(t) { requestAnimationFrame(sm); var dt = lkT ? Math.min(.1, (t - lkT) / 1000) : .016; lkT = t; if (!on || (Math.abs(lkX) + Math.abs(lkY) < 1e-5)) { lkX = lkY = 0; return; } var k = 1 - Math.exp(-dt * ((window.FPSUPR && FPSUPR.SM) || 22)), x = lkX * k, y = lkY * k; lkX -= x; lkY -= y; yaw += x; pitch = Math.max(-1.1, Math.min(.85, pitch + y)); })(0);
       if (window.FPSUPR && FPSUPR.mouseHelp) FPSUPR.mouseHelp({ canvas: cv, locked: locked, lock: function () { try { var r = cv.requestPointerLock(); if (r && r.catch) r.catch(function () {}); } catch (er) {} }, walk: function () { return on && !paused && !anim; }, look: function (dx, dy) { yaw += dx; pitch = Math.max(-1.1, Math.min(.85, pitch + dy)); lookAt = null; } });
       document.addEventListener('pointerlockchange', function () { var L = locked(); if (!L) keys = {}; document.body.classList.toggle('kmn-lock', L); if (L && !lockHint) { lockHint = true; hint('Мышь поворачивает камеру. Щелчок или E - подойти и открыть. Esc - вернуть стрелку.', 6000); } }); }
     /* тачпад и колесо мыши: два пальца по тачпаду (или колесо) - поворот камеры вверх-вниз и влево-вправо; щипок (Ctrl + колесо) - шаг вперёд-назад */
@@ -646,13 +658,57 @@ function make(cfg) {
     if (GX) { GX.render(dt); fpsG(raw); } else R.render(S, CAM);
   }
   var fL = 0, fN = 0, fT = 0, fW = /[?&]q=/.test(location.search) ? 1e9 : 5;
-  function fpsG(dt) { if (fW > 0) { fW -= dt; return; } fN++; fT += dt; if (fN >= 70) { if (fT / fN > (PROBA ? (fL ? 1 / 26 : 1 / 40) : 1 / 21) && document.visibilityState === 'visible' && !paused) { fL++; if (GX.lower() === 2) lsS('kursy_grafika', 'low'); fW = 3; } fN = 0; fT = 0; } }
+  function fpsG(dt) { if (fW > 0) { fW -= dt; return; } fN++; fT += dt; if (fN >= 70) { if (fT / fN > (PROBA ? (fL ? 1 / 26 : 1 / 40) : 1 / 21) && document.visibilityState === 'visible' && !paused) { if (window.KACHESTVO) { if (KACHESTVO.manual) { fW = 1e9; return; } KACHESTVO.slow(); } fL++; if (GX.lower() === 2 && !window.KACHESTVO) lsS('kursy_grafika', 'low'); fW = 3; } fN = 0; fT = 0; } }
 
   /* ---------- состояние заданий ---------- */
   function refreshAll() { nextTarget(); Object.keys(STANDS).forEach(function (k) { drawStand(STANDS[k]); }); hud(); }
 
   /* ---------- вход и выход ---------- */
-  function open(a) {
+  /* ---------- 21.11 (проба new.html): экран загрузки, склейка предметов, прогрев - движение начинается, когда всё готово ---------- */
+  var FIN = false, MERGED = false, LOADT = 0;
+  var BYSTRO = !!(window.KURS_ZAGRUZKA && window.SKLEYKA) && !/[?&]bystro=0\b/.test(location.search);
+  function finish() { if (FIN || !GX) { FIN = true; return; } FIN = true; adoptG(); try { GX.bakeEnv(0, 1.6, 0); } catch (e) {} }
+  function noMerge(o) { if (o) (o.userData || (o.userData = {})).noMerge = true; }
+  function skleit() { if (MERGED || !window.SKLEYKA) return; MERGED = true;
+    noMerge(FLOOR); noMerge(GUIDE); if (MON) noMerge(MON.g); Object.keys(STANDS).forEach(function (k) { noMerge(STANDS[k].g); }); if (dotG) noMerge(dotG); DOTS.forEach(noMerge);
+    var t0 = performance.now(), tc = clock.elapsedTime;
+    var w = SKLEYKA.watch(S, function (i) { var t = tc + (i + 1) * .137; TICK.slice().forEach(function (f) { try { f(t, .137); } catch (e) {} }); if (GX && GX.step) GX.step(.137); }, 14);
+    if (LOADT) LOADT.forEach(function (o) { w.dyn.add(o); });
+    if (/[?&]skdbg\b/.test(location.search) && window.console) console.log('[skleyka] why', JSON.stringify(SKLEYKA.why(S, w)), 'dyn', w.dyn.size, 'mat', w.mat.size);
+    var CL = new Set(CLICK.map(function (c) { return c.o; }));
+    /* отражается ли предмет в полу: у предка есть копия-отражение и по пути нет noMirror */
+    var r = SKLEYKA.merge(S, { watch: w, skip: function (o) { return o.isLight || (GX && o === GX.mirrorGroup) || o === CAM; },
+      anchor: function (o) { return CL.has(o); },
+      tag: function (o, t) { if (o.userData.noMirror) return 'n'; if (t === 'n' || t === 'M') return t; return GX && GX.mirrorOf(o) ? 'M' : t; } });
+    if (GX && GX.remirror) GX.remirror();
+    if (GX) r.made.forEach(function (e) { if (e.tag === 'M' && (e.mesh.parent === S || e.mesh.parent === GX.world)) GX.adopt(e.mesh); });   /* внутри групп отражение уже собрал remirror */
+    window.__skleyka = { mid: cfg.mid, before: r.before, after: r.after, ms: Math.round(performance.now() - t0) };
+    if (window.console) console.log('[skleyka]', cfg.mid, r.before, '->', r.after, Math.round(performance.now() - t0) + ' ms'); }
+  /* прогрев: шейдеры, тени, фактуры - рисуем зал с нескольких сторон под экраном загрузки */
+  function warm() { try { if (R.compile) R.compile(S, CAM); } catch (e) {}
+    var p0 = CAM.position.clone(), r0 = CAM.rotation.clone(); CAM.rotation.order = 'YXZ';
+    [[0, 0], [Math.PI / 2, 0], [Math.PI, 0], [-Math.PI / 2, 0], [0, -.5]].forEach(function (v) { CAM.position.set(0, EYE, 0); CAM.rotation.set(v[1], v[0], 0); CAM.updateMatrixWorld(); if (GX) GX.render(0); else R.render(S, CAM); });
+    CAM.position.copy(p0); CAM.rotation.copy(r0); }
+  /* снимок того, что меняется само по себе (requestAnimationFrame вне кадра комнаты) */
+  function realDyn() { var a = new Map(); S.updateMatrixWorld(true); S.traverse(function (o) { a.set(o, o.matrix.elements.join() + o.visible); });
+    return function () { var d = []; S.updateMatrixWorld(true); S.traverse(function (o) { var v = a.get(o); if (v == null || v !== o.matrix.elements.join() + o.visible) d.push(o); }); return d; }; }
+  function openLoad(a) {
+    var Z = window.KURS_ZAGRUZKA, my = {}; api = a; I = window.VZ_KURS_INFO; K = window.VZ_KURS; LOADING = my;
+    Z.show({ title: cfg.title || (mod && mod.t) || '', sub: 'Модуль ' + (mod ? mod.n : ''), color: MC, text: built ? 'Готовим зал' : 'Строим помещение' });
+    var alive = function () { return LOADING === my; };
+    Z.paint().then(function () { if (!alive()) return; if (!built) build(); Z.step('Загружаем фактуры и модели', .25);
+      var p0 = Math.max(1, Z.pending()), iv = setInterval(function () { Z.step(null, .25 + .45 * (1 - Z.pending() / p0)); }, 120);
+      return Z.waitFiles(20000).then(function () { clearInterval(iv); }); })
+    .then(function () { if (!alive()) return; Z.step('Ставим свет', .72); return Z.paint(); })
+    .then(function () { if (!alive()) return; finish(); Z.step('Собираем зал', .8); var rd = realDyn(); return Z.paint().then(function () { return Z.paint(); }).then(function () { LOADT = rd(); }); })
+    .then(function () { if (!alive()) return; try { skleit(); } catch (e) { if (window.console) console.warn('skleyka', e); } Z.step('Готовим картинку', .9); return Z.paint(); })
+    .then(function () { if (!alive()) return; CAM.aspect = innerWidth / innerHeight; CAM.updateProjectionMatrix(); R.setSize(innerWidth, innerHeight); gfit(); warm(); Z.step('Поехали!', 1); return Z.paint(); })
+    .then(function () { if (!alive()) return; LOADING = null; start(a); Z.hide(); })
+    .catch(function (e) { if (window.console) console.warn('zagruzka', e); if (alive()) { LOADING = null; start(a); Z.hide(); } });
+  }
+  var LOADING = null;
+  function open(a) { if (BYSTRO) return openLoad(a); start(a); }
+  function start(a) {
     api = a; I = window.VZ_KURS_INFO; K = window.VZ_KURS; if (!built) build();
     on = true; paused = false; root.classList.add('on'); sel = null; card(null); sndUI();
     CAM.aspect = innerWidth / innerHeight; CAM.fov = fov0(); CAM.updateProjectionMatrix(); R.setSize(innerWidth, innerHeight); gfit();
@@ -681,7 +737,7 @@ function make(cfg) {
   /* ворота: закрыть после входа (0) или открыть (1) за секунду */
   function doorAnim(open) { var a0 = doorR.position.x, a1 = open ? 2.4 : .8, t0 = clock.elapsedTime;
     TICK.push(function dA(t) { var u = Math.min(1, (t - t0) / 1.1), e = ease(u), x = a0 + (a1 - a0) * e; doorR.position.x = x; doorL.position.x = -x; if (u >= 1) TICK.splice(TICK.indexOf(dA), 1); }); }
-  function close() { if (SIT) { SIT = null; if (OKN && OKN.sat) OKN.sat(false); } unlock(); on = false; cancelAnimationFrame(raf); stopTalk(); root.classList.remove('on'); document.body.classList.remove('kmn-win'); if (winObs) winObs.disconnect(); card(null); }
+  function close() { if (LOADING) { LOADING = null; if (window.KURS_ZAGRUZKA) KURS_ZAGRUZKA.hide(); } if (SIT) { SIT = null; if (OKN && OKN.sat) OKN.sat(false); } unlock(); on = false; cancelAnimationFrame(raf); stopTalk(); root.classList.remove('on'); document.body.classList.remove('kmn-win'); if (winObs) winObs.disconnect(); card(null); }
   function leave() { stopTalk(); if (api) api.exit(); }
   /* окно задания закрыто: обновляем стенды, при свежем прохождении - праздник и проводник к следующему */
   function back(tid, fresh) {

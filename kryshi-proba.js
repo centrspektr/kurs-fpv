@@ -90,7 +90,7 @@ function common(L,G,kd,c,zMin){ var md=MOOD[kd], z0=60, len=z0-zMin, zc=(z0+zMin
   /* свет: своё "солнце" (в вариантах b и c - с тенями), небо-полусфера */
   var hm=new T.HemisphereLight(md.hemi[0],md.hemi[1],md.hemi[2]); L.g.add(hm);
   var sun=new T.DirectionalLight(md.sun,md.sunI), dir=new T.Vector3(md.dir[0],md.dir[1],md.dir[2]).normalize(); L.g.add(sun); L.g.add(sun.target);
-  if(SHD){ sun.castShadow=true; sun.shadow.mapSize.set(2048,2048); var sc=sun.shadow.camera; sc.left=-120; sc.right=120; sc.top=120; sc.bottom=-120; sc.near=20; sc.far=520; sun.shadow.bias=-.0008; sun.shadow.normalBias=.06; sun.shadow.radius=2.5; }
+  if(SHD){ sun.castShadow=true; var smz=window.KACHESTVO&&KACHESTVO.level!=='high'?1024:2048; sun.shadow.mapSize.set(smz,smz); var sc=sun.shadow.camera; sc.left=-120; sc.right=120; sc.top=120; sc.bottom=-120; sc.near=20; sc.far=520; sun.shadow.bias=-.0008; sun.shadow.normalBias=.06; sun.shadow.radius=2.5; }
   var fw=new T.Vector3(); L.tick=L.tick||[]; L.tick.push(function(){ E.C.getWorldDirection(fw); var fx=E.C.position.x+fw.x*70, fz=E.C.position.z+fw.z*70; fx=Math.round(fx/8)*8; fz=Math.round(fz/8)*8; sun.target.position.set(fx,PY,fz); sun.position.set(fx+dir.x*260,PY+dir.y*260,fz+dir.z*260); });
   /* зарево у горизонта: у каждой крыши своего цвета */
   var gt=ctex(function(x,w,h){ var g=x.createLinearGradient(0,0,0,h); g.addColorStop(0,'rgba(0,0,0,0)'); g.addColorStop(.55,'rgba(255,255,255,.28)'); g.addColorStop(.8,'rgba(255,255,255,1)'); g.addColorStop(1,'rgba(255,255,255,.2)'); x.fillStyle=g; x.fillRect(0,0,w,h); },4,128);
@@ -579,7 +579,7 @@ function arena(L,G,c,B){ var zMin=B.zMin, i, dk=std(0x14121f,{r:.3,m:.8}), carbo
 K.build=function(e,L,i,pts,c){ E=e; PY=e.PY; mob=e.mob; var kd=KIND[i]; if(!kd) return; var zMin=Math.min.apply(0,pts.map(function(q){ return q[1]; }))-55;
   var G=new T.Group(); G.position.y=PY; L.g.add(G); L.kg=G; L.kr=MOOD[kd]; L.tick=L.tick||[]; L.blink=L.blink||[]; L.spin=L.spin||[];
   var B=common(L,G,kd,c,zMin); (kd==='shkola'?shkola:kd==='aero'?aero:arena)(L,G,c,B); };
-K.init=function(e){ E=e; PY=e.PY; mob=e.mob; SHD=(VAR==='b'||VAR==='c')&&!mob; if(SHD){ e.R.shadowMap.enabled=true; e.R.shadowMap.type=T.PCFSoftShadowMap; } };
+K.init=function(e){ E=e; PY=e.PY; mob=e.mob; SHD=(VAR==='b'||VAR==='c')&&!mob&&!(window.KACHESTVO&&KACHESTVO.level==='low'); /* 21.11 (проба new.html): на низком качестве без теней */ if(SHD){ e.R.shadowMap.enabled=true; e.R.shadowMap.type=T.PCFSoftShadowMap; } };
 /* вошли в уровень: свет и тени */
 var SUN0=null, EXP0=null;
 K.level=function(L){ if(!E) return; if(SUN0==null){ SUN0=E.sun.intensity; EXP0=E.R.toneMappingExposure; } var kr=L&&L.kr; E.sun.intensity=kr?0:SUN0; E.R.toneMappingExposure=kr?kr.exp:EXP0; K.cur=kr?L:null;
@@ -587,7 +587,7 @@ K.level=function(L){ if(!E) return; if(SUN0==null){ SUN0=E.sun.intensity; EXP0=E
   if(kr&&SHD&&!L.krSh){ L.krSh=1; L.g.traverse(function(o){ if(o.isMesh) o.receiveShadow=true; }); if(L.city) L.city.traverse(function(o){ if(o.isMesh){ o.receiveShadow=false; o.castShadow=false; } }); L.nodes.forEach(function(n){ n.g.traverse(function(o){ if(o.isMesh&&o.material&&!o.material.transparent&&!o.material.isMeshBasicMaterial) o.castShadow=true; }); }); } };
 /* кадр: в варианте c - со свечением ярких огней */
 var CMP=null, CW=0, CH=0, v2=new T.Vector2();
-K.render=function(R,S,C){ if(!BLOOM||!K.cur||mob||!T.EffectComposer||!T.UnrealBloomPass) return false; R.getDrawingBufferSize(v2);
+K.render=function(R,S,C){ if(window.KACHESTVO&&KACHESTVO.level!=='high') return false; /* 21.11: свечение крыш только на высоком */ if(!BLOOM||!K.cur||mob||!T.EffectComposer||!T.UnrealBloomPass) return false; R.getDrawingBufferSize(v2);
   if(!CMP||CW!==v2.x||CH!==v2.y){ CW=v2.x; CH=v2.y; var rt=R.capabilities.isWebGL2&&T.WebGLMultisampleRenderTarget?new T.WebGLMultisampleRenderTarget(CW,CH,{format:T.RGBAFormat}):new T.WebGLRenderTarget(CW,CH,{format:T.RGBAFormat});
     CMP=new T.EffectComposer(R,rt); CMP.setPixelRatio(1); CMP.setSize(CW,CH); CMP.addPass(new T.RenderPass(S,C)); CMP.addPass(new T.UnrealBloomPass(new T.Vector2(CW,CH),.45,.5,.88)); }
   CMP.render(); return true; };

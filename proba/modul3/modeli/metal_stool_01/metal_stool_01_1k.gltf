@@ -1,159 +1,174 @@
 {
-  "asset": {
-    "generator": "Khronos glTF Blender I/O v5.1.18",
-    "version": "2.0"
+ "asset": {
+  "generator": "glTF-Transform v4.5.1",
+  "version": "2.0"
+ },
+ "accessors": [
+  {
+   "type": "SCALAR",
+   "componentType": 5123,
+   "count": 25002,
+   "bufferView": 0,
+   "byteOffset": 0
   },
-  "scene": 0,
-  "scenes": [
-    {
-      "name": "Scene",
-      "nodes": [
-        0
-      ]
-    }
-  ],
-  "nodes": [
-    {
-      "mesh": 0,
-      "name": "metal_stool_01"
-    }
-  ],
-  "materials": [
-    {
-      "doubleSided": true,
-      "name": "metal_stool_01",
-      "normalTexture": {
-        "index": 0
-      },
-      "pbrMetallicRoughness": {
-        "baseColorTexture": {
-          "index": 1
-        },
-        "metallicRoughnessTexture": {
-          "index": 2
-        }
-      }
-    }
-  ],
-  "meshes": [
-    {
-      "name": "Cylinder.010",
-      "primitives": [
-        {
-          "attributes": {
-            "POSITION": 0,
-            "NORMAL": 1,
-            "TEXCOORD_0": 2
-          },
-          "indices": 3,
-          "material": 0
-        }
-      ]
-    }
-  ],
-  "textures": [
-    {
-      "sampler": 0,
-      "source": 0
+  {
+   "type": "VEC3",
+   "componentType": 5122,
+   "count": 5198,
+   "max": [
+    13065,
+    32767,
+    13161
+   ],
+   "min": [
+    -13065,
+    -32767,
+    -13161
+   ],
+   "normalized": true,
+   "bufferView": 1,
+   "byteOffset": 0
+  },
+  {
+   "type": "VEC3",
+   "componentType": 5122,
+   "count": 5198,
+   "normalized": true,
+   "bufferView": 1,
+   "byteOffset": 8
+  },
+  {
+   "type": "VEC2",
+   "componentType": 5123,
+   "count": 5198,
+   "normalized": true,
+   "bufferView": 1,
+   "byteOffset": 16
+  }
+ ],
+ "bufferViews": [
+  {
+   "buffer": 0,
+   "byteOffset": 0,
+   "byteLength": 50004,
+   "target": 34963
+  },
+  {
+   "buffer": 0,
+   "byteOffset": 50004,
+   "byteLength": 103960,
+   "byteStride": 20,
+   "target": 34962
+  }
+ ],
+ "samplers": [
+  {
+   "magFilter": 9729,
+   "minFilter": 9987,
+   "wrapS": 10497,
+   "wrapT": 10497
+  }
+ ],
+ "textures": [
+  {
+   "source": 1,
+   "sampler": 0
+  },
+  {
+   "source": 0,
+   "sampler": 0
+  },
+  {
+   "source": 2,
+   "sampler": 0
+  }
+ ],
+ "images": [
+  {
+   "name": "metal_stool_01_nor_gl",
+   "mimeType": "image/jpeg",
+   "uri": "textures/metal_stool_01_nor_gl_1k.jpg"
+  },
+  {
+   "name": "metal_stool_01_diff",
+   "mimeType": "image/jpeg",
+   "uri": "textures/metal_stool_01_diff_1k.jpg"
+  },
+  {
+   "name": "metal_stool_01_metal-metal_stool_01_rough",
+   "mimeType": "image/jpeg",
+   "uri": "textures/metal_stool_01_arm_1k.jpg"
+  }
+ ],
+ "buffers": [
+  {
+   "uri": "metal_stool_01-q.bin",
+   "byteLength": 153964
+  }
+ ],
+ "materials": [
+  {
+   "name": "metal_stool_01",
+   "doubleSided": true,
+   "pbrMetallicRoughness": {
+    "baseColorTexture": {
+     "index": 0
     },
-    {
-      "sampler": 0,
-      "source": 1
-    },
-    {
-      "sampler": 0,
-      "source": 2
+    "metallicRoughnessTexture": {
+     "index": 2
     }
-  ],
-  "images": [
+   },
+   "normalTexture": {
+    "index": 1
+   }
+  }
+ ],
+ "meshes": [
+  {
+   "name": "Cylinder.010",
+   "primitives": [
     {
-      "mimeType": "image/jpeg",
-      "name": "metal_stool_01_nor_gl",
-      "uri": "textures/metal_stool_01_nor_gl_1k.jpg"
-    },
-    {
-      "mimeType": "image/jpeg",
-      "name": "metal_stool_01_diff",
-      "uri": "textures/metal_stool_01_diff_1k.jpg"
-    },
-    {
-      "mimeType": "image/jpeg",
-      "name": "metal_stool_01_metal-metal_stool_01_rough",
-      "uri": "textures/metal_stool_01_arm_1k.jpg"
+     "attributes": {
+      "POSITION": 1,
+      "NORMAL": 2,
+      "TEXCOORD_0": 3
+     },
+     "mode": 4,
+     "material": 0,
+     "indices": 0
     }
-  ],
-  "accessors": [
-    {
-      "bufferView": 0,
-      "componentType": 5126,
-      "count": 5198,
-      "max": [
-        0.17599543929100037,
-        0.882793128490448,
-        0.17723581194877625
-      ],
-      "min": [
-        -0.17599546909332275,
-        0.000018831517081707716,
-        -0.17733439803123474
-      ],
-      "type": "VEC3"
-    },
-    {
-      "bufferView": 1,
-      "componentType": 5126,
-      "count": 5198,
-      "type": "VEC3"
-    },
-    {
-      "bufferView": 2,
-      "componentType": 5126,
-      "count": 5198,
-      "type": "VEC2"
-    },
-    {
-      "bufferView": 3,
-      "componentType": 5123,
-      "count": 25002,
-      "type": "SCALAR"
-    }
-  ],
-  "bufferViews": [
-    {
-      "buffer": 0,
-      "byteLength": 62376,
-      "byteOffset": 0,
-      "target": 34962
-    },
-    {
-      "buffer": 0,
-      "byteLength": 62376,
-      "byteOffset": 62376,
-      "target": 34962
-    },
-    {
-      "buffer": 0,
-      "byteLength": 41584,
-      "byteOffset": 124752,
-      "target": 34962
-    },
-    {
-      "buffer": 0,
-      "byteLength": 50004,
-      "byteOffset": 166336,
-      "target": 34963
-    }
-  ],
-  "samplers": [
-    {
-      "magFilter": 9729,
-      "minFilter": 9987
-    }
-  ],
-  "buffers": [
-    {
-      "byteLength": 216340,
-      "uri": "metal_stool_01.bin"
-    }
-  ]
+   ]
+  }
+ ],
+ "nodes": [
+  {
+   "name": "metal_stool_01",
+   "translation": [
+    -1.4901161193847656e-08,
+    0.44140598000376485,
+    -4.929304122924805e-05
+   ],
+   "scale": [
+    0.44138714848668315,
+    0.44138714848668315,
+    0.44138714848668315
+   ],
+   "mesh": 0
+  }
+ ],
+ "scenes": [
+  {
+   "name": "Scene",
+   "nodes": [
+    0
+   ]
+  }
+ ],
+ "scene": 0,
+ "extensionsUsed": [
+  "KHR_mesh_quantization"
+ ],
+ "extensionsRequired": [
+  "KHR_mesh_quantization"
+ ]
 }
