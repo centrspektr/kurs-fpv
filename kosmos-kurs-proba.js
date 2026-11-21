@@ -43,7 +43,11 @@ if(!force&&(lsG(VKEY)==='plain'||weak)){ plain(weak?'weak':'vid'); return; }
 var cv=document.getElementById('c'), R;
 try{ R=new THREE.WebGLRenderer({canvas:cv,antialias:!mob,powerPreference:'high-performance'}); }catch(e){ plain('webgl'); return; }
 document.getElementById('plainB').onclick=function(){ lsS(VKEY,'plain'); location.href=PLAIN; };
-var DPR=Math.min(devicePixelRatio||1,mob?1.25:1.75), DPRMIN=mob?.8:1; R.setPixelRatio(DPR); /* если кадры долгие - DPR снижаем (см. tune в frame) */
+var DPR=Math.min(devicePixelRatio||1,mob?1.25:1.75), DPRMIN=mob?.8:1; R.setPixelRatio(DPR);
+/* 21.11 (проба new.html, kachestvo.js): качество графики из шестерёнки - резкость и "лёгкий" город */
+if(window.KACHESTVO){ DPR=KACHESTVO.dpr(mob); DPRMIN=Math.min(DPRMIN,DPR); R.setPixelRatio(DPR);
+  KACHESTVO.on(function(q){ DPR=KACHESTVO.dpr(mob); DPRMIN=Math.min(mob?.8:1,DPR); R.setPixelRatio(DPR); try{ size(); }catch(e){} if(q==='low'&&!LITE&&LK) lite(); });
+  if(KACHESTVO.level==='low') (function w(){ setTimeout(function(){ if(typeof LK!=='undefined'&&LK&&LK.drones) lite(); else w(); },800); })(); } /* если кадры долгие - DPR снижаем (см. tune в frame) */
 var S=new THREE.Scene(), C=new THREE.PerspectiveCamera(62,1,.4,2600); /* ближняя плоскость .4 (было .1): точнее глубина, крыши не мерцают полосками */
 var BG_A=new THREE.Color('#04050d'), BG_B=new THREE.Color('#0c0420'); S.background=BG_A.clone();
 var bgT=BG_A.clone(), galT=new THREE.Color('#ffffff');
@@ -1560,7 +1564,7 @@ function hoverPick(calm){ var h=null; if(calm&&curL&&mxy){ var r=new THREE.Rayca
   hov=calm?(hovEl||h):null; if(hov===cur) hov=null; cv.style.cursor=h?'pointer':''; }
 /* разгрузка (правка 22.10 вечер, п.1): каждые 2 с смотрим среднее время кадра; если телефон не успевает (меньше ~38 кадров в секунду) - рисуем чуть мельче (DPR), город не тормозит */
 var TN=0, TS=0, TW=0;
-function tune(raw){ if(document.hidden||raw>.5||winOn||st==='gate'||st==='falling'||document.body.classList.contains('intro')) return; /* 12.11: на подлёте к городу резкость не дёргаем - от этого был рывок при торможении */ TN++; TS+=raw; if(TS<2) return; var avg=TS/TN; TN=0; TS=0; if(avg>1/38&&(DPR>DPRMIN+.01||!LITE)){ if(++TW<2) return; TW=0; if(DPR>DPRMIN+.01){ DPR=Math.max(DPRMIN,DPR-.15); R.setPixelRatio(DPR); size(); } else lite(); } else TW=0; }
+function tune(raw){ if(document.hidden||raw>.5||winOn||st==='gate'||st==='falling'||document.body.classList.contains('intro')) return; /* 12.11: на подлёте к городу резкость не дёргаем - от этого был рывок при торможении */ TN++; TS+=raw; if(TS<2) return; var avg=TS/TN; TN=0; TS=0; if(avg>1/38&&(DPR>DPRMIN+.01||!LITE)){ if(++TW<2) return; TW=0; if(DPR>DPRMIN+.01){ DPR=Math.max(DPRMIN,DPR-.15); R.setPixelRatio(DPR); size(); } else { lite(); if(window.KACHESTVO) KACHESTVO.slow(); } } else TW=0; }
 /* совсем слабый телефон: убираем часть мелочей - половину дронов и роботов, они только для красоты */
 var LITE=false; function lite(){ LITE=true; (LK.drones||[]).forEach(function(q,i){ if(i%2) q.g.visible=false; }); (LK.bots||[]).forEach(function(q,i){ if(i%2) q.g.visible=false; }); }
 function frame(){ var raw=clock.getDelta(), dt=Math.min(raw,.05); tm+=dt; fc++; tune(raw);

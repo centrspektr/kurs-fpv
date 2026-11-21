@@ -45,6 +45,8 @@ function create(o) {
   var G = { S: S, style: o.style || 'A', accent: ACC, quality: Q, mat: {}, frames: [], pairs: [], lamps: [] };
   var world = new T.Group(), mirror = new T.Group(); mirror.scale.y = -1; sc.add(world); sc.add(mirror);
   G.world = world; G.mirrorGroup = mirror;
+  var KQ = (function () { try { return window.KACHESTVO || (parent !== window && parent.KACHESTVO) || null; } catch (e) { return null; } })();   /* 21.11: в пробе new.html отражение в полу только на высоком качестве */
+  if (o.mirror == null && KQ && Q !== 'high') o.mirror = false;
   var MIRROR = Q !== 'low' && S.mirror > 0 && o.mirror !== false, MIR = new WeakMap(), MIRS = [];   /* 21.11: o.mirror = false - без отражения в полу (среднее качество) */
   G.mirrorOf = function (o) { return MIR.get(o) || null; };
   G.show = function (o, on) { o.visible = on; var c = MIR.get(o); if (c) c.visible = on; };
