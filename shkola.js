@@ -258,7 +258,10 @@ $('shFls').addEventListener('click', function (e) { var b = e.target.closest('.s
 $('shLiftX').onclick = function () { back(); };
 function goFloor(i) { lift.classList.remove('on'); ride.style.setProperty('--c', col(i)); $('shRideN').textContent = MODS[i].n; $('shRideT').textContent = MODS[i].t; ride.classList.add('on');
   var b = $('shRideB'); b.style.transition = 'none'; b.style.width = '0'; void b.offsetWidth; b.style.transition = 'width 1.1s ease-in-out'; b.style.width = '100%';
-  setTimeout(function () { floor(i, null); setTimeout(function () { ride.classList.remove('on'); }, 150); }, 1150); }
+  setTimeout(function () { floor(i, null); var tv = tvOf(MODS[i]);   /* 24.11 (Alexandr): этаж - это сразу комната: из лифта садимся к телевизору */
+    if (tv) { DIRECT = true; enterRoom(i, tv); }
+    setTimeout(function () { ride.classList.remove('on'); }, 150); }, 1150); }
+var DIRECT = false;
 function floor(i, z) {
   MODE = 'floor'; push('floor'); tap.style.display = 'none'; lift.classList.remove('on'); var m = MODS[i]; FL = { i: i, m: m, zone: null, cams: floorScene(i) }; fit(); bot.style.display = ''; doors = null;
   camSet(FL.cams.all[0].clone(), FL.cams.all[1].clone());
@@ -317,6 +320,9 @@ function enterRoom(i, tv) { var m = MODS[i], r = tv ? { type: 'k' } : roomOf(m);
     push('room');
   } else KURS_KOMNATA.open(m.id); }
 function exitRoom(byBack) { if (!ROOM) return; var r = ROOM; ROOM = null; D.body.classList.remove('sh-room'); try { r.close(); } catch (e) {}
+  if (DIRECT) { DIRECT = false;   /* пришли из лифта прямо в комнату - выходим обратно к лифту */
+    if (!byBack && history.state && history.state.sh === 'room') { ignorePop = true; history.go(-2); } else if (byBack && history.state && history.state.sh === 'floor') { ignorePop = true; history.back(); }
+    need = true; back(); return; }
   if (!byBack && history.state && history.state.sh === 'room') { ignorePop = true; history.back(); }
   if (FL) zone(FL.zone); need = true; }
 /* комнаты рассчитаны на горизонтальный экран телефона: в комнате просим повернуть (povorot.js), в здании - любое положение */
