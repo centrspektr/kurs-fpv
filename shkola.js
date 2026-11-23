@@ -122,10 +122,10 @@ addEventListener('resize', fit);
 /* камера: позиция + точка взгляда; переходы плавно */
 var camL = new T.Vector3();
 function camSet(p, l) { CAM.position.copy(p); camL.copy(l); CAM.lookAt(camL); need = true; }
-function camGo(p, l, dur, done) { tw = { p0: CAM.position.clone(), l0: camL.clone(), p1: p, l1: l, t: 0, d: dur || 1.1, done: done }; need = true; }
+function camGo(p, l, dur, done) { tw = { p0: CAM.position.clone(), l0: camL.clone(), p1: p, l1: l, t0: performance.now(), d: (dur || 1.1) * 1000, done: done }; need = true; }
 var last = performance.now();
-function loop(now) { requestAnimationFrame(loop); var dt = Math.min(.05, (now - last) / 1000); last = now;
-  if (tw) { tw.t += dt / tw.d; var k = Math.min(1, tw.t), e = k < .5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
+function loop(now) { requestAnimationFrame(loop); var dt = Math.min(.12, (now - last) / 1000); last = now;   /* время по часам: на медленном телефоне переход не растягивается */
+  if (tw) { var k = Math.min(1, Math.max(0, (performance.now() - tw.t0) / tw.d)), e = k < .5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
     CAM.position.lerpVectors(tw.p0, tw.p1, e); camL.lerpVectors(tw.l0, tw.l1, e); CAM.lookAt(camL); need = true; if (k >= 1) { var f = tw.done; tw = null; if (f) f(); } }
   for (var i = 0; i < anim.length; i++) if (anim[i](dt, now / 1000)) need = true;
   if (need && S && !paused()) { R.render(S, CAM); need = false; } }
