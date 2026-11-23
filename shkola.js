@@ -327,5 +327,26 @@ var go = function () { fit(); hall(); requestAnimationFrame(loop); var z = $('sh
 var fp = D.fonts && D.fonts.load ? Promise.all(['800 40px ShU', '700 40px ShM'].map(function (f) { return D.fonts.load(f, 'АБВ 123 abc'); })) : Promise.resolve();
 var started = false; fp.then(function () { if (!started) { started = true; go(); } }, function () { if (!started) { started = true; go(); } });
 setTimeout(function () { if (!started) { started = true; go(); } }, 2500);
+/* ---------- "На весь экран" - в шестерёнке, а не кнопкой поверх экрана (23.11, замечание Alexandr) ---------- */
+(function () {
+  function fsEl() { return D.fullscreenElement || D.webkitFullscreenElement; }
+  function fsGo() {
+    if (window.KURS_EKRAN) { window.KURS_EKRAN.go(); return; }   /* телефон: ekran.js (подсказки для iPhone и мессенджеров) */
+    try { if (fsEl()) (D.exitFullscreen || D.webkitExitFullscreen).call(D);
+      else { var e = D.documentElement; (e.requestFullscreen || e.webkitRequestFullscreen).call(e); } } catch (er) { toast('Полный экран здесь не включается'); }
+  }
+  function lab() { return fsEl() ? '✕ Выйти из полного экрана' : '⛶ На весь экран'; }
+  var btns = [];
+  function upd() { btns.forEach(function (b) { b.textContent = lab(); }); }
+  function mk(par, cls, before) { var b = D.createElement('button'); b.type = 'button'; b.className = cls; b.textContent = lab();
+    b.addEventListener('click', function (e) { e.preventDefault(); e.stopPropagation(); fsGo(); });
+    if (before) par.insertBefore(b, before); else par.appendChild(b); btns.push(b); return b; }
+  var st = D.createElement('style');
+  st.textContent = '#muzP .shFs{display:block;width:100%;min-height:40px;margin:4px 0 8px;border-radius:10px;border:1px solid rgba(255,255,255,.25);background:rgba(255,255,255,.06);color:#fff;font:700 13px system-ui,sans-serif;cursor:pointer;text-align:left;padding:0 12px}';
+  D.head.appendChild(st);
+  var gm = $('gearM'); if (gm) mk(gm, 'shFsW');
+  var n = 0, iv = setInterval(function () { var p = $('muzP'); if (p && !p.querySelector('.shFs')) { mk(p, 'shFs', p.querySelector('#avM')); clearInterval(iv); } else if (++n > 120) clearInterval(iv); }, 250);
+  D.addEventListener('fullscreenchange', upd); D.addEventListener('webkitfullscreenchange', upd);
+})();
 window.SHKOLA = { hall: function () { hall(); }, floor: function (i, z) { floor(i, z); }, lift: function () { toLift(); }, mode: function () { return MODE; }, cam: function () { return [CAM.position.toArray(), camL.toArray(), CAM.fov]; } };
 })();

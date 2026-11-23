@@ -19,7 +19,7 @@
   };
   AVTOR.podpis = AVTOR.imya + ', ' + AVTOR.klub;
   AVTOR.stroka = 'Автор курса: ' + AVTOR.podpis + ', ' + AVTOR.god;
-  AVTOR.copy = '© ' + AVTOR.god + ' ' + AVTOR.podpis + '. Все права защищены.';
+  AVTOR.copy = '© ' + AVTOR.god + '. Все права защищены.';   /* 23.11 Alexandr: в подвале без имени и клуба */
   /* условия использования: заголовок, абзацы; строка с "- " в начале - пункт списка */
   AVTOR.usloviya = [
     'Условия использования курса',
@@ -109,7 +109,7 @@
     var wel = document.getElementById('wel');
     if (wel && !document.getElementById('avW')) {
       var w = document.createElement('div'); w.id = 'avW';
-      w.appendChild(document.createTextNode(AVTOR.stroka + '. '));
+      w.appendChild(document.createTextNode(AVTOR.copy + ' '));
       w.appendChild(knopka('Условия'));
       wel.appendChild(w);
     }
@@ -123,7 +123,7 @@
       var p = document.getElementById('muzP');
       if (!p || document.getElementById('avM')) return !!p;
       var m = document.createElement('div'); m.id = 'avM';
-      m.appendChild(document.createTextNode(AVTOR.stroka));
+      m.appendChild(document.createTextNode(AVTOR.copy + ' '));
       m.appendChild(knopka('Условия использования'));
       p.appendChild(m);
       return true;
@@ -135,7 +135,7 @@
         var e = d[i];
         if (e.getAttribute('data-av') || !/пройден/i.test(e.textContent)) continue;
         e.setAttribute('data-av', '1');
-        var c = document.createElement('div'); c.className = 'avD'; c.textContent = '© ' + AVTOR.god + ' ' + AVTOR.podpis;
+        var c = document.createElement('div'); c.className = 'avD'; c.textContent = '© ' + AVTOR.god + '. Все права защищены.';
         e.parentNode.insertBefore(c, e.nextSibling);
       }
     }
