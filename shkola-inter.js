@@ -5,7 +5,9 @@
    Без ?inter Мастерская как была. Работает поверх teoriya-okno.js (хук KOMNATA_OKNO.m2), подключать после него. Всё рисуется кодом. */
 (function () {
 'use strict';
-var VAR = ((/[?&]inter=([ABV])/.exec(location.search) || [])[1]) || '';
+var VAR = ((/[?&]inter=([ABV0])/.exec(location.search) || [])[1]) || 'A';   /* 24.11 Alexandr выбрал А (клуб пилотов) + подиумы с дронами у правой стены; ?inter=0 - Мастерская как была */
+if (VAR === '0') VAR = '';
+if (window.KOMNATA_KVEST) delete window.KOMNATA_KVEST.m2;   /* 24.11: в Лётной школе без мини-квеста "Подготовь стол сборки" - стол сразу открывает сборку */
 var OK = window.KOMNATA_OKNO && window.KOMNATA_OKNO.m2; if (!OK) return;
 var PI = Math.PI, pre0 = OK.pre, build0 = OK.build;
 
@@ -67,6 +69,16 @@ function raceArt(seed, col) { return function (x, w, h) { var g = x.createLinear
   for (var k = 0; k < 3; k++) { var cx = w * (.22 + k * .28), cy = h * (.58 - k * .06), r = h * (.18 - k * .03); x.lineWidth = 10 - k * 2; x.strokeStyle = ['#ff7ce0', '#7cf3ff', '#ffd36e'][(k + seed) % 3]; x.beginPath(); x.arc(cx, cy, r, PI, 0); x.lineTo(cx + r, cy + r * .9); x.moveTo(cx - r, cy); x.lineTo(cx - r, cy + r * .9); x.stroke(); }
   x.lineWidth = 4; x.strokeStyle = '#ffffffaa'; x.beginPath(); x.moveTo(w * .05, h * .8); x.bezierCurveTo(w * .3, h * .2, w * .6, h * .9, w * .95, h * .3); x.stroke(); }; }
 
+function podiumy(K, items) { var T = K.T, white = K.std('#eceef2', .4, 0), glass = K.std('#dff0ff', .03, 0, { transparent: true, opacity: .14 }), dark = K.std('#16171c', .5, .3);
+    items.forEach(function (it, n) { var g = K.grp(it[3], 0, it[4], it[5]);
+      K.rb(.8, 1.05, .8, .05, white, 0, .525, 0, g); K.box(.82, .04, .82, dark, 0, .03, 0, g); K.box(.7, .74, .7, glass, 0, 1.43, 0, g); K.box(.72, .02, .72, K.std('#c9ccd3', .3, .9), 0, 1.81, 0, g);
+      var dr = K.drone(it[0], g, it[0] === '5' ? 1.6 : it[0] === '3' ? 2.0 : 2.7); dr.position.set(0, 1.12, 0); dr.rotation.set(.18, n * .7, 0);
+      var st = K.cyl(.012, .012, .06, K.std('#c9ccd3', .3, .9), 0, 1.08, 0, g, 8);
+      var t = K.tex(512, 192, function (x, w, h) { x.fillStyle = '#14161c'; x.fillRect(0, 0, w, h); x.fillStyle = '#7cf3ff'; x.fillRect(0, 0, 10, h); x.fillStyle = '#fff'; x.font = '800 58px Manrope,system-ui,sans-serif'; x.fillText(it[1], 36, 84); x.fillStyle = '#aab2d8'; x.font = '600 38px Manrope,system-ui,sans-serif'; x.fillText(it[2], 36, 144); });
+      var pl = K.plane(.56, .21, t, 0, .86, .47, g, true); pl.rotation.x = -.35;
+      var sp = new T.Mesh(new T.CylinderGeometry(.06, .5, 2.3, 24, 1, true), new T.MeshBasicMaterial({ color: '#fff4dc', transparent: true, opacity: .022, depthWrite: false, side: T.DoubleSide })); sp.position.set(0, 2.95, 0); g.add(sp);
+      K.cyl(.07, .09, .12, dark, 0, 4.15, 0, g, 16); K.block(it[3], it[4], .45, .45, 0); }); }
+
 var DEC = {
   /* А. Клуб пилотов: диван с журнальным столиком, очки и пульт, ковёр, торшер, растения; справа шкаф с кубками и фото гонок */
   A: function (X) { var K = kit(X), T = K.T, W = K.W, D = K.D;
@@ -96,22 +108,15 @@ var DEC = {
       for (var j = 0; j < 3; j++) { var x = -.62 + j * .62, m = (i + j) % 3 === 0 ? gold : (i + j) % 3 === 1 ? silv : K.std('#c47a3c', .3, .9);
         if ((i * 3 + j) % 4 === 3) { var dr = K.drone(j === 1 ? '5' : '3', C, .9); dr.position.set(x, y + .02, .02); dr.rotation.y = .5; continue; }
         K.lathe([[0, 0], [.09, 0], [.09, .03], [.03, .05], [.025, .14], [.1, .2], [.11, .32], [0, .32]], m, x, y + .015, .02, C); K.box(.14, .03, .1, K.std('#111', .5, .2), x, y + .03, .02, C); } }
-    [[0, 0], [1, 1]].forEach(function (q) { frameArt(K, .8, .55, raceArt(q[1], ['#1e3a70', '#5a1e4a'][q[1]]), W / 2 - .06, 1.6, 4.4 + q[0] * 1.05, -PI / 2); });
-    K.plant(W / 2 - .6, 3.0, 1.0); K.block(W / 2 - .35, 1.4, 1.1, .3, 0);
+    podiumy(K, [['whoop', 'Вуп', '65-75 мм · комната', W / 2 - 1.2, -2.8, -PI / 2], ['3', '3 дюйма', 'зал и двор', W / 2 - 1.2, 4.3, -PI / 2], ['5', '5 дюймов', 'гонки на улице', W / 2 - 1.2, 6.4, -PI / 2]]);   /* музей дронов у правой стены */
+    K.plant(W / 2 - .6, 3.0, .9); K.block(W / 2 - .35, 1.4, 1.1, .3, 0);
     /* у окна по углам - кресла-мешки */
     [[-8.6, -6.9, '#2f6f8f'], [8.9, -6.8, '#8f3f6f']].forEach(function (q) { var g = K.grp(q[0], 0, q[1], 0); K.sph(.55, K.std(q[2], .95, 0), 0, .34, 0, g, 1, .62, 1); K.sph(.42, K.std(q[2], .95, 0), 0, .62, -.28, g, 1, .7, .55); K.block(q[0], q[1], .5, .5, 0); });
   },
   /* Б. Музей дронов: подиумы со стеклянными колпаками, в каждом дрон своего класса, подсветка сверху, таблички */
   B: function (X) { var K = kit(X), T = K.T, W = K.W, D = K.D, white = K.std('#eceef2', .4, 0), glass = K.std('#dff0ff', .03, 0, { transparent: true, opacity: .14 }), dark = K.std('#16171c', .5, .3);
     var items = [['whoop', 'Вуп', '65-75 мм · комната', -W / 2 + 1.4, 5.2, PI / 2], ['3', '3 дюйма', 'зал и двор', -W / 2 + 1.4, 1.4, PI / 2], ['cine', 'Синевуп', 'съёмка кино', -W / 2 + 1.4, -2.4, PI / 2], ['5', '5 дюймов', 'гонки на улице', W / 2 - 1.4, -2.4, -PI / 2], ['5', 'Фристайл', 'трюки', W / 2 - 1.4, 1.4, -PI / 2], ['3', 'Гоночный 3"', 'гонки в зале', W / 2 - 1.4, 5.2, -PI / 2]];
-    items.forEach(function (it, n) { var g = K.grp(it[3], 0, it[4], it[5]);
-      K.rb(.8, 1.05, .8, .05, white, 0, .525, 0, g); K.box(.82, .04, .82, dark, 0, .03, 0, g); K.box(.7, .74, .7, glass, 0, 1.43, 0, g); K.box(.72, .02, .72, K.std('#c9ccd3', .3, .9), 0, 1.81, 0, g);
-      var dr = K.drone(it[0], g, it[0] === '5' ? 1.6 : it[0] === '3' ? 2.0 : 2.7); dr.position.set(0, 1.12, 0); dr.rotation.set(.18, n * .7, 0);
-      var st = K.cyl(.012, .012, .06, K.std('#c9ccd3', .3, .9), 0, 1.08, 0, g, 8);
-      var t = K.tex(512, 192, function (x, w, h) { x.fillStyle = '#14161c'; x.fillRect(0, 0, w, h); x.fillStyle = '#7cf3ff'; x.fillRect(0, 0, 10, h); x.fillStyle = '#fff'; x.font = '800 58px Manrope,system-ui,sans-serif'; x.fillText(it[1], 36, 84); x.fillStyle = '#aab2d8'; x.font = '600 38px Manrope,system-ui,sans-serif'; x.fillText(it[2], 36, 144); });
-      var pl = K.plane(.56, .21, t, 0, .86, .47, g, true); pl.rotation.x = -.35;
-      var sp = new T.Mesh(new T.CylinderGeometry(.06, .5, 2.3, 24, 1, true), new T.MeshBasicMaterial({ color: '#fff4dc', transparent: true, opacity: .022, depthWrite: false, side: T.DoubleSide })); sp.position.set(0, 2.95, 0); g.add(sp);
-      K.cyl(.07, .09, .12, dark, 0, 4.15, 0, g, 16); K.block(it[3], it[4], .45, .45, 0); });
+    podiumy(K, items);
     /* у окна: большая карта трассы на подставке и растения */
     [[-8.6, -7.0, 0], [8.9, -7.0, 1]].forEach(function (q) { var g = K.grp(q[0], 0, q[1], 0); K.cyl(.03, .03, 1.3, K.std('#2a2d35', .35, .8), 0, .65, 0, g, 8); K.cyl(.3, .32, .04, K.std('#2a2d35', .35, .8), 0, .02, 0, g);
       var t = K.tex(512, 360, raceArt(q[2], '#24305a')); var p2 = K.plane(1.3, .9, t, 0, 1.75, .02, g); K.rb(1.4, 1.0, .04, .02, K.std('#1a1a1e', .5, .3), 0, 1.75, 0, g); K.plant(q[0] + (q[2] ? -1.1 : 1.1), q[1] + .2, 1.0); K.block(q[0], q[1], .5, .3, 0); });
