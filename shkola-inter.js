@@ -18,12 +18,13 @@ OK.pre = function (cfg) { if (pre0) pre0.call(OK, cfg); if (!VAR) return;
 OK.build = function (X) { var r = build0.call(OK, X); if (VAR) try { DEC[VAR](X); } catch (e) { if (window.console) console.warn('shkola-inter', e); }
   /* 24.11: сел в кресло - заставка теории (nachalo-teorii.js): название печатается, потом две кнопки "Лера рассказывает" / "Читаю сам" */
   var NT = window.NACHALO_TEORII;
-  if (r && NT && X.MON) { var sat0 = r.sat, L = X.MON.list || [];
+  if (r && NT && X.MON) { var sat0 = r.sat;
     r.sat = function (on) { if (sat0) sat0.apply(r, arguments);
       if (!on) { NT.hide(); NT.busy = false; NT.sam = false; return; }
+      var L = X.MON.list || [];   /* список берём при посадке: на телевизоре может быть урок другого модуля (komnata-new.js lesson) */
       var ch = L.reduce(function (a, s) { return a + String(s.say || s.p || '').length; }, 0), min = Math.max(1, Math.round(ch / 800));
       NT.busy = true; NT.sam = false;
-      NT.show({ title: (L[0] && L[0].h) || 'Теория', info: L.length + ' слайдов · ~' + min + ' мин',
+      NT.show({ title: X.MON.title || (L[0] && L[0].h) || 'Теория', info: L.length + ' слайдов · ~' + min + ' мин',
         lera: function () { NT.busy = false; NT.sam = false; var G = window.GOLOS; if (G && !G.on && G.setOn) G.setOn(true); X.MON.said = -1; },
         sam: function () { NT.busy = false; NT.sam = true; if (window.GOLOS) GOLOS.stop(); X.MON.talk = false; try { X.hint('Читай сам: нажми на экран - появятся стрелки листания.'); } catch (e) {} } }); }; }
   return r; };

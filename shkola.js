@@ -35,6 +35,9 @@ function roomOf(m) {
   if (window.KURS_KOMNATA && KURS_KOMNATA.has(m.id)) return { type: 'i', name: m.id === 'm5' ? 'Гоночный клуб' : m.id === 'm3' ? 'Аккумуляторная' : 'Комната модуля' };
   return null;
 }
+/* 24.11: урок у телевизора - кресло и ТВ Мастерской, на экране урок этого модуля (shkola-uroki.js); у модуля 2 - свои слайды Мастерской */
+function tvOf(m) { if (!window.KURS_KOMNATY || !KURS_KOMNATY.m2) return null; if (m.id === 'm2') return { lesson: null };
+  var U = window.SHKOLA_UROKI && SHKOLA_UROKI[m.id]; return U ? { lesson: { slides: U, n: m.n, t: m.t, title: 'Урок: ' + m.t } } : null; }
 function nextFloor() { var n = I.next(); if (!n) return -1; for (var i = 0; i < MODS.length; i++) if (MODS[i].id === n.m) return i; return -1; }
 function modState(i) { return I.mod(MODS[i].id); }
 
@@ -267,11 +270,13 @@ function zone(k, first) { if (!FL) return; FL.zone = k; var m = FL.m, c = col(FL
   var tabs = '<div id="shTabs">' + ZONES.map(function (Z) { var d = zoneDone(m, Z.k), n = floorTasks(m, Z.k).length; return '<button type="button" data-z="' + Z.k + '" class="' + (Z.k === k ? 'a' : d ? 'd' : '') + '" style="--c:' + c + '"' + (n ? '' : ' disabled') + '>' + (d ? '✓ ' : '') + Z.n + '</button>'; }).join('') + '</div>';
   var nt = I.next(), list = floorTasks(m, k).map(function (t, j) { var s = I.task(t), L = K.lib[t];
     return '<button type="button" class="shTk ' + s + (nt && nt.t === t ? ' next' : '') + '" style="--c:' + c + '" data-t="' + t + '"><i>' + (s === 'done' ? '✓' : s === 'wait' ? '•' : s === 'lock' ? '🔒' : j + 1) + '</i><span>' + esc(L.t) + (s === 'wait' ? '<br><small>ждёт проверки педагога</small>' : '') + '</span>›</button>'; }).join('');
-  var room = k === 'prak' ? roomOf(m) : null;
-  bot.innerHTML = tabs + (room ? '<button class="shBtn" id="shRoom" type="button" style="background:' + c + '">ВОЙТИ: ' + esc(room.name.toUpperCase()) + '</button><div class="shHint">Или выбери задание из списка:</div>' : '') + '<div id="shList">' + (list || '<div class="shHint">Здесь пока нет заданий.</div>') + '</div>';
+  var room = k === 'prak' ? roomOf(m) : null, tv = k === 'teor' ? tvOf(m) : null;
+  bot.innerHTML = tabs + (room ? '<button class="shBtn" id="shRoom" type="button" style="background:' + c + '">ВОЙТИ: ' + esc(room.name.toUpperCase()) + '</button><div class="shHint">Или выбери задание из списка:</div>' : '')
+    + (tv ? '<button class="shBtn" id="shTv" type="button" style="background:' + c + '">СЕСТЬ К ТЕЛЕВИЗОРУ: УРОК</button><div class="shHint">Или выбери задание из списка:</div>' : '') + '<div id="shList">' + (list || '<div class="shHint">Здесь пока нет заданий.</div>') + '</div>';
   var tb = $('shTabs'); tb.onclick = function (e) { var b = e.target.closest('button'); if (b && !b.disabled) zone(b.dataset.z); };
   $('shList').onclick = function (e) { var b = e.target.closest('.shTk'); if (!b) return; var t = b.dataset.t; if (I.task(t) === 'lock') { toast('Это задание пока закрыто'); return; } openWin(t); };
   if (room) $('shRoom').onclick = function () { enterRoom(FL.i); };
+  if (tv) $('shTv').onclick = function () { enterRoom(FL.i, tv); };
 }
 /* назад: этаж -> лифт -> холл */
 function back() { if ($('win').classList.contains('on')) { closeWin(); return; }
@@ -304,11 +309,11 @@ window.KURS_KOMNATA_OUT = function () { roomShut = Date.now(); D.body.classList.
 /* ============ КОМНАТЫ ============ */
 var ROOM = null;
 function roomOn() { return !!ROOM || !!(window.KURS_KOMNATA && KURS_KOMNATA.on); }
-function enterRoom(i) { var m = MODS[i], r = roomOf(m); if (!r) return; D.body.classList.add('sh-room');
-  if (r.type === 'k') { ROOM = KURS_KOMNATY[m.id];
+function enterRoom(i, tv) { var m = MODS[i], r = tv ? { type: 'k' } : roomOf(m); if (!r) return; D.body.classList.add('sh-room');
+  if (r.type === 'k') { ROOM = tv ? KURS_KOMNATY.m2 : KURS_KOMNATY[m.id];
     ROOM.open({ mid: m.id, color: col(i), name: m.n + '. ' + m.t, state: function (tid) { return I.task(tid); },
       task: function (tid) { if (I.task(tid) === 'lock') return false; openWin(tid); return true; },
-      exit: function () { exitRoom(false); } });
+      exit: function () { exitRoom(false); } }, tv ? { sit: true, lesson: tv.lesson } : null);
     push('room');
   } else KURS_KOMNATA.open(m.id); }
 function exitRoom(byBack) { if (!ROOM) return; var r = ROOM; ROOM = null; D.body.classList.remove('sh-room'); try { r.close(); } catch (e) {}

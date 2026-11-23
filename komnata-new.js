@@ -88,6 +88,9 @@ function make(cfg) {
   var IMG = {}, SVGCSS = '.kk-t{fill:#cbd5ff;font:600 12px system-ui,sans-serif;text-anchor:middle}.kk-tb{fill:#fff;font:800 12px system-ui,sans-serif;text-anchor:middle}.kk-ts{fill:#cbd5ff;font:700 10px system-ui,sans-serif;text-anchor:middle}.kk-m{font-family:ui-monospace,monospace}';
   function svgImg(k, cb) {
     if (IMG[k]) { if (IMG[k].complete && IMG[k].naturalWidth) cb(IMG[k]); else IMG[k].addEventListener('load', function () { cb(IMG[k]); }); return; }
+    if (String(k).indexOf('e:') === 0) {   /* 24.11: картинка-эмодзи для уроков (shkola-uroki.js): большой значок в мягком круге */
+      var e = String(k).slice(2).replace(/[<&]/g, ''), es = '<svg xmlns="http://www.w3.org/2000/svg" width="720" height="420" viewBox="0 0 720 420"><defs><radialGradient id="g"><stop offset="0" stop-color="' + MC + '" stop-opacity=".34"/><stop offset="1" stop-color="' + MC + '" stop-opacity="0"/></radialGradient></defs><circle cx="360" cy="210" r="205" fill="url(#g)"/><circle cx="360" cy="210" r="150" fill="none" stroke="' + MC + '" stroke-opacity=".35" stroke-width="3"/><text x="360" y="212" font-size="190" text-anchor="middle" dominant-baseline="central" font-family="Apple Color Emoji,Segoe UI Emoji,Noto Color Emoji,sans-serif">' + e + '</text></svg>';
+      var ie = new Image(); IMG[k] = ie; ie.onload = function () { cb(ie); }; ie.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(es); return; }
     var s = (K && K.pic && K.pic(k)) || ''; if (!s) return;
     s = s.replace('<svg ', '<svg xmlns="http://www.w3.org/2000/svg" width="720" height="420" ').replace('class="kpic"', '').replace('>', '><style>' + SVGCSS + '</style>');
     var im = new Image(); IMG[k] = im; im.onload = function () { cb(im); }; im.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(s);
@@ -252,15 +255,15 @@ function make(cfg) {
     var sc = new T.Mesh(new T.PlaneGeometry(w, h), new T.MeshBasicMaterial({ map: tx, toneMapped: false })); sc.position.z = .01; g.add(sc);
     var pl = new T.PointLight(MC, .55, 10, 2); pl.position.set(0, 0, 1.6); g.add(pl);
     var list = o.slides;
-    MON = { k: 0, t0: 0, a: 1, list: list, talk: false, said: -1, g: g,
+    MON = { k: 0, t0: 0, a: 1, list: list, base: list, talk: false, said: -1, g: g,
       draw: function (a) {
-        var s = list[MON.k], i = MON.k; cx.globalAlpha = 1; cx.fillStyle = '#050816'; cx.fillRect(0, 0, cw, ch);
+        var list = MON.list, s = list[MON.k], i = MON.k; cx.globalAlpha = 1; cx.fillStyle = '#050816'; cx.fillRect(0, 0, cw, ch);
         var gr = cx.createRadialGradient(cw * .2, ch * .1, 10, cw * .2, ch * .1, cw * .9); gr.addColorStop(0, 'rgba(' + MCr + ',.22)'); gr.addColorStop(1, 'rgba(0,0,0,0)'); cx.fillStyle = gr; cx.fillRect(0, 0, cw, ch);
         cx.globalAlpha = a; cx.textAlign = 'left';
         cx.fillStyle = MC; cx.font = '800 30px ' + MONO; cx.textBaseline = 'top'; cx.fillText((o.tag || 'ТЕОРИЯ') + ' · ' + (i + 1) + '/' + list.length, 60, 46);
         cx.fillStyle = '#fff'; cx.font = '800 72px ' + DISP; var y = wrap(cx, s.h, 60, 104, cw * .5, 84, 3);
         cx.fillStyle = '#cfd7ff'; cx.font = '600 40px ' + FONT; wrap(cx, s.p, 60, Math.max(ch * .48, y + 110), cw * .45, 54, 6);
-        if (s.pic) svgImg(s.pic, function (im) { if (list[MON.k] !== s) return; cx.globalAlpha = a; var iw = cw * .44, ih = iw * 420 / 720; cx.drawImage(im, cw * .53, (ch - ih) / 2 + 10, iw, ih); tx.needsUpdate = true; });
+        if (s.pic) svgImg(s.pic, function (im) { if (MON.list[MON.k] !== s) return; cx.globalAlpha = a; var iw = cw * .44, ih = iw * 420 / 720; cx.drawImage(im, cw * .53, (ch - ih) / 2 + 10, iw, ih); tx.needsUpdate = true; });
         cx.globalAlpha = 1; for (var j = 0; j < list.length; j++) { cx.fillStyle = j === i ? MC : 'rgba(255,255,255,.18)'; cx.fillRect(60 + j * 64, ch - 54, 52, 8); }
         if (MON.talk && !BYSTRO) { cx.fillStyle = MC; for (j = 0; j < 5; j++) { var hh = 10 + Math.abs(Math.sin(Date.now() / 160 + j)) * 26; cx.fillRect(cw - 110 + j * 14, ch - 46 - hh, 8, hh); } }
         if (BYSTRO) { if (!MON.scan) { MON.scan = document.createElement('canvas'); MON.scan.width = 4; MON.scan.height = 4; var sx = MON.scan.getContext('2d'); sx.fillStyle = 'rgba(255,255,255,.035)'; sx.fillRect(0, 0, 4, 1); MON.scanP = cx.createPattern(MON.scan, 'repeat'); }
@@ -268,7 +271,7 @@ function make(cfg) {
         else { cx.strokeStyle = 'rgba(255,255,255,.035)'; cx.lineWidth = 1; for (j = 0; j < ch; j += 4) { cx.beginPath(); cx.moveTo(0, j); cx.lineTo(cw, j); cx.stroke(); } }
         tx.needsUpdate = true;
       },
-      go: function (k) { MON.k = (k + list.length) % list.length; MON.t0 = 0; MON.a = .1; MON.said = -1; if (window.GOLOS && MON.talk) { MON.talk = false; GOLOS.stop(); } if (BYSTRO) { MON.draw(1); sc.material.color.setScalar(.1); } }
+      go: function (k) { var list = MON.list; MON.k = (k + list.length) % list.length; MON.t0 = 0; MON.a = .1; MON.said = -1; if (window.GOLOS && MON.talk) { MON.talk = false; GOLOS.stop(); } if (BYSTRO) { MON.draw(1); sc.material.color.setScalar(.1); } }
     };
     /* 21.11 (проба): экран теории перерисовывается только при смене слайда; появление - яркостью экрана, "эквалайзер" голоса - маленьким
        отдельным экраном. Раньше весь экран 1600 точек перерисовывался и заново отправлялся в видеокарту 6 раз в секунду - отсюда заикание */
@@ -288,7 +291,7 @@ function make(cfg) {
     else if (MON.a < 1) { MON.a = Math.min(1, MON.a + dt * 2); MON.draw(MON.a); }
     else if (MON.talk && Math.floor(t * 6) !== MON.tb) { MON.tb = Math.floor(t * 6); MON.draw(1); }
     var G = window.GOLOS, near = (OKN ? !!SIT : pos.distanceTo(MON.g.position) < 11) && !paused && !anim, can = G && G.on && G.can && G.can() && !(window.NACHALO_TEORII && (NACHALO_TEORII.busy || NACHALO_TEORII.sam));   /* 24.11 Лётная школа: пока печатается заставка или выбран режим "читаю сам" - Лера молчит */
-    if (can && near && MON.said !== MON.k && !SPEAK) { var s = MON.list[MON.k]; MON.said = MON.k; MON.talk = true; G.say(s.say || (s.h + '. ' + s.p), { onend: function () { MON.talk = false; MON.draw(1); setTimeout(function () { if (on && !paused && MON.said === MON.k) MON.go(MON.k + 1); }, 1800); } }); return; }
+    if (can && near && MON.said !== MON.k && !SPEAK) { var s = MON.list[MON.k]; MON.said = MON.k; MON.talk = true; G.say(s.say || (s.h + '. ' + s.p), { onend: function () { MON.talk = false; MON.draw(1); if (LES && MON.k >= MON.list.length - 1) { if (!LES.done) { LES.done = true; hint(LES.end || 'Урок окончен. Встань с кресла - дальше тест', 7000); if (api && api.lessonEnd) try { api.lessonEnd(); } catch (e) {} } return; } setTimeout(function () { if (on && !paused && MON.said === MON.k) MON.go(MON.k + 1); }, 1800); } }); return; }
     if (!MON.talk && !(window.NACHALO_TEORII && (NACHALO_TEORII.sam || NACHALO_TEORII.busy) && SIT)) { MON.t0 += dt; if (MON.t0 > (can && near ? 30 : 9)) MON.go(MON.k + 1); }   /* "читаю сам" - слайды сами не листаются */
   }
   var SPEAK = false; /* приветствие говорит - монитор ждёт */
@@ -334,10 +337,10 @@ function make(cfg) {
       c.shadowBlur = 0; c.font = '700 38px ' + FONT; c.fillStyle = '#cfd7ff'; c.fillText('задание ' + n + ' · нажми на стол', 50, 150); c.font = '900 110px ' + FONT; c.textAlign = 'right'; c.fillText('🛠', w - 40, 100); });
     var pan = new T.Mesh(new T.PlaneGeometry(2.6, .49), new T.MeshBasicMaterial({ map: ptx, toneMapped: false })); pan.position.set(0, .6, SBT ? .735 : .81); g.add(pan);
     box(2.7, .58, .04, mDark, 0, .6, SBT ? .705 : .78, g);
-    block(o.x, o.z, 1.8, .9, o.ry);
+    block(o.x, o.z, 1.8, .9, o.ry); var tbBox = BOX[BOX.length - 1];
     var at = fwd(o.ry || 0, 2.0, o.x, o.z);
-    TABLE = { o: o, g: g, n: n, center: new T.Vector3(o.x, 1.0, o.z) };
-    CLICK.push({ o: g, kind: 'table', tid: o.task, at: at, look: [o.x, 1.0, o.z] });
+    TABLE = { o: o, g: g, n: n, center: new T.Vector3(o.x, 1.0, o.z), box: tbBox };
+    CLICK.push(TABLE.click = { o: g, kind: 'table', tid: o.task, at: at, look: [o.x, 1.0, o.z] });
   }
   var smokeTx = null;
   function SMOKE() { return smokeTx || (smokeTx = tex(64, 64, function (c) { var g = c.createRadialGradient(32, 32, 2, 32, 32, 30); g.addColorStop(0, 'rgba(255,255,255,.9)'); g.addColorStop(1, 'rgba(255,255,255,0)'); c.fillStyle = g; c.fillRect(0, 0, 64, 64); })); }
@@ -403,7 +406,7 @@ function make(cfg) {
     dotG = new T.Group(); S.add(dotG); var dm = glow('#ffd36e', .8), dg = new T.CircleGeometry(.07, 12);
     for (var i = 0; i < 40; i++) { var d = new T.Mesh(dg, dm.clone()); d.rotation.x = -Math.PI / 2; d.position.y = .02; dotG.add(d); DOTS.push(d); }
   }
-  function nextTarget() { NEXT = null; var nx = I && I.next && I.next(); if (nx && nx.m === cfg.mid) NEXT = nx.t;
+  function nextTarget() { NEXT = null; if (LES) return null; var nx = I && I.next && I.next(); if (nx && nx.m === cfg.mid) NEXT = nx.t;
     /* общий "дальше" ведёт в другой модуль - в комнате ведём к первому открытому непройденному заданию этого модуля */
     if (!NEXT && api) NEXT = mod.tasks.find(function (t) { return api.state(t) === 'open'; }) || null; return NEXT; }
   function guideTick(t, dt) {
@@ -709,7 +712,7 @@ function make(cfg) {
     return function () { var d = []; S.updateMatrixWorld(true); S.traverse(function (o) { var v = a.get(o); if (v == null || v !== o.matrix.elements.join() + o.visible) d.push(o); }); return d; }; }
   function openLoad(a) {
     var Z = window.KURS_ZAGRUZKA, my = {}; api = a; I = window.VZ_KURS_INFO; K = window.VZ_KURS; LOADING = my;
-    Z.show({ title: cfg.title || (mod && mod.t) || '', sub: 'Модуль ' + (mod ? mod.n : ''), color: MC, text: built ? 'Готовим зал' : 'Строим помещение' });
+    var oL = OPT.lesson; Z.show({ title: oL ? (oL.title || oL.t) : (cfg.title || (mod && mod.t) || ''), sub: 'Модуль ' + (oL ? oL.n : mod ? mod.n : ''), color: MC, text: built ? 'Готовим зал' : 'Строим помещение' });
     var alive = function () { return LOADING === my; };
     Z.paint().then(function () { if (!alive()) return; if (!built) build(); Z.step('Загружаем фактуры и модели', .25);
       var p0 = Math.max(1, Z.pending()), iv = setInterval(function () { Z.step(null, .25 + .45 * (1 - Z.pending() / p0)); }, 120);
@@ -721,13 +724,20 @@ function make(cfg) {
     .then(function () { if (!alive()) return; LOADING = null; start(a); Z.hide(); })
     .catch(function (e) { if (window.console) console.warn('zagruzka', e); if (alive()) { LOADING = null; start(a); Z.hide(); } });
   }
-  var LOADING = null;
-  function open(a) { if (BYSTRO) return openLoad(a); start(a); }
+  var LOADING = null, OPT = {}, LES = null;
+  /* 24.11 (Лётная школа): урок другого модуля на том же телевизоре - open(api, { lesson: { slides, n, t, title }, sit: true }).
+     Стол сборки на время урока убираем (вместе с нажатием и препятствием), по коридору к заданиям не ведём. */
+  function lesson(L) { LES = L ? { slides: L.slides, n: L.n, t: L.t, title: L.title, end: L.end, done: false } : null;
+    if (MON) { MON.list = LES ? LES.slides : MON.base; MON.title = LES ? LES.t : null; MON.go(0); MON.draw(1); }
+    if (TABLE) { var tv = !LES; TABLE.g.visible = tv; var mc = GX && GX.mirrorOf && GX.mirrorOf(TABLE.g); if (mc) mc.visible = tv;
+      var ci = CLICK.indexOf(TABLE.click); if (tv && ci < 0) CLICK.push(TABLE.click); if (!tv && ci >= 0) CLICK.splice(ci, 1);
+      var bi = BOX.indexOf(TABLE.box); if (tv && bi < 0) BOX.push(TABLE.box); if (!tv && bi >= 0) BOX.splice(bi, 1); } }
+  function open(a, opt) { OPT = opt || {}; if (BYSTRO) return openLoad(a); start(a); }
   function start(a) {
-    api = a; I = window.VZ_KURS_INFO; K = window.VZ_KURS; if (!built) build();
+    api = a; I = window.VZ_KURS_INFO; K = window.VZ_KURS; if (!built) build(); lesson(OPT.lesson || null);
     on = true; paused = false; root.classList.add('on'); sel = null; card(null); sndUI();
     CAM.aspect = innerWidth / innerHeight; CAM.fov = fov0(); CAM.updateProjectionMatrix(); R.setSize(innerWidth, innerHeight); gfit();
-    ui.ttlS.textContent = 'МОДУЛЬ ' + mod.n; ui.ttlB.textContent = cfg.title || mod.t;
+    ui.ttlS.textContent = 'МОДУЛЬ ' + (LES ? LES.n : mod.n); ui.ttlB.textContent = LES ? (LES.title || LES.t) : (cfg.title || mod.t);
     refreshAll();
     /* вход: за воротами, ворота разъезжаются, шагаем внутрь */
     var st = cfg.start, lk = cfg.look, from = new T.Vector3(0, EYE, D / 2 + 2.6), to = new T.Vector3(st[0], EYE, st[1]);
@@ -735,12 +745,12 @@ function make(cfg) {
     pos.copy(from); yaw = Math.atan2(-(lk[0] - from.x), -(lk[2] - from.z)); pitch = -.04; target = null; lookAt = null; vel.set(0, 0, 0);
     doorL.position.x = -.8; doorR.position.x = .8;
     ui.fade.style.background = '#05060f'; ui.fade.style.transition = 'opacity .9s'; ui.fade.style.opacity = 1; requestAnimationFrame(function () { ui.fade.style.opacity = 0; });
-    ui.hello.querySelector('small').textContent = 'МОДУЛЬ ' + mod.n; ui.hello.querySelector('b').textContent = cfg.title || mod.t; ui.hello.querySelector('span').textContent = mod.t;
+    ui.hello.querySelector('small').textContent = 'МОДУЛЬ ' + (LES ? LES.n : mod.n); ui.hello.querySelector('b').textContent = LES ? (LES.title || LES.t) : (cfg.title || mod.t); ui.hello.querySelector('span').textContent = LES ? LES.t : mod.t;
     ui.hello.classList.add('on'); setTimeout(function () { ui.hello.classList.remove('on'); }, 2600);
     anim = { t: 0, d: RED ? .4 : 3.2, step: function (u) { var dO = Math.min(1, u / .35), e = ease(dO); doorL.position.x = -.8 - e * 1.6; doorR.position.x = .8 + e * 1.6;
         var w = ease(Math.max(0, (u - .25) / .75)); pos.lerpVectors(from, to, w); bob = w * 8; },
-      end: function () { var first = !lsG('kmn_hi_' + cfg.mid); lsS('kmn_hi_' + cfg.mid, '1');
-        doorAnim(0);
+      end: function () { var first = !LES && !OPT.sit && !lsG('kmn_hi_' + cfg.mid); if (!LES) lsS('kmn_hi_' + cfg.mid, '1');
+        doorAnim(0); if (OPT.sit) setTimeout(function () { if (on && !SIT) sit(); }, 60);   /* Лётная школа: с этажа сразу в кресло */
         /* подсказка управления больше не всплывает сама - кнопка "?" вверху */
         var G = window.GOLOS; if (first && cfg.hello && G && G.on && G.can && G.can()) { SPEAK = true; G.say(cfg.hello, { onend: function () { SPEAK = false; } }); } } };
     clock.getDelta(); frame();
