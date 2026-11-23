@@ -91,7 +91,7 @@ function make(cfg) {
     if (String(k).indexOf('e:') === 0) {   /* 24.11: картинка-эмодзи для уроков (shkola-uroki.js): большой значок в мягком круге */
       var e = String(k).slice(2).replace(/[<&]/g, ''), es = '<svg xmlns="http://www.w3.org/2000/svg" width="720" height="420" viewBox="0 0 720 420"><defs><radialGradient id="g"><stop offset="0" stop-color="' + MC + '" stop-opacity=".34"/><stop offset="1" stop-color="' + MC + '" stop-opacity="0"/></radialGradient></defs><circle cx="360" cy="210" r="205" fill="url(#g)"/><circle cx="360" cy="210" r="150" fill="none" stroke="' + MC + '" stroke-opacity=".35" stroke-width="3"/><text x="360" y="212" font-size="190" text-anchor="middle" dominant-baseline="central" font-family="Apple Color Emoji,Segoe UI Emoji,Noto Color Emoji,sans-serif">' + e + '</text></svg>';
       var ie = new Image(); IMG[k] = ie; ie.onload = function () { cb(ie); }; ie.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(es); return; }
-    var s = (K && K.pic && K.pic(k)) || ''; if (!s) return;
+    var s = (window.UROK_PIC && UROK_PIC[k]) || (K && K.pic && K.pic(k)) || ''; if (!s) return;   /* 24.11: схемы уроков (shkola-kartinki.js) */
     s = s.replace('<svg ', '<svg xmlns="http://www.w3.org/2000/svg" width="720" height="420" ').replace('class="kpic"', '').replace('>', '><style>' + SVGCSS + '</style>');
     var im = new Image(); IMG[k] = im; im.onload = function () { cb(im); }; im.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(s);
   }
@@ -290,14 +290,15 @@ function make(cfg) {
       if (MON.eq) { MON.eq.visible = !!MON.talk; if (MON.talk && Math.floor(t * 8) !== MON.tb) { MON.tb = Math.floor(t * 8); MON.eqDraw(); } } }
     else if (MON.a < 1) { MON.a = Math.min(1, MON.a + dt * 2); MON.draw(MON.a); }
     else if (MON.talk && Math.floor(t * 6) !== MON.tb) { MON.tb = Math.floor(t * 6); MON.draw(1); }
-    var G = window.GOLOS, near = (OKN ? !!SIT : pos.distanceTo(MON.g.position) < 11) && !paused && !anim, can = G && G.on && G.can && G.can() && !(window.NACHALO_TEORII && (NACHALO_TEORII.busy || NACHALO_TEORII.sam));   /* 24.11 Лётная школа: пока печатается заставка или выбран режим "читаю сам" - Лера молчит */
-    if (can && near && MON.said !== MON.k && !SPEAK) { var s = MON.list[MON.k]; MON.said = MON.k; MON.talk = true; G.say(s.say || (s.h + '. ' + s.p), { onend: function () { MON.talk = false; MON.draw(1); if (LES && MON.k >= MON.list.length - 1) { if (!LES.done) { LES.done = true; hint(LES.end || 'Урок окончен. Встань с кресла - дальше тест', 7000); if (api && api.lessonEnd) try { api.lessonEnd(); } catch (e) {} } return; } setTimeout(function () { if (on && !paused && MON.said === MON.k) MON.go(MON.k + 1); }, 1800); } }); return; }
+    var G = window.GOLOS, near = (OKN ? (!!SIT || MON.heard) : pos.distanceTo(MON.g.position) < 11) && !paused && !anim, can = G && G.on && G.can && G.can() && !(window.NACHALO_TEORII && (NACHALO_TEORII.busy || NACHALO_TEORII.sam));   /* 24.11 Лётная школа: пока печатается заставка или выбран режим "читаю сам" - Лера молчит */
+    if (can && near && MON.said !== MON.k && !SPEAK) { var s = MON.list[MON.k]; MON.said = MON.k; MON.talk = true; if (SIT) MON.heard = true;   /* 24.11 (Alexandr): начала рассказывать в кресле - встал и ходишь по залу, Лера рассказывает дальше */
+      G.say(s.say || (s.h + '. ' + s.p), { onend: function () { MON.talk = false; MON.draw(1); if (LES && MON.k >= MON.list.length - 1) { if (!LES.done) { LES.done = true; hint(LES.end || 'Урок окончен. Встань с кресла - дальше тест', 7000); if (api && api.lessonEnd) try { api.lessonEnd(); } catch (e) {} } return; } setTimeout(function () { if (on && !paused && MON.said === MON.k) MON.go(MON.k + 1); }, 1800); } }); return; }
     if (!MON.talk && !(window.NACHALO_TEORII && (NACHALO_TEORII.sam || NACHALO_TEORII.busy) && SIT)) { MON.t0 += dt; if (MON.t0 > (can && near ? 30 : 9)) MON.go(MON.k + 1); }   /* "читаю сам" - слайды сами не листаются */
   }
   var SPEAK = false; /* приветствие говорит - монитор ждёт */
 
   /* ---------- стол с мини-игрой ---------- */
-  var PROBA = /\/((new|g|index)\.html)?$/.test(location.pathname);   /* правки 11.11 сначала в пробе курса */
+  var PROBA = /\/((new|g|index|shkola)\.html)?$/.test(location.pathname);   /* 24.11: и Лётная школа - управление как в "Побеге" */   /* правки 11.11 сначала в пробе курса */
   var TABLE = null;
   var QK = null; /* 18.11 (проба new.html): мини-квест с предметами - window.KOMNATA_KVEST[mid](ctx), см. masterskaya-kvest.js */
   function qLock() { try { return QK && QK.table ? QK.table() : null; } catch (e) { return null; } }
@@ -436,8 +437,40 @@ function make(cfg) {
     ui.help.addEventListener('pointerdown', function (e) { e.stopPropagation(); }); ui.help.onclick = function () { helpT(!helpOn); ui.help.blur(); };
     ui.hint.addEventListener('pointerdown', function (e) { if (!helpOn) return; e.stopPropagation(); helpT(false); });
     ui.card.addEventListener('click', function (e) { var b = e.target.closest('[data-a]'); if (b) doAct(b.dataset.a); });
+    if (window.KMN_GEAR) gearUI();
   }
-  function sndUI() { var G = window.GOLOS; ui.snd.textContent = G && G.on ? '🔊' : '🔇'; ui.snd.hidden = !G; ui.vol.hidden = !G || !G.setVol; if (G && G.vol != null) ui.vol.value = Math.round(G.vol * 100); }
+  /* 24.11 (Лётная школа, замечания Alexandr): справа вверху только шестерёнка (muzyka.js) - в ней "Управление", голос вкл/выкл и ползунки;
+     звёзды по центру; название модуля печатается одной строкой и гаснет, остаётся стрелка назад; табличка предмета узкая справа. */
+  function gearUI() {
+    root.classList.add('k-gear');
+    var st = document.createElement('style'); st.textContent = [
+      '#kmn.k-gear .k-top{background:none}#kmn.k-gear .k-hello{display:none}',
+      '#kmn.k-gear .k-top [data-k=help],#kmn.k-gear .k-top [data-k=snd],#kmn.k-gear .k-top .k-vol{display:none!important}',
+      '#kmn.k-gear .k-st{position:absolute;left:50%;top:calc(14px + env(safe-area-inset-top,0px));transform:translateX(-50%)}',
+      '#kmn.k-gear .k-ttl small,#kmn.k-gear .k-ttl b{display:none}',
+      '#kmn.k-gear .k-ttl{flex:none;max-width:calc(50vw - 110px);transition:opacity .9s}#kmn.k-gear .k-ttl.gone{opacity:0}',
+      '#kmn.k-gear .k-ttl i{display:block;font:700 15px ' + FONT + ';font-style:normal;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-shadow:0 2px 10px rgba(0,0,0,.7)}',
+      '#kmn.k-gear .k-ttl i em{font-style:normal;color:var(--kc);font-weight:800;letter-spacing:.08em}',
+      '#kmn.k-gear .k-card{left:auto;right:max(12px,env(safe-area-inset-right,0px));top:calc(66px + env(safe-area-inset-top,0px));bottom:auto;transform:translateX(24px);width:min(270px,32vw);min-width:200px;max-height:calc(100% - 150px);overflow:auto;padding:12px 14px;font-size:13.5px;line-height:1.4}',
+      '#kmn.k-gear .k-card.on{transform:none}#kmn.k-gear .k-card h3{font-size:16px}',
+      '#muzP .kmnG{display:none;gap:6px;margin:0 0 8px}body.kmn-on #muzP .kmnG{display:grid}body.kmn-on #muzP{max-height:calc(100% - 80px);overflow-y:auto;overscroll-behavior:contain}',
+      '#muzP .kmnG button{min-height:40px;border-radius:10px;border:1px solid rgba(255,255,255,.25);background:rgba(255,255,255,.06);color:#fff;font:700 13px system-ui,sans-serif;cursor:pointer;text-align:left;padding:0 12px}'
+    ].join(''); document.head.appendChild(st);
+    var tl = root.querySelector('.k-ttl'); ui.ttlL = document.createElement('i'); tl.appendChild(ui.ttlL); ui.ttl = tl;
+    (function mount(n) { var p = document.getElementById('muzP'); if (!p) { if (n < 80) setTimeout(function () { mount(n + 1); }, 250); return; }
+      if (p.querySelector('.kmnG')) return; var g = document.createElement('div'); g.className = 'kmnG';
+      g.innerHTML = '<button type="button" data-g="help">? Управление</button><button type="button" data-g="snd"></button>'; p.insertBefore(g, p.firstChild);
+      g.onclick = function (e) { var b = e.target.closest('[data-g]'); if (!b || !on) return; if (window.MUZYKA) MUZYKA.close();
+        if (b.dataset.g === 'help') helpT(!helpOn); else ui.snd.onclick(); };
+      ui.gSnd = g.querySelector('[data-g=snd]'); sndUI(); })(0);
+  }
+  var ttlT = [];
+  function ttlType() { if (!ui.ttlL) return; ttlT.forEach(clearTimeout); ttlT = []; var a = ui.ttlS.textContent, b = ui.ttlB.textContent, txt = a + ' · ' + b;
+    ui.ttl.classList.remove('gone'); ui.ttlL.innerHTML = '';
+    var step = RED ? 0 : 32; for (var i = 1; i <= txt.length; i++) (function (k) { ttlT.push(setTimeout(function () {
+      var t = txt.slice(0, k), x = t.slice(0, Math.min(k, a.length)).replace(/[<&]/g, ''), y = t.slice(a.length).replace(/[<&]/g, ''); ui.ttlL.innerHTML = '<em>' + x + '</em>' + y; }, 400 + k * step)); })(i);
+    ttlT.push(setTimeout(function () { ttlT.push(setTimeout(function () { ui.ttl.classList.add('gone'); }, 3500)); }, 420 + txt.length * step)); }   /* гаснет через 3,5 с после последней буквы */
+  function sndUI() { var G = window.GOLOS; if (ui.gSnd) ui.gSnd.textContent = G && G.on ? '🔊 Голос Леры: вкл' : '🔇 Голос Леры: выкл'; ui.snd.textContent = G && G.on ? '🔊' : '🔇'; ui.snd.hidden = !G; ui.vol.hidden = !G || !G.setVol; if (G && G.vol != null) ui.vol.value = Math.round(G.vol * 100); }
   function hud() { var d = 0; mod.tasks.forEach(function (t) { if (api && api.state(t) === 'done') d++; }); ui.st.textContent = '★ ' + d + ' / ' + mod.tasks.length; }
   var hintT = 0;
   var helpOn = false; /* 14.11: подсказка управления - по кнопке "?": нажал - открылась, нажал ещё раз (или на неё) - закрылась */
@@ -728,16 +761,16 @@ function make(cfg) {
   /* 24.11 (Лётная школа): урок другого модуля на том же телевизоре - open(api, { lesson: { slides, n, t, title }, sit: true }).
      Стол сборки на время урока убираем (вместе с нажатием и препятствием), по коридору к заданиям не ведём. */
   function lesson(L) { LES = L ? { slides: L.slides, n: L.n, t: L.t, title: L.title, end: L.end, done: false } : null;
-    if (MON) { MON.list = LES ? LES.slides : MON.base; MON.title = LES ? LES.t : null; MON.go(0); MON.draw(1); }
+    if (MON) { MON.heard = false; MON.list = LES ? LES.slides : MON.base; MON.title = LES ? LES.t : null; MON.go(0); MON.draw(1); }
     if (TABLE) { var tv = !LES; TABLE.g.visible = tv; var mc = GX && GX.mirrorOf && GX.mirrorOf(TABLE.g); if (mc) mc.visible = tv;
       var ci = CLICK.indexOf(TABLE.click); if (tv && ci < 0) CLICK.push(TABLE.click); if (!tv && ci >= 0) CLICK.splice(ci, 1);
       var bi = BOX.indexOf(TABLE.box); if (tv && bi < 0) BOX.push(TABLE.box); if (!tv && bi >= 0) BOX.splice(bi, 1); } }
   function open(a, opt) { OPT = opt || {}; if (BYSTRO) return openLoad(a); start(a); }
   function start(a) {
     api = a; I = window.VZ_KURS_INFO; K = window.VZ_KURS; if (!built) build(); lesson(OPT.lesson || null);
-    on = true; paused = false; root.classList.add('on'); sel = null; card(null); sndUI();
+    on = true; paused = false; root.classList.add('on'); document.body.classList.add('kmn-on'); sel = null; card(null); sndUI();
     CAM.aspect = innerWidth / innerHeight; CAM.fov = fov0(); CAM.updateProjectionMatrix(); R.setSize(innerWidth, innerHeight); gfit();
-    ui.ttlS.textContent = 'МОДУЛЬ ' + (LES ? LES.n : mod.n); ui.ttlB.textContent = LES ? (LES.title || LES.t) : (cfg.title || mod.t);
+    ui.ttlS.textContent = 'МОДУЛЬ ' + (LES ? LES.n : mod.n); ui.ttlB.textContent = LES ? (LES.title || LES.t) : (cfg.title || mod.t); if (ui.ttlL) { ttlT.forEach(clearTimeout); ui.ttlL.innerHTML = ''; ui.ttl.classList.remove('gone'); }
     refreshAll();
     /* вход: за воротами, ворота разъезжаются, шагаем внутрь */
     var st = cfg.start, lk = cfg.look, from = new T.Vector3(0, EYE, D / 2 + 2.6), to = new T.Vector3(st[0], EYE, st[1]);
@@ -750,7 +783,7 @@ function make(cfg) {
     anim = { t: 0, d: RED ? .4 : 3.2, step: function (u) { var dO = Math.min(1, u / .35), e = ease(dO); doorL.position.x = -.8 - e * 1.6; doorR.position.x = .8 + e * 1.6;
         var w = ease(Math.max(0, (u - .25) / .75)); pos.lerpVectors(from, to, w); bob = w * 8; },
       end: function () { var first = !LES && !OPT.sit && !lsG('kmn_hi_' + cfg.mid); if (!LES) lsS('kmn_hi_' + cfg.mid, '1');
-        doorAnim(0); if (OPT.sit) setTimeout(function () { if (on && !SIT) sit(); }, 60);   /* Лётная школа: с этажа сразу в кресло */
+        doorAnim(0); ttlType(); if (OPT.sit) setTimeout(function () { if (on && !SIT) sit(); }, 60);   /* Лётная школа: с этажа сразу в кресло */
         /* подсказка управления больше не всплывает сама - кнопка "?" вверху */
         var G = window.GOLOS; if (first && cfg.hello && G && G.on && G.can && G.can()) { SPEAK = true; G.say(cfg.hello, { onend: function () { SPEAK = false; } }); } } };
     clock.getDelta(); frame();
@@ -762,7 +795,7 @@ function make(cfg) {
   /* ворота: закрыть после входа (0) или открыть (1) за секунду */
   function doorAnim(open) { var a0 = doorR.position.x, a1 = open ? 2.4 : .8, t0 = clock.elapsedTime;
     TICK.push(function dA(t) { var u = Math.min(1, (t - t0) / 1.1), e = ease(u), x = a0 + (a1 - a0) * e; doorR.position.x = x; doorL.position.x = -x; if (u >= 1) TICK.splice(TICK.indexOf(dA), 1); }); }
-  function close() { if (window.NACHALO_TEORII) { NACHALO_TEORII.hide(); NACHALO_TEORII.busy = NACHALO_TEORII.sam = false; } if (LOADING) { LOADING = null; if (window.KURS_ZAGRUZKA) KURS_ZAGRUZKA.hide(); } if (SIT) { SIT = null; if (OKN && OKN.sat) OKN.sat(false); } unlock(); on = false; cancelAnimationFrame(raf); stopTalk(); root.classList.remove('on'); document.body.classList.remove('kmn-win'); if (winObs) winObs.disconnect(); card(null); }
+  function close() { if (window.NACHALO_TEORII) { NACHALO_TEORII.hide(); NACHALO_TEORII.busy = NACHALO_TEORII.sam = false; } if (LOADING) { LOADING = null; if (window.KURS_ZAGRUZKA) KURS_ZAGRUZKA.hide(); } if (SIT) { SIT = null; if (OKN && OKN.sat) OKN.sat(false); } unlock(); on = false; cancelAnimationFrame(raf); stopTalk(); root.classList.remove('on'); document.body.classList.remove('kmn-win', 'kmn-on'); if (window.MUZYKA) MUZYKA.close(); if (winObs) winObs.disconnect(); card(null); }
   function leave() { stopTalk(); if (api) api.exit(); }
   /* окно задания закрыто: обновляем стенды, при свежем прохождении - праздник и проводник к следующему */
   function back(tid, fresh) {
