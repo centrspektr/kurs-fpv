@@ -7,6 +7,10 @@
 # Новые записи: положить как раньше в zvuk/<первая буква>/g-xxxxxxxx.mp3, дописать в spisok.json и запустить
 #   python3 .github/zvuk-paket.py
 # Скрипт достанет старые записи из пакетов, добавит новые, пересоберёт пакеты и удалит отдельные файлы.
+# 23.11.2026: стартовый пакет zvuk/p/s.mp3 - копии записей из zvuk/start.json (приветствие при входе, ~50 КБ).
+#   GitVerse не отдаёт кусок файла (Range), только пакет целиком (~1,8 МБ), и приветствие ждало 4 пакета (до 7 МБ).
+#   Маленький стартовый пакет плеер (golos-proba4.js) качает сразу при открытии сайта. В paket.json: "s": { "v": метка, "f": {...} }.
+#   Метка "v" считается только по пакетам 0-f, как раньше (старый плеер golos-proba3.js стартовый пакет не знает и не замечает).
 import json, os, hashlib, glob, sys
 Z = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'zvuk')
 spisok = json.load(open(os.path.join(Z, 'spisok.json'), encoding='utf-8'))
@@ -39,7 +43,18 @@ for p in '0123456789abcdef':
         data += b
     open(os.path.join(Z, 'p', p + '.mp3'), 'wb').write(data)
     h.update(data)
-json.dump({'v': h.hexdigest()[:8], 'f': out}, open(pj, 'w', encoding='utf-8'), ensure_ascii=False, separators=(',', ':'))
+res = {'v': h.hexdigest()[:8], 'f': out}
+sj = os.path.join(Z, 'start.json')
+if os.path.exists(sj):
+    sdata, sout = bytearray(), {}
+    for name in json.load(open(sj, encoding='utf-8')):
+        if name in old and name not in sout:
+            sout[name] = [len(sdata), len(old[name])]
+            sdata += old[name]
+    open(os.path.join(Z, 'p', 's.mp3'), 'wb').write(sdata)
+    res['s'] = {'v': hashlib.md5(sdata).hexdigest()[:8], 'f': sout}
+    print('Стартовый пакет:', len(sout), 'записей,', len(sdata), 'байт')
+json.dump(res, open(pj, 'w', encoding='utf-8'), ensure_ascii=False, separators=(',', ':'))
 for name in nado:
     f = os.path.join(Z, name)
     if os.path.exists(f):
