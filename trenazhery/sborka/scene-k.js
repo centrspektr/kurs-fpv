@@ -285,17 +285,72 @@ function workshop(S, lite, noLegs) { var R = new THREE.Group(); S.add(R);
   sp.updateMatrixWorld(true); var cEnd = V(0, 14.6, 0).applyMatrix4(new THREE.Matrix4().compose(V(0, 2.4, 0), new THREE.Quaternion().setFromEuler(new THREE.Euler(-.55, 0, 0)), V(.75, .75, .75))).add(V(18, 0, -2));
   tube([V(4.6, 2.35, 6.4), V(6.5, .5, 9), V(11, .4, 8), V(16, 2, 6), cEnd.clone().add(V(0, 1.5, 2.5)), cEnd], .28, M.wireK, st);
   st.position.set(24, 0, -14); st.rotation.y = -.6; R.add(st);
-  /* мультиметр и пинцет на столе */
-  var mm = new THREE.Group(); mesh(new THREE.BoxGeometry(7, 1.6, 12), new THREE.MeshStandardMaterial({ color: 0xffb020, roughness: .6 }), 0, .8, 0, mm); mesh(new THREE.BoxGeometry(5.6, .2, 3), new THREE.MeshStandardMaterial({ color: 0x9fd8a8, roughness: .3 }), 0, 1.65, -3.3, mm);
-  var mk = mesh(new THREE.CylinderGeometry(1.6, 1.6, .5, 24), M.chip, 0, 1.8, 1.2, mm); [[-1.8, 0xd8262f], [1.8, 0x111111]].forEach(function (q) { mesh(new THREE.CylinderGeometry(.35, .35, .4, 12), M.steel, q[0], 1.8, 4.6, mm); tube([V(q[0], 1.9, 4.6), V(q[0] * 1.5, 2.5, 8), V(q[0] * 3, .4, 11), V(q[0] * 4, .4, 15)], .14, new THREE.MeshStandardMaterial({ color: q[1], roughness: .5 }), mm); });
-  mm.position.set(-30, 0, -6); mm.rotation.y = .4; R.add(mm);
+  /* 24.11 (Лётная школа, замечание Alexandr): мультиметр, флюс и органайзер прорисованы подробнее */
+  function rbox(w, h, d, r, m, x, y, z, par) {   /* коробка со скруглёнными углами (в плане), высота h по Y */
+    var s = new THREE.Shape(), hw = w / 2 - r, hd = d / 2 - r;
+    s.moveTo(-hw, -d / 2); s.lineTo(hw, -d / 2); s.quadraticCurveTo(w / 2, -d / 2, w / 2, -hd); s.lineTo(w / 2, hd); s.quadraticCurveTo(w / 2, d / 2, hw, d / 2);
+    s.lineTo(-hw, d / 2); s.quadraticCurveTo(-w / 2, d / 2, -w / 2, hd); s.lineTo(-w / 2, -hd); s.quadraticCurveTo(-w / 2, -d / 2, -hw, -d / 2);
+    var b = Math.min(.25, h / 4), g = new THREE.ExtrudeGeometry(s, { depth: h - 2 * b, bevelEnabled: true, bevelThickness: b, bevelSize: b * .8, bevelSegments: 2, curveSegments: 6 });
+    g.rotateX(-Math.PI / 2); g.translate(0, b, 0); var o = new THREE.Mesh(g, m); o.position.set(x, y, z); o.castShadow = true; o.receiveShadow = true; (par || R).add(o); return o;
+  }
+  /* мультиметр: жёлтый резиновый чехол, серая панель, экран с цифрами, переключатель с делениями, гнёзда и щупы */
+  var mm = new THREE.Group(), mRub = new THREE.MeshStandardMaterial({ color: 0xf2b21b, roughness: .85 }), mFace = new THREE.MeshStandardMaterial({ color: 0x2b2f38, roughness: .55 });
+  rbox(8, 2.2, 15, 1.4, mRub, 0, 0, 0, mm); rbox(6.6, .3, 13.4, .9, mFace, 0, 2.05, 0, mm);
+  var lcd = cTex(256, 128, function (x, w, h) { x.fillStyle = '#9fb59a'; x.fillRect(0, 0, w, h); var g = x.createLinearGradient(0, 0, 0, h); g.addColorStop(0, 'rgba(255,255,255,.18)'); g.addColorStop(1, 'rgba(0,0,0,.12)'); x.fillStyle = g; x.fillRect(0, 0, w, h);
+    x.fillStyle = '#1d2a1f'; x.font = 'bold 78px "Courier New",monospace'; x.textAlign = 'right'; x.fillText('16.42', w - 40, 92); x.font = 'bold 26px sans-serif'; x.fillText('V', w - 12, 92); x.textAlign = 'left'; x.font = 'bold 18px sans-serif'; x.fillText('DC  AUTO', 14, 26); });
+  var scr = new THREE.Mesh(new THREE.PlaneGeometry(5.2, 2.6), new THREE.MeshStandardMaterial({ map: lcd, roughness: .25, metalness: 0 })); scr.rotation.x = -Math.PI / 2; scr.position.set(0, 2.41, -4.2); mm.add(scr);
+  mesh(new THREE.BoxGeometry(5.8, .1, 3.2), M.chip, 0, 2.32, -4.2, mm);   /* рамка экрана */
+  var dialFace = cTex(256, 256, function (x, w) { x.fillStyle = '#2b2f38'; x.fillRect(0, 0, w, w); x.translate(w / 2, w / 2); x.strokeStyle = '#e8ecf3'; x.fillStyle = '#e8ecf3'; x.lineWidth = 4; x.font = 'bold 20px sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle';
+    var lab = ['OFF', 'V~', 'V⎓', 'mV', 'Ω', '•))', 'A', 'mA']; for (var i = 0; i < 8; i++) { var a = -Math.PI * .9 + i * Math.PI * 1.8 / 7; x.save(); x.rotate(a); x.beginPath(); x.moveTo(0, -78); x.lineTo(0, -92); x.stroke(); x.restore(); x.fillText(lab[i], Math.sin(a) * 110, -Math.cos(a) * 110); } });
+  var dp = new THREE.Mesh(new THREE.CircleGeometry(4.2, 40), new THREE.MeshStandardMaterial({ map: dialFace, roughness: .6 })); dp.rotation.x = -Math.PI / 2; dp.position.set(0, 2.36, 1.6); mm.add(dp);
+  var knob = new THREE.Group(); mesh(new THREE.CylinderGeometry(2.3, 2.4, .9, 32), new THREE.MeshStandardMaterial({ color: 0x15171c, roughness: .5 }), 0, 0, 0, knob);
+  mesh(new THREE.BoxGeometry(.9, .7, 4.4), new THREE.MeshStandardMaterial({ color: 0x23262e, roughness: .5 }), 0, .7, 0, knob); mesh(new THREE.BoxGeometry(.25, .1, 1.6), neon(0xffffff), 0, 1.08, -1.3, knob);
+  knob.position.set(0, 2.8, 1.6); knob.rotation.y = -.85; mm.add(knob);
+  var probeC = [[-2.1, 0x111111, 'COM'], [-.7, 0xd8262f, 'VΩ'], [.7, 0xd8262f, 'mA'], [2.1, 0xd8262f, '10A']];
+  probeC.forEach(function (q, i) { mesh(new THREE.CylinderGeometry(.55, .55, .25, 20), new THREE.MeshStandardMaterial({ color: q[1], roughness: .4 }), q[0], 2.35, 5.6, mm); mesh(new THREE.CylinderGeometry(.25, .25, .3, 12), M.chip, q[0], 2.45, 5.6, mm); });
+  /* щупы: провода из COM и VΩ, ручки с наконечниками лежат рядом */
+  [[-2.1, 0x161616, -6.5, 9.5, .25], [-.7, 0xd02a2a, -2.5, 12, -.15]].forEach(function (q) {
+    var lm = new THREE.MeshStandardMaterial({ color: q[1], roughness: .55 }); tube([V(q[0], 2.6, 5.6), V(q[0], 3.4, 7.2), V(q[0] * 1.4, 1.2, 9.5), V(q[2] + 2, .35, q[3] + 2.5), V(q[2] + 6, .35, q[3] + 5), V(q[2] + 2.5, .35, q[3] + 7.5), V(q[2], .35, q[3] + 6)], .16, lm, mm);
+    var pr = new THREE.Group(); mesh(new THREE.CylinderGeometry(.42, .5, 6.5, 14), lm, 0, 3.25, 0, pr); mesh(new THREE.CylinderGeometry(.75, .75, .35, 16), lm, 0, 6.2, 0, pr); mesh(new THREE.CylinderGeometry(.08, .1, 2.6, 8), M.steel, 0, 7.6, 0, pr);
+    pr.rotation.set(Math.PI / 2, 0, q[4]); pr.position.set(q[2], .5, q[3] + 6); mm.add(pr); });
+  mm.position.set(-31, 0, -7); mm.rotation.y = .4; R.add(mm);
   var tw = new THREE.Group(); [-1, 1].forEach(function (s2) { var arm = mesh(new THREE.BoxGeometry(.35, .2, 11), M.steel, s2 * .35, .2, 0, tw); arm.rotation.y = s2 * .05; }); tw.position.set(-22, 0, 4); tw.rotation.y = -.9; R.add(tw);
-  /* катушка припоя, флюс */
+  /* катушка припоя */
   var sl = mesh(new THREE.CylinderGeometry(2.6, 2.6, 2.4, 28), new THREE.MeshStandardMaterial({ color: 0x9aa3b5, metalness: .9, roughness: .3 }), 24, 1.2, 12, R); mesh(new THREE.CylinderGeometry(3.2, 3.2, .3, 28), M.benchEdge, 24, 2.5, 12, R); mesh(new THREE.CylinderGeometry(3.2, 3.2, .3, 28), M.benchEdge, 24, 0, 12, R);
-  var fx = mesh(new THREE.CylinderGeometry(1.6, 1.6, 6, 20), new THREE.MeshStandardMaterial({ color: 0xffd166, transparent: true, opacity: .75, roughness: .1 }), -19, 3, -4, R); mesh(new THREE.CylinderGeometry(.6, 1.2, 2.2, 16), new THREE.MeshStandardMaterial({ color: 0xff4f6a }), -19, 7, -4, R);
-  /* органайзер с деталями */
-  var org = new THREE.Group(); mesh(new THREE.BoxGeometry(20, 1.6, 12), new THREE.MeshStandardMaterial({ color: 0x241f38, roughness: .5 }), 0, .8, 0, org);
-  for (var c = 0; c < 4; c++) for (var r = 0; r < 2; r++) { mesh(new THREE.BoxGeometry(.3, 2, 12), M.benchEdge, -10 + c * 5, 1.4, 0, org); var cnt = [0xc77dff, 0xffd166, 0x5effc4, 0xff4fd8][c]; for (var k = 0; k < 4; k++) mesh(new THREE.SphereGeometry(.45, 10, 8), new THREE.MeshStandardMaterial({ color: cnt, metalness: .6, roughness: .3 }), -7.5 + c * 5 + (k % 2) * 1.2 - .6, 1.9, -3 + r * 6 + (k > 1 ? 1 : -1), org); }
+  /* флюс: янтарный флакон с иглой-дозатором и наклейкой "ФЛЮС" */
+  var fx = new THREE.Group(), lbl = cTex(512, 96, function (x, w, h) { x.fillStyle = '#f4f1e8'; x.fillRect(0, 0, w, h); x.fillStyle = '#1f6fd6'; x.fillRect(0, 0, w, 18); x.fillRect(0, h - 12, w, 12);
+    x.fillStyle = '#16233a'; x.textAlign = 'center'; [w / 4, w * 3 / 4].forEach(function (cx) { x.font = 'bold 40px sans-serif'; x.fillText('ФЛЮС', cx, 60); x.font = 'bold 14px sans-serif'; x.fillText('безотмывочный  10 мл', cx, 78); }); });   /* надпись дважды - читается с любой стороны */
+  var pts2 = [V(0, 0, 0), V(1.55, 0, 0), V(1.7, .3, 0), V(1.7, 4.6, 0), V(1.45, 5.3, 0), V(.7, 5.8, 0), V(.55, 6.3, 0), V(0, 6.3, 0)].map(function (p) { return new THREE.Vector2(p.x, p.y); });
+  mesh(new THREE.LatheGeometry(pts2, 28), new THREE.MeshStandardMaterial({ color: 0xc9781e, transparent: true, opacity: .82, roughness: .12, metalness: .1 }), 0, 0, 0, fx);
+  mesh(new THREE.CylinderGeometry(1.58, 1.58, 3.4, 28, 1, true), new THREE.MeshStandardMaterial({ color: 0x8a4a10, roughness: .3 }), 0, 1.75, 0, fx);   /* флюс внутри */
+  var lb = mesh(new THREE.CylinderGeometry(1.74, 1.74, 2.6, 32, 1, true), new THREE.MeshStandardMaterial({ map: lbl, roughness: .7 }), 0, 2.6, 0, fx); lb.rotation.y = Math.PI * .65;
+  mesh(new THREE.CylinderGeometry(.75, .75, 1.1, 20), new THREE.MeshStandardMaterial({ color: 0xf5f5f5, roughness: .4 }), 0, 6.8, 0, fx); mesh(new THREE.CylinderGeometry(.35, .5, .9, 16), new THREE.MeshStandardMaterial({ color: 0x3fa9ff, roughness: .4 }), 0, 7.75, 0, fx);
+  mesh(new THREE.CylinderGeometry(.06, .06, 2.4, 8), M.steel, 0, 9.3, 0, fx);
+  fx.position.set(-19, 0, -4); R.add(fx);
+  /* органайзер с крепежом: прозрачная крышка откинута, в ячейках болты, гайки, латунные стойки, шайбы и стяжки, на ячейках подписи */
+  var org = new THREE.Group(), oM = new THREE.MeshStandardMaterial({ color: 0x1b1d26, roughness: .6 }), oW = 20, oD = 12;
+  rbox(oW, 1.0, oD, .6, oM, 0, 0, 0, org);
+  [-oD / 2 + .15, oD / 2 - .15].forEach(function (z) { mesh(new THREE.BoxGeometry(oW, 2.4, .3), oM, 0, 1.6, z, org); });
+  [-oW / 2 + .15, oW / 2 - .15].forEach(function (x) { mesh(new THREE.BoxGeometry(.3, 2.4, oD), oM, x, 1.6, 0, org); });
+  for (var c = 1; c < 4; c++) mesh(new THREE.BoxGeometry(.2, 2.0, oD - .4), oM, -oW / 2 + c * 5, 1.5, 0, org);
+  mesh(new THREE.BoxGeometry(oW - .4, 2.0, .2), oM, 0, 1.5, 0, org);
+  var lid = mesh(new THREE.BoxGeometry(oW, .25, oD), new THREE.MeshPhysicalMaterial({ color: 0xcfe6ff, transparent: true, opacity: .22, roughness: .05, metalness: 0 }), 0, 0, 0, null);
+  var lidG = new THREE.Group(); lid.position.set(0, 0, -oD / 2); lidG.add(lid); lid.castShadow = false; lidG.position.set(0, 2.85, -oD / 2); lidG.rotation.x = -1.95; org.add(lidG);
+  var steelS = new THREE.MeshStandardMaterial({ color: 0xb9c0cc, metalness: .9, roughness: .3 }), blk = new THREE.MeshStandardMaterial({ color: 0x1a1a1f, metalness: .6, roughness: .35 }), brass = new THREE.MeshStandardMaterial({ color: 0xd4a640, metalness: .9, roughness: .3 });
+  function cellXY(c, r) { return [-oW / 2 + 2.5 + c * 5, -oD / 4 + r * oD / 2]; }
+  function rnd(i) { var s = Math.sin(i * 12.9898) * 43758.5453; return s - Math.floor(s); }
+  function bolt(m, x, z, i) { var g = new THREE.Group(); mesh(new THREE.CylinderGeometry(.42, .42, .32, 12), m, 0, .16, 0, g); mesh(new THREE.CylinderGeometry(.16, .16, 1.6, 8), m, 0, 0, .9, g).rotation.x = Math.PI / 2; g.position.set(x, 1.15 + rnd(i) * .2, z); g.rotation.y = rnd(i + 7) * 6.3; org.add(g); }
+  function nut(m, x, z, i) { var n = mesh(new THREE.CylinderGeometry(.42, .42, .28, 6), m, x, 1.15 + rnd(i) * .15, z, org); n.rotation.set(rnd(i) * .5, rnd(i + 3) * 6, 0); }
+  function stand(x, z, i) { var s = mesh(new THREE.CylinderGeometry(.3, .3, 2.0, 6), brass, x, 1.4, z, org); s.rotation.set(Math.PI / 2, 0, rnd(i) * 6.3); s.position.y = 1.3 + rnd(i) * .2; }
+  function washer(x, z, i) { var w = mesh(new THREE.TorusGeometry(.32, .1, 6, 14), steelS, x, 1.12 + rnd(i) * .1, z, org); w.rotation.x = Math.PI / 2 + (rnd(i) - .5) * .4; }
+  function tie(x, z, i, col) { var t = mesh(new THREE.BoxGeometry(.25, .08, 3.6), new THREE.MeshStandardMaterial({ color: col, roughness: .6 }), x, 1.1 + i * .06, z, org); t.rotation.y = (rnd(i) - .5) * 1.2; }
+  var fill = [function (x, z, i) { bolt(blk, x, z, i); }, function (x, z, i) { nut(steelS, x, z, i); }, stand, washer, function (x, z, i) { bolt(steelS, x, z, i); }, function (x, z, i) { nut(blk, x, z, i); }, null, function (x, z, i) { bolt(blk, x, z, i + 50); }];
+  var names = ['M3x8', 'M3 гайка', 'стойки', 'шайбы', 'M2x6', 'M2 гайка', 'стяжки', 'M3x12'];
+  for (var ci = 0; ci < 8; ci++) { var cc = ci % 4, cr = ci >> 2, p0 = cellXY(cc, cr);
+    if (fill[ci]) for (var k = 0; k < 9; k++) fill[ci](p0[0] + (rnd(ci * 31 + k) - .5) * 3.4, p0[1] + (rnd(ci * 17 + k) - .5) * 3.8, ci * 13 + k);
+    else [0x111111, 0xf2f2f2, 0x111111, 0x3fa9ff, 0x111111].forEach(function (col, k) { tie(p0[0] + (k - 2) * .55, p0[1], k, col); });
+    var tl = cTex(128, 32, function (x, w, h) { x.fillStyle = '#f2f2f2'; x.fillRect(0, 0, w, h); x.fillStyle = '#111'; x.font = 'bold 18px sans-serif'; x.textAlign = 'center'; x.fillText(names[ci], w / 2, 23); });
+    var tg = new THREE.Mesh(new THREE.PlaneGeometry(2.1, .52), new THREE.MeshBasicMaterial({ map: tl })); tg.position.set(p0[0], 1.7, cr ? oD / 2 + .17 : -oD / 2 - .17); if (!cr) tg.rotation.y = Math.PI; org.add(tg); }
   org.position.set(-25, 0, 13); org.rotation.y = .5; R.add(org);
   /* лампа на кронштейне */
   var lp = new THREE.Group(); mesh(new THREE.CylinderGeometry(3.5, 4, 1.2, 24), M.benchEdge, 0, .6, 0, lp);
