@@ -17,7 +17,8 @@ body{font-family:Manrope,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;-we
 .tb{padding:13px 20px;background:linear-gradient(160deg,#18203ee6,#0b1126eb)}
 .tb:hover,.qs button:hover{border-color:var(--a)}.tb:active,.qs button:active{transform:scale(.97)}
 .tb.pri,.btn{font-family:Unbounded,Manrope,sans-serif;font-weight:600;font-size:14px;letter-spacing:.01em}
-.btn{border-radius:18px;box-shadow:0 10px 34px #8b3dff77,inset 0 1px 0 #ffffff55}
+.btn{width:auto!important;min-width:0;padding:11px 26px!important;border-radius:999px;background:rgba(12,14,32,.72)!important;border:1px solid rgba(199,125,255,.6);box-shadow:0 6px 18px #0007!important;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);font-size:13.5px!important;letter-spacing:.04em;transition:border-color .15s,background .15s,transform .12s}   /* 24.11 Alexandr: кнопка без большой сиреневой плашки, спокойная */
+.btn:hover{border-color:#c77dff;background:rgba(40,24,70,.8)!important}.btn:active{transform:translateX(-50%) scale(.97)}
 .bars i::before,.bars i{border-radius:3px}
 .hint{border-radius:14px;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)}
 .toast{border-radius:16px;box-shadow:0 10px 30px #0008}

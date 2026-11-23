@@ -166,11 +166,22 @@ function make(X) {
     GX.add(stand); X.block(mo.g.position.x, mo.g.position.z + .4, 2.4, .5, 0); }
   var spk = [];
   [-1, 1].forEach(function (k) { var g = new T.Group(), sx = k * (X.monW / 2 + .75); g.position.set(sx, 0, (mo ? mo.g.position.z : NZ + 1.5) + .45); g.rotation.y = -k * .18;
-    var cab = GX.std(PAL.spk, .45, .2); g.add(GX.rbox ? GX.rbox(.62, 1.75, .5, .05, cab, 0, .875 + .06, 0) : GX.box(.62, 1.75, .5, cab, 0, .935, 0));
-    [[.35, .25], [.85, .25], [1.38, .12]].forEach(function (d, q) { var dr = new T.Mesh(new T.CylinderGeometry(d[1], d[1] * .9, .05, 28), GX.std('#0b0b0e', .7, .2)); dr.rotation.x = PI / 2; dr.position.set(0, d[0] + .2, .26); g.add(dr);
-      var cn = new T.Mesh(new T.CylinderGeometry(d[1] * .35, d[1] * .2, .04, 20), mtl); cn.rotation.x = PI / 2; cn.position.set(0, d[0] + .2, .29); g.add(cn); });
-    var c = new T.Color(X.MC), ring = new T.Mesh(new T.TorusGeometry(.27, .012, 6, 40), new T.MeshBasicMaterial({ color: c.clone(), toneMapped: false })); ring.position.set(0, .55, .29); g.add(ring);
-    [-.24, .24].forEach(function (f) { g.add(GX.box(.04, .06, .04, mtl, f, .03, f)); });
+    /* 24.11 (замечание Alexandr): колонки прорисованы - корпус под орех, матовая передняя панель, два басовых динамика с подвесом и колпачком, твитер с рупором, фазоинвертор, цоколь на шипах */
+    var rb2 = function (w, h, d, r, m, x, y, z) { var o = GX.rbox ? GX.rbox(w, h, d, r, m, x, y, z) : GX.box(w, h, d, m, x, y, z); g.add(o); return o; };
+    var cab = VAR === 'A' ? GX.std('#5b3b26', .42, .05) : GX.std(PAL.spk, .45, .2), baf = GX.std('#17181d', .85, .05), rub = GX.std('#0d0d10', .9, 0), cone = GX.std('#26272d', .6, .15), alu = GX.std('#9aa0ab', .3, .9);
+    rb2(.6, 1.62, .46, .04, cab, 0, .14 + .81, 0); rb2(.54, 1.56, .03, .02, baf, 0, .14 + .81, .235);
+    rb2(.66, .06, .52, .02, GX.std('#111216', .5, .4), 0, .11, 0);
+    [-.25, .25].forEach(function (fx2) { [-.2, .2].forEach(function (fz) { var sp2 = new T.Mesh(new T.ConeGeometry(.025, .08, 12), alu); sp2.rotation.x = PI; sp2.position.set(fx2, .04, fz); g.add(sp2); }); });
+    [.5, .95].forEach(function (yy) { var R0 = .19;
+      var sur = new T.Mesh(new T.TorusGeometry(R0, .022, 10, 36), rub); sur.position.set(0, yy, .255); g.add(sur);
+      var cn2 = new T.Mesh(new T.CylinderGeometry(R0 - .01, .06, .05, 32, 1, true), cone); cn2.rotation.x = -PI / 2; cn2.position.set(0, yy, .245); g.add(cn2);
+      var cap = new T.Mesh(new T.SphereGeometry(.065, 16, 10, 0, PI * 2, 0, PI / 2), GX.std('#1c1d22', .35, .3)); cap.rotation.x = PI / 2; cap.position.set(0, yy, .232); g.add(cap);
+      var trim = new T.Mesh(new T.TorusGeometry(R0 + .035, .008, 6, 40), alu); trim.position.set(0, yy, .252); g.add(trim); });
+    var wg = new T.Mesh(new T.CylinderGeometry(.1, .05, .04, 28, 1, true), baf); wg.rotation.x = -PI / 2; wg.position.set(0, 1.36, .26); g.add(wg);
+    var dome = new T.Mesh(new T.SphereGeometry(.035, 14, 8, 0, PI * 2, 0, PI / 2), alu); dome.rotation.x = PI / 2; dome.position.set(0, 1.36, .245); g.add(dome);
+    g.add(GX.box(.3, .035, .02, rub, 0, .24, .25)); g.add(GX.box(.3, .035, .02, rub, 0, .3, .25));   /* щели фазоинвертора */
+    var c = new T.Color(X.MC), ring = new T.Mesh(new T.TorusGeometry(.12, .006, 6, 40), new T.MeshBasicMaterial({ color: c.clone(), toneMapped: false })); ring.position.set(0, 1.36, .262); g.add(ring);   /* подсветка вокруг твитера - мигает, когда говорит Лера */
+
     GX.add(g); spk.push({ ring: ring, c: c, ph: k }); X.block(sx, g.position.z, .4, .4, 0); });
 
   var SEAT = { x: 0, z: -2.3, eye: 1.22, ux: 1.1, uz: .5 };

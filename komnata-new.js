@@ -344,9 +344,24 @@ function make(cfg) {
 
   /* ---------- декорации ---------- */
   var DECOR = {
-    shelf: function (o) { var g = grp(o.x, 0, o.z, o.ry), cols = ['#ef4444', '#f59e0b', '#22c55e', '#3b82f6', '#a855f7', '#ec4899'];
-      [-1, 1].forEach(function (s) { box(.08, 3.2, .6, mSteel, s * 1.5, 1.6, 0, g); });
-      for (var i = 0; i < 5; i++) { box(3.1, .05, .6, mSteel, 0, .3 + i * .7, 0, g); for (var j = 0; j < 5; j++) { box(.48, .3, .45, M({ color: cols[(i + j * 2) % cols.length], roughness: .55 }), -1.15 + j * .58, .48 + i * .7, .02, g); box(.3, .06, .01, M({ color: '#fff', roughness: .9 }), -1.15 + j * .58, .5 + i * .7, .25, g); } }
+    shelf: function (o) {   /* 24.11 (Лётная школа, замечание Alexandr): стеллаж прорисован - стойки с перфорацией, фанерные полки, ящики-лотки с открытым передом и подписями, катушки провода, картонные коробки */
+      var g = grp(o.x, 0, o.z, o.ry), SH = ({
+        post: M({ color: '#2a2e38', roughness: .45, metalness: .7 }), ply: M({ color: '#c9a678', roughness: .75 }), plyE: M({ color: '#a8835a', roughness: .8 }),
+        bin: [M({ color: '#2f4a7a', roughness: .5 }), M({ color: '#3b3f48', roughness: .5 }), M({ color: '#d9822b', roughness: .5 })], lab: M({ color: '#f3f1ea', roughness: .9 }),
+        kraft: M({ color: '#b78d5c', roughness: .9 }), tape: M({ color: '#d9c49a', roughness: .5 }), steel: M({ color: '#b9c0cc', roughness: .3, metalness: .9 }),
+        wire: [M({ color: '#d63b3b', roughness: .45 }), M({ color: '#1d1d22', roughness: .45 }), M({ color: '#e8c33c', roughness: .45 }), M({ color: '#3a7bd5', roughness: .45 })], hole: M({ color: '#111318', roughness: .8 }) }), i, j;
+      [-1.5, 1.5].forEach(function (x) { [-.27, .27].forEach(function (z) { box(.05, 3.2, .05, SH.post, x, 1.6, z, g); for (var k = 0; k < 14; k++) box(.012, .05, .052, SH.hole, x + (x > 0 ? -.02 : .02), .25 + k * .21, z, g, 1); }); });
+      [-1, 1].forEach(function (s2) { var br = box(.02, 3.3, .02, SH.post, 0, 1.6, -.28, g); br.rotation.z = s2 * .82; br.scale.y = 1.15; });   /* крест на задней стенке */
+      for (i = 0; i < 5; i++) { var y = .3 + i * .7; box(3.04, .03, .58, SH.ply, 0, y, 0, g); box(3.04, .05, .02, SH.plyE, 0, y, .29, g);
+        if (i === 0 || i === 4) { for (j = 0; j < 3; j++) { var bw = [.9, .8, .95][j], bh = i ? .36 : .42, bx = -1.0 + j * 1.0; box(bw, bh, .5, SH.kraft, bx, y + .015 + bh / 2, 0, g); box(bw + .005, .02, .1, SH.tape, bx, y + .02 + bh, 0, g, 1); box(.22, .08, .005, SH.lab, bx - bw / 4, y + bh * .62, .252, g, 1); } continue; }
+        if (i === 2) { for (j = 0; j < 4; j++) { var sx = -1.08 + j * .72, sp = cyl(.17, .17, .16, SH.wire[j], sx, y + .19, 0, g, 22); sp.rotation.x = Math.PI / 2; [-.09, .09].forEach(function (dz) { var fl = cyl(.21, .21, .015, SH.post, sx, y + .19, dz, g, 22); fl.rotation.x = Math.PI / 2; }); var ax = cyl(.03, .03, .2, SH.steel, sx, y + .19, 0, g, 10); ax.rotation.x = Math.PI / 2; } continue; }
+        var bm = SH.bin[i === 1 ? 0 : 1];
+        for (j = 0; j < 5; j++) { var x0 = -1.16 + j * .58, by = y + .015;
+          box(.52, .02, .48, bm, x0, by + .01, 0, g); box(.02, .3, .48, bm, x0 - .25, by + .15, 0, g); box(.02, .3, .48, bm, x0 + .25, by + .15, 0, g); box(.52, .3, .02, bm, x0, by + .15, -.23, g);
+          var fr = box(.52, .16, .02, bm, x0, by + .09, .23, g); fr.rotation.x = -.18;   /* низкий передний бортик с наклоном - видно, что внутри */
+          box(.2, .07, .006, SH.lab, x0, by + .1, .247, g, 1);
+          for (var q = 0; q < 4; q++) { var it = cyl(.035, .035, .05, (j + q) % 3 === 0 ? SH.wire[2] : SH.steel, x0 - .12 + (q % 2) * .2, by + .06 + (q > 1 ? .03 : 0), -.05 + (q % 2) * .08, g, 8); it.rotation.z = q * .7; } }
+        if (i === 3) for (j = 0; j < 5; j++) box(.08, .3, .02, SH.bin[2], -1.16 + j * .58 + .18, y + .17, .235, g, 1);   /* оранжевые язычки-метки на сером ряду */ }
       block(o.x, o.z, 1.6, .4, o.ry); return g; },
     droneWall: function (o) { if (PROBA && window.SBDron) return droneWallP(o); var g = grp(o.x, 0, o.z, o.ry), pb = M({ color: '#141829', roughness: .85 }); box(4.4, 2.4, .05, mSteel, 0, 2.6, -.02, g); box(4.2, 2.2, .06, pb, 0, 2.6, 0, g); box(4.4, .04, .04, glow(MC), 0, 3.8, .04, g, 1);
       ['#ea580c', '#7cf3ff', '#ffd36e'].forEach(function (c, i) { var q = quad([.45, .7, .95][i], c); q.rotation.x = Math.PI / 2; q.position.set(-1.35 + i * 1.35, 2.65, .12); g.add(q); });
