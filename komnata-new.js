@@ -287,9 +287,9 @@ function make(cfg) {
       if (MON.eq) { MON.eq.visible = !!MON.talk; if (MON.talk && Math.floor(t * 8) !== MON.tb) { MON.tb = Math.floor(t * 8); MON.eqDraw(); } } }
     else if (MON.a < 1) { MON.a = Math.min(1, MON.a + dt * 2); MON.draw(MON.a); }
     else if (MON.talk && Math.floor(t * 6) !== MON.tb) { MON.tb = Math.floor(t * 6); MON.draw(1); }
-    var G = window.GOLOS, near = (OKN ? !!SIT : pos.distanceTo(MON.g.position) < 11) && !paused && !anim, can = G && G.on && G.can && G.can();
+    var G = window.GOLOS, near = (OKN ? !!SIT : pos.distanceTo(MON.g.position) < 11) && !paused && !anim, can = G && G.on && G.can && G.can() && !(window.NACHALO_TEORII && (NACHALO_TEORII.busy || NACHALO_TEORII.sam));   /* 24.11 Лётная школа: пока печатается заставка или выбран режим "читаю сам" - Лера молчит */
     if (can && near && MON.said !== MON.k && !SPEAK) { var s = MON.list[MON.k]; MON.said = MON.k; MON.talk = true; G.say(s.say || (s.h + '. ' + s.p), { onend: function () { MON.talk = false; MON.draw(1); setTimeout(function () { if (on && !paused && MON.said === MON.k) MON.go(MON.k + 1); }, 1800); } }); return; }
-    if (!MON.talk) { MON.t0 += dt; if (MON.t0 > (can && near ? 30 : 9)) MON.go(MON.k + 1); }
+    if (!MON.talk && !(window.NACHALO_TEORII && (NACHALO_TEORII.sam || NACHALO_TEORII.busy) && SIT)) { MON.t0 += dt; if (MON.t0 > (can && near ? 30 : 9)) MON.go(MON.k + 1); }   /* "читаю сам" - слайды сами не листаются */
   }
   var SPEAK = false; /* приветствие говорит - монитор ждёт */
 
@@ -626,7 +626,7 @@ function make(cfg) {
     var from = pos.clone(), to = new T.Vector3(s.x, s.eye, s.z), fy = yaw, fp = pitch; from.y = EYE; var sv = pos.clone(); pos.copy(to); var a = aimAt(OKN.look()); pos.copy(sv);
     anim = { t: 0, d: RED ? .3 : 1.5, step: function (u) { var e = ease(u); pos.lerpVectors(from, to, e); yaw = fy + angD(fy, a[0]) * e; pitch = fp + (a[1] - fp) * e; },
       end: function () { SIT = { uT: -99, y: yaw, p: pitch }; ui.up.classList.add('on'); if (MON) { if (window.GOLOS && MON.talk) GOLOS.stop(); MON.talk = false; MON.said = -1; MON.t0 = 0; }
-        if (OKN.sat) OKN.sat(true); var G = window.GOLOS; hint((G && G.on ? 'Слушай теорию. ' : 'Включи звук 🔊 вверху - Лера прочитает теорию. ') + (MOB ? 'Встать - джойстик или кнопка "Встать".' : 'Встать - W, стрелка или кнопка "Встать".'), 5000); } };
+        if (OKN.sat) OKN.sat(true); var G = window.GOLOS; if (!window.NACHALO_TEORII) hint((G && G.on ? 'Слушай теорию. ' : 'Включи звук 🔊 вверху - Лера прочитает теорию. ') + (MOB ? 'Встать - джойстик или кнопка "Встать".' : 'Встать - W, стрелка или кнопка "Встать".'), 5000); } };
   }
   function standUp(tg) { if (!SIT || anim) return; var s = OKN.seat, from = pos.clone(), to = new T.Vector3(s.x + (s.ux || 0), EYE, s.z + (s.uz || 1.1)); SIT = null; if (ui.up) ui.up.classList.remove('on'); if (OKN.sat) OKN.sat(false);
     anim = { t: 0, d: RED ? .2 : .7, step: function (u) { pos.lerpVectors(from, to, ease(u)); }, end: function () { pos.y = EYE; if (tg) { target = tg; arrived = false; } } }; }
@@ -752,7 +752,7 @@ function make(cfg) {
   /* ворота: закрыть после входа (0) или открыть (1) за секунду */
   function doorAnim(open) { var a0 = doorR.position.x, a1 = open ? 2.4 : .8, t0 = clock.elapsedTime;
     TICK.push(function dA(t) { var u = Math.min(1, (t - t0) / 1.1), e = ease(u), x = a0 + (a1 - a0) * e; doorR.position.x = x; doorL.position.x = -x; if (u >= 1) TICK.splice(TICK.indexOf(dA), 1); }); }
-  function close() { if (LOADING) { LOADING = null; if (window.KURS_ZAGRUZKA) KURS_ZAGRUZKA.hide(); } if (SIT) { SIT = null; if (OKN && OKN.sat) OKN.sat(false); } unlock(); on = false; cancelAnimationFrame(raf); stopTalk(); root.classList.remove('on'); document.body.classList.remove('kmn-win'); if (winObs) winObs.disconnect(); card(null); }
+  function close() { if (window.NACHALO_TEORII) { NACHALO_TEORII.hide(); NACHALO_TEORII.busy = NACHALO_TEORII.sam = false; } if (LOADING) { LOADING = null; if (window.KURS_ZAGRUZKA) KURS_ZAGRUZKA.hide(); } if (SIT) { SIT = null; if (OKN && OKN.sat) OKN.sat(false); } unlock(); on = false; cancelAnimationFrame(raf); stopTalk(); root.classList.remove('on'); document.body.classList.remove('kmn-win'); if (winObs) winObs.disconnect(); card(null); }
   function leave() { stopTalk(); if (api) api.exit(); }
   /* окно задания закрыто: обновляем стенды, при свежем прохождении - праздник и проводник к следующему */
   function back(tid, fresh) {
