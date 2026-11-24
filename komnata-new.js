@@ -60,6 +60,8 @@ function make(cfg) {
   var anim = null; /* сценарий камеры (вход, провал в стол) */
   var paused = false, winP = false, winObs = null, K = window.VZ_KURS, I = window.VZ_KURS_INFO;
   var mod = K && K.mods.find(function (m) { return m.id === cfg.mid; });
+  if (!mod) mod = { id: cfg.mid, n: cfg.n || '', t: cfg.title || '', tasks: [] };   /* 24.11: помещение без модуля курса (холл Лётной школы, holl.js) */
+  var HK = null, HOLD = false;   /* HK - хук помещения (KOMNATA_OKNO[mid]); HOLD - ученик стоит (открыто меню лифта) */
 
   function hexRgb(h) { var c = new T.Color(h); return Math.round(c.r * 255) + ',' + Math.round(c.g * 255) + ',' + Math.round(c.b * 255); }
 
@@ -122,8 +124,9 @@ function make(cfg) {
   function gfit() { if (GX) GX.resize(innerWidth, innerHeight, Math.min(devicePixelRatio || 1, GX.quality === 'high' ? 2 : GX.quality === 'mid' ? (window.KACHESTVO ? 1.25 : 1.5) : (window.KACHESTVO ? 1 : 1.25))); }
   /* помещение в новой графике: зал, ворота, тамбур за воротами, окно на город */
   function roomG() { var gw = 3.2, gh = 3.5, lamps = [], ww = Math.min(14, D - 3), i, k;
+    if (cfg.lamps) lamps = cfg.lamps; else
     for (i = -1; i <= 1; i++) for (k = -1.5; k <= 1.5; k++) lamps.push([i * W / 3.2, k * D / 4.4, 1.35, 0]);
-    var g = GX.room({ x0: -W / 2, z0: -D / 2, x1: W / 2, z1: D / 2, h: H, holes: { s: [[-gw / 2, gw / 2, gh]], e: cfg.window !== false ? [[-1 - ww / 2, -1 + ww / 2, H - 1.0, H - 3.3]] : [], n: (cfg.okno && cfg.okno.n) || [] }, lamps: lamps, walls: { n: GX.S.feature } });
+    var g = GX.room({ x0: -W / 2, z0: -D / 2, x1: W / 2, z1: D / 2, h: H, holes: { s: [[-gw / 2, gw / 2, gh]], e: cfg.window !== false ? [[-1 - ww / 2, -1 + ww / 2, H - 1.0, H - 3.3]] : [], n: (cfg.okno && cfg.okno.n) || [], w: (cfg.okno && cfg.okno.w) || [] }, lamps: lamps, glows: cfg.glows, walls: cfg.walls || { n: GX.S.feature } });
     g.traverse(function (m) { if (m.userData.floor) FLOOR = m; });
     if (cfg.window !== false) GX.window({ axis: 'z', c: W / 2, a0: -1 - ww / 2, a1: -1 + ww / 2, y0: H - 3.3, y1: H - 1.0, out: 1 });
     GX.room({ x0: -gw / 2, z0: D / 2 + .24, x1: gw / 2, z1: D / 2 + 3.4, h: gh + .1, holes: { n: [[-gw / 2, gw / 2, gh]] }, lamps: [[0, D / 2 + 1.8, .8, 0]] });
@@ -411,7 +414,7 @@ function make(cfg) {
     /* общий "дальше" ведёт в другой модуль - в комнате ведём к первому открытому непройденному заданию этого модуля */
     if (!NEXT && api) NEXT = mod.tasks.find(function (t) { return api.state(t) === 'open'; }) || null; return NEXT; }
   function guideTick(t, dt) {
-    var c = NEXT && (CLICK.find(function (z) { return (z.kind === 'stand' || z.kind === 'table') && z.tid === NEXT; }));
+    var c = cfg.guideTo ? cfg.guideTo() : NEXT && (CLICK.find(function (z) { return (z.kind === 'stand' || z.kind === 'table') && z.tid === NEXT; }));
     if (c) gTo.set(c.look[0], 2.9, c.look[2]); else gTo.set(pos.x - Math.sin(yaw + .5) * 4.5, 3.3, pos.z - Math.cos(yaw + .5) * 4.5);
     GUIDE.position.lerp(gTo, Math.min(1, dt * 1.2)); GUIDE.position.y += Math.sin(t * 2) * .004; GUIDE.rotation.y += dt * .5; GUIDE.userData.spin(.8);
     /* светящийся путь от ученика к стоянке у следующего задания */
@@ -437,6 +440,7 @@ function make(cfg) {
     ui.help.addEventListener('pointerdown', function (e) { e.stopPropagation(); }); ui.help.onclick = function () { helpT(!helpOn); ui.help.blur(); };
     ui.hint.addEventListener('pointerdown', function (e) { if (!helpOn) return; e.stopPropagation(); helpT(false); });
     ui.card.addEventListener('click', function (e) { var b = e.target.closest('[data-a]'); if (b) doAct(b.dataset.a); });
+    if (cfg.noExit) root.querySelector('[data-k="exit"]').style.display = 'none';
     if (window.KMN_GEAR) gearUI();
   }
   /* 24.11 (Лётная школа, замечания Alexandr): справа вверху только шестерёнка (muzyka.js) - в ней "Управление", голос вкл/выкл и ползунки;
@@ -471,7 +475,7 @@ function make(cfg) {
       var t = txt.slice(0, k), x = t.slice(0, Math.min(k, a.length)).replace(/[<&]/g, ''), y = t.slice(a.length).replace(/[<&]/g, ''); ui.ttlL.innerHTML = '<em>' + x + '</em>' + y; }, 400 + k * step)); })(i);
     ttlT.push(setTimeout(function () { ttlT.push(setTimeout(function () { ui.ttl.classList.add('gone'); }, 3500)); }, 420 + txt.length * step)); }   /* гаснет через 3,5 с после последней буквы */
   function sndUI() { var G = window.GOLOS; if (ui.gSnd) ui.gSnd.textContent = G && G.on ? '🔊 Голос Леры: вкл' : '🔇 Голос Леры: выкл'; ui.snd.textContent = G && G.on ? '🔊' : '🔇'; ui.snd.hidden = !G; ui.vol.hidden = !G || !G.setVol; if (G && G.vol != null) ui.vol.value = Math.round(G.vol * 100); }
-  function hud() { var d = 0; mod.tasks.forEach(function (t) { if (api && api.state(t) === 'done') d++; }); ui.st.textContent = '★ ' + d + ' / ' + mod.tasks.length; }
+  function hud() { if (cfg.hud) { ui.st.textContent = cfg.hud(); return; } var d = 0; mod.tasks.forEach(function (t) { if (api && api.state(t) === 'done') d++; }); ui.st.textContent = '★ ' + d + ' / ' + mod.tasks.length; }
   var hintT = 0;
   var helpOn = false; /* 14.11: подсказка управления - по кнопке "?": нажал - открылась, нажал ещё раз (или на неё) - закрылась */
   function helpT(on) { clearTimeout(hintT); helpOn = !!on; ui.help.classList.toggle('on', helpOn); ui.hint.style.pointerEvents = helpOn ? 'auto' : ''; ui.hint.style.whiteSpace = helpOn ? 'normal' : ''; ui.hint.style.textAlign = helpOn ? 'center' : '';
@@ -502,7 +506,7 @@ function make(cfg) {
   function kidFirst() { try { var P = JSON.parse(lsG((window.KURSY || {}).meKey || 'spk_vzlet') || 'null'), c = P && parseInt(P.cls, 10); return c > 0 && c <= 6; } catch (e) { return false; } }
   function doAct(a) {
     var c = sel; if (!c) return;
-    if (a.indexOf('q:') === 0) { if (QK && QK.act) QK.act(a.slice(2), c); return; }
+    if (a.indexOf('q:') === 0) { if (c.q && c.q.act) c.q.act(a.slice(2), c); else if (QK && QK.act) QK.act(a.slice(2), c); return; }
     if ((a === 'game0' || a === 'game1') && qLock()) a = 'lock';
     if (a === 'lock') { ui.card.classList.remove('shake'); void ui.card.offsetWidth; ui.card.classList.add('shake'); return; }
     if (a === 'task') { stopTalk(); if (api.task(c.tid) === false) doAct('lock'); return; }
@@ -566,9 +570,9 @@ function make(cfg) {
     S = new T.Scene(); S.background = new T.Color('#05060f'); S.fog = new T.Fog('#070914', 28, 70);
     if (T.RoomEnvironment) { var pm = new T.PMREMGenerator(R); S.environment = pm.fromScene(new T.RoomEnvironment(), .04).texture; }
     CAM = new T.PerspectiveCamera(64, innerWidth / innerHeight, .05, 200);
-    if (window.INTER && cfg.grafika !== false) { var gs = (/[?&]s=([ABC])/.exec(location.search) || [])[1] || cfg.style || 'C';
+    if (window.INTER && cfg.grafika !== false) { var gs = (!cfg.styleFix && (/[?&]s=([ABC])/.exec(location.search) || [])[1]) || cfg.style || 'C';
       try { GX = INTER.create({ renderer: R, scene: S, camera: CAM, style: gs, accent: gs === 'A' ? '#e0409a' : MC, quality: gq(), mirror: !window.KACHESTVO || gq() === 'high', tex: cfg.tex || 'proba/modul3/tex/' }); gfit(); } catch (e) { GX = null; } }
-    var OKH = GX && window.KOMNATA_OKNO && KOMNATA_OKNO[cfg.mid]; if (OKH && OKH.pre) try { OKH.pre(cfg); } catch (e) { OKH = null; }   /* 18.11 (проба new.html): теория у большого окна - teoriya-okno.js */
+    var OKH = GX && window.KOMNATA_OKNO && KOMNATA_OKNO[cfg.mid]; if (OKH && OKH.pre) try { OKH.pre(cfg); } catch (e) { OKH = null; } HK = OKH;   /* 18.11 (проба new.html): теория у большого окна - teoriya-okno.js */
     mats(); room();
     if (cfg.monitor) monitor(cfg.monitor);
     (cfg.stands || []).forEach(stand);
@@ -579,7 +583,13 @@ function make(cfg) {
       sel: function () { return sel; }, arrived: function () { return arrived; }, recard: function () { if (sel) card(sel); }, go: function (c) { go(c); }, unsel: function () { sel = null; card(null); }, refresh: function () { refreshAll(); }, mats: { steel: mSteel, wood: mWood, dark: mDark, metal: mMetal } }); } catch (e) { QK = null; if (window.console) console.warn('kvest', e); }
     S.children.concat(GX ? GX.world.children : []).forEach(function (o) { if (!preK.has(o)) o.userData.noMerge = true; });   /* 21.11: предметы квеста двигаются по нажатию - не склеиваем */
     if (OKH && OKH.build) try { OKN = OKH.build({ T: T, S: S, CAM: CAM, GX: GX, root: root, CLICK: CLICK, TICK: TICK, MON: MON, pos: pos, W: W, D: D, H: H, MC: MC, MOB: MOB, RED: RED, box: box, cyl: cyl, grp: grp, M: M, glow: glow, tex: tex, block: block, quad: quad, hint: hint, ring: ring,
-      sitting: function () { return !!SIT; }, sit: function () { sit(); },
+      sitting: function () { return !!SIT; }, sit: function () { sit(); }, cfg: cfg, toast: toast, fwd: fwd,
+      /* 24.11 (холл): хуку - подойти к предмету, что выбрано, карточка, полёт камеры, стоять на месте */
+      go: function (c) { go(c); }, sel: function () { return sel; }, arrived: function () { return arrived; }, recard: function () { if (sel) card(sel); }, unsel: function () { sel = null; card(null); },
+      place: function (p, l) { pos.copy(p); var v = aimAt(l); pos.y = EYE; yaw = v[0]; pitch = v[1]; target = null; lookAt = null; vel.set(0, 0, 0); },
+      yaw: function () { return yaw; }, hold: function (v) { HOLD = !!v; if (HOLD) { target = null; lookAt = null; vel.set(0, 0, 0); keys = {}; unlock(); } }, refresh: function () { refreshAll(); },
+      fly: function (to, look, d, done) { var from = pos.clone(), fy = yaw, fp = pitch; from.y = to.y = EYE; pos.copy(to); var a = look ? aimAt(look) : [yaw, pitch]; pos.copy(from); target = null; lookAt = null; vel.set(0, 0, 0); sel = null; card(null); unlock();
+        anim = { t: 0, d: RED ? .2 : d, step: function (u) { var e = ease(u); pos.lerpVectors(from, to, e); yaw = fy + angD(fy, a[0]) * e; pitch = fp + (a[1] - fp) * e; bob = e * 6; }, end: function () { pos.y = EYE; if (done) done(); } }; },
       anim: function () { return !!anim; }, view: function (p, l) { pos.copy(p); var v = aimAt(l); yaw = v[0]; pitch = v[1]; SIT = { uT: 1e9, y: yaw, p: pitch }; } });   /* view - для снимков: поставить камеру */ } catch (e) { OKN = null; if (window.console) console.warn('okno', e); }
     if (cfg.signs) cfg.signs.forEach(function (s) { label(s[0], s[1], s[2] || MC, s[3], s[4], s[5], s[6]); });
     guideBuild(); adoptG(); if (GX) setTimeout(function () { if (FIN) return; adoptG(); try { GX.bakeEnv(0, 1.6, 0); } catch (e) {} }, 1500);
@@ -613,13 +623,14 @@ function make(cfg) {
     addEventListener('keyup', function (e) { keys[e.code] = 0; if (!e.code || e.key === 'Fn' || e.key === 'Meta' || e.key === 'OS') keys = {}; });
     /* 18.11: клавиша не должна залипать (Alexandr нажал Fn - бег вперёд не останавливался): окно потеряло фокус - все клавиши отпущены */
     addEventListener('blur', function () { keys = {}; }); document.addEventListener('visibilitychange', function () { keys = {}; });
-    if (PROBA && window.FPSUPR) FU = FPSUPR.create({ canvas: cv, root: root, noMouse: true, walk: function () { return on && !paused && !anim; }, act: function () { if (!anim) interact(); }, jump: function () { if (!anim && jy <= 0) jv = FPSUPR.JV; },
+    if (PROBA && window.FPSUPR) FU = FPSUPR.create({ canvas: cv, root: root, noMouse: true, walk: function () { return on && !paused && !anim && !HOLD; }, act: function () { if (!anim) interact(); }, jump: function () { if (!anim && jy <= 0) jv = FPSUPR.JV; },
       look: function (dx, dy) { yaw += dx; pitch = Math.max(-1.1, Math.min(.85, pitch + dy)); lookAt = null; } });
   }
   var FU = null;
   /* Enter / E: если уже подошли - главное действие карточки (начать задание, собрать дрон, слушать); если нет - подойти к тому, что в центре взгляда или ближе всего впереди */
   var jy = 0, jv = 0;
   function interact() {
+    if (HOLD) return;
     if (sel && arrived) { var b = ui.card.querySelector('.k-b.pri') || ui.card.querySelector('.k-b[data-a]'); if (b) doAct(b.dataset.a); else if (sel.kind === 'info') { sel = null; card(null); } return; }
     /* 18.11: предмет квеста рядом (до 2.6 м) и примерно впереди - берём его, целиться точно не нужно */
     var fq = new T.Vector3(-Math.sin(yaw), 0, -Math.cos(yaw)), nq = null, nd = 1e9; CLICK.forEach(function (c) { if (!c.item) return; var d = new T.Vector3(c.look[0] - pos.x, 0, c.look[2] - pos.z), L = d.length(); if (L > 2.6 || (L > .3 && d.dot(fq) / L < .2)) return; if (L < nd) { nd = L; nq = c; } }); if (nq) { go(nq); return; }
@@ -634,6 +645,7 @@ function make(cfg) {
     var o = hit.object, c = null; while (o && !c) { c = CLICK.find(function (z) { return z.o === o; }); o = o.parent; } return { c: c, p: hit.point, d: hit.distance }; }
   function hover(e) { if (MOB || paused || anim) return; var h = pick(e.clientX, e.clientY); cv.style.cursor = h && h.c ? 'pointer' : 'default'; }
   function tap(cx, cy) {
+    if (HOLD) return;
     var h = pick(cx, cy); if (!h) return;
     if (h.c) { if (sel === h.c && arrived && (h.c.kind === 'q' || (h.c.kind === 'table' && qLock()))) { var qb = ui.card.querySelector('.k-b.pri'); if (qb) doAct(qb.dataset.a); return; }
       if (sel === h.c && arrived) { var a = h.c.kind === 'stand' ? 'task' : h.c.kind === 'table' ? 'game' + (kidFirst() ? 1 : 0) : null; if (a) { if (a === 'task' && stState(h.c.tid) === 'lock') doAct('lock'); else doAct(a); } return; }
@@ -683,6 +695,7 @@ function make(cfg) {
       /* WASD / стрелки */
       var kx = (keys.KeyD || 0) - (keys.KeyA || 0), kz = (keys.KeyW || keys.ArrowUp || 0) - (keys.KeyS || keys.ArrowDown || 0);
       if (FU) { kx = Math.max(-1, Math.min(1, kx + FU.joy.s)); kz = Math.max(-1, Math.min(1, kz + FU.joy.f)); }
+      if (HOLD) { kx = kz = 0; target = null; jv = 0; }
       if (keys.ArrowLeft) yaw += dt * 1.8; if (keys.ArrowRight) yaw -= dt * 1.8;
       if (SIT) { if (kx || kz || target || jv > 0) { var tg0 = target; kx = kz = 0; target = null; jv = 0; standUp(tg0); } else { seatLook(t, dt); kx = kz = 0; } }
       else if (OKN && sel && sel.kind === 'seat' && arrived) { sit(); }
@@ -712,7 +725,7 @@ function make(cfg) {
   function fpsG(dt) { if (fW > 0) { fW -= dt; return; } fN++; fT += dt; if (fN >= 70) { if (fT / fN > (PROBA ? (fL ? 1 / 26 : 1 / 40) : 1 / 21) && document.visibilityState === 'visible' && !paused) { if (window.KACHESTVO) { if (KACHESTVO.manual) { fW = 1e9; return; } KACHESTVO.slow(); } fL++; if (GX.lower() === 2 && !window.KACHESTVO) lsS('kursy_grafika', 'low'); fW = 3; } fN = 0; fT = 0; } }
 
   /* ---------- состояние заданий ---------- */
-  function refreshAll() { nextTarget(); Object.keys(STANDS).forEach(function (k) { drawStand(STANDS[k]); }); hud(); }
+  function refreshAll() { nextTarget(); Object.keys(STANDS).forEach(function (k) { drawStand(STANDS[k]); }); if (HK && HK.refresh) try { HK.refresh(); } catch (e) {} hud(); }
 
   /* ---------- вход и выход ---------- */
   /* ---------- 21.11 (проба new.html): экран загрузки, склейка предметов, прогрев - движение начинается, когда всё готово ---------- */
@@ -745,7 +758,7 @@ function make(cfg) {
     return function () { var d = []; S.updateMatrixWorld(true); S.traverse(function (o) { var v = a.get(o); if (v == null || v !== o.matrix.elements.join() + o.visible) d.push(o); }); return d; }; }
   function openLoad(a) {
     var Z = window.KURS_ZAGRUZKA, my = {}; api = a; I = window.VZ_KURS_INFO; K = window.VZ_KURS; LOADING = my;
-    var oL = OPT.lesson; Z.show({ title: oL ? (oL.title || oL.t) : (cfg.title || (mod && mod.t) || ''), sub: 'Модуль ' + (oL ? oL.n : mod ? mod.n : ''), color: MC, text: built ? 'Готовим зал' : 'Строим помещение' });
+    var oL = OPT.lesson; Z.show({ title: oL ? (oL.title || oL.t) : (cfg.title || (mod && mod.t) || ''), sub: cfg.kicker != null && !oL ? (cfg.loadSub || '') : 'Модуль ' + (oL ? oL.n : mod ? mod.n : ''), color: MC, text: built ? 'Готовим зал' : 'Строим помещение' });
     var alive = function () { return LOADING === my; };
     Z.paint().then(function () { if (!alive()) return; if (!built) build(); Z.step('Загружаем фактуры и модели', .25);
       var p0 = Math.max(1, Z.pending()), iv = setInterval(function () { Z.step(null, .25 + .45 * (1 - Z.pending() / p0)); }, 120);
@@ -767,10 +780,12 @@ function make(cfg) {
       var bi = BOX.indexOf(TABLE.box); if (tv && bi < 0) BOX.push(TABLE.box); if (!tv && bi >= 0) BOX.splice(bi, 1); } }
   function open(a, opt) { OPT = opt || {}; if (BYSTRO) return openLoad(a); start(a); }
   function start(a) {
-    api = a; I = window.VZ_KURS_INFO; K = window.VZ_KURS; if (!built) build(); lesson(OPT.lesson || null);
+    api = a; I = window.VZ_KURS_INFO; K = window.VZ_KURS;
+    if (cfg.needGX) { try { if (!built) build(); } catch (e) { if (window.console) console.warn('komnata', e); } if (!built || !GX || !HK) { if (a && a.fail) a.fail(); return; } }   /* холл без новой графики не строим - shkola.js покажет простой холл */
+    if (!built) build(); lesson(OPT.lesson || null); HOLD = false;
     on = true; paused = false; root.classList.add('on'); document.body.classList.add('kmn-on'); sel = null; card(null); sndUI();
     CAM.aspect = innerWidth / innerHeight; CAM.fov = fov0(); CAM.updateProjectionMatrix(); R.setSize(innerWidth, innerHeight); gfit();
-    ui.ttlS.textContent = 'МОДУЛЬ ' + (LES ? LES.n : mod.n); ui.ttlB.textContent = LES ? (LES.title || LES.t) : (cfg.title || mod.t); if (ui.ttlL) { ttlT.forEach(clearTimeout); ui.ttlL.innerHTML = ''; ui.ttl.classList.remove('gone'); }
+    ui.ttlS.textContent = cfg.kicker != null && !LES ? cfg.kicker : 'МОДУЛЬ ' + (LES ? LES.n : mod.n); ui.ttlB.textContent = LES ? (LES.title || LES.t) : (cfg.title || mod.t); if (ui.ttlL) { ttlT.forEach(clearTimeout); ui.ttlL.innerHTML = ''; ui.ttl.classList.remove('gone'); }
     refreshAll();
     /* вход: за воротами, ворота разъезжаются, шагаем внутрь */
     var st = cfg.start, lk = cfg.look, from = new T.Vector3(0, EYE, D / 2 + 2.6), to = new T.Vector3(st[0], EYE, st[1]);
@@ -778,14 +793,17 @@ function make(cfg) {
     pos.copy(from); yaw = Math.atan2(-(lk[0] - from.x), -(lk[2] - from.z)); pitch = -.04; target = null; lookAt = null; vel.set(0, 0, 0);
     doorL.position.x = -.8; doorR.position.x = .8;
     ui.fade.style.background = '#05060f'; ui.fade.style.transition = 'opacity .9s'; ui.fade.style.opacity = 1; requestAnimationFrame(function () { ui.fade.style.opacity = 0; });
-    ui.hello.querySelector('small').textContent = 'МОДУЛЬ ' + (LES ? LES.n : mod.n); ui.hello.querySelector('b').textContent = LES ? (LES.title || LES.t) : (cfg.title || mod.t); ui.hello.querySelector('span').textContent = LES ? LES.t : mod.t;
+    ui.hello.querySelector('small').textContent = cfg.kicker != null && !LES ? cfg.kicker : 'МОДУЛЬ ' + (LES ? LES.n : mod.n); ui.hello.querySelector('b').textContent = LES ? (LES.title || LES.t) : (cfg.title || mod.t); ui.hello.querySelector('span').textContent = LES ? LES.t : mod.t;
     ui.hello.classList.add('on'); setTimeout(function () { ui.hello.classList.remove('on'); }, 2600);
+    if (OPT.spawn) { var sp = OPT.spawn; pos.set(sp.x, EYE, sp.z); yaw = sp.yaw || 0; pitch = sp.pitch || 0; anim = null; ui.hello.classList.remove('on'); ttlType(); }   /* 24.11: вернулись с этажа - стоим у лифта, без входа через ворота */
+    else
     anim = { t: 0, d: RED ? .4 : 3.2, step: function (u) { var dO = Math.min(1, u / .35), e = ease(dO); doorL.position.x = -.8 - e * 1.6; doorR.position.x = .8 + e * 1.6;
         var w = ease(Math.max(0, (u - .25) / .75)); pos.lerpVectors(from, to, w); bob = w * 8; },
       end: function () { var first = !LES && !OPT.sit && !lsG('kmn_hi_' + cfg.mid); if (!LES) lsS('kmn_hi_' + cfg.mid, '1');
         doorAnim(0); ttlType(); if (OPT.sit) setTimeout(function () { if (on && !SIT) sit(); }, 60);   /* Лётная школа: с этажа сразу в кресло */
         /* подсказка управления больше не всплывает сама - кнопка "?" вверху */
         var G = window.GOLOS; if (first && cfg.hello && G && G.on && G.can && G.can()) { SPEAK = true; G.say(cfg.hello, { onend: function () { SPEAK = false; } }); } } };
+    if (HK && HK.open) try { HK.open(OPT); } catch (e) { if (window.console) console.warn('hook open', e); }
     clock.getDelta(); frame();
     /* окно задания поверх: комната размыта и стоит */
     winObs = new MutationObserver(function () { var w = document.getElementById('win'), o = w && w.classList.contains('on'); document.body.classList.toggle('kmn-win', !!o); if (o) { stopTalk(); paused = true; winP = true; card(null); unlock(); }
@@ -795,7 +813,7 @@ function make(cfg) {
   /* ворота: закрыть после входа (0) или открыть (1) за секунду */
   function doorAnim(open) { var a0 = doorR.position.x, a1 = open ? 2.4 : .8, t0 = clock.elapsedTime;
     TICK.push(function dA(t) { var u = Math.min(1, (t - t0) / 1.1), e = ease(u), x = a0 + (a1 - a0) * e; doorR.position.x = x; doorL.position.x = -x; if (u >= 1) TICK.splice(TICK.indexOf(dA), 1); }); }
-  function close() { if (window.NACHALO_TEORII) { NACHALO_TEORII.hide(); NACHALO_TEORII.busy = NACHALO_TEORII.sam = false; } if (LOADING) { LOADING = null; if (window.KURS_ZAGRUZKA) KURS_ZAGRUZKA.hide(); } if (SIT) { SIT = null; if (OKN && OKN.sat) OKN.sat(false); } unlock(); on = false; cancelAnimationFrame(raf); stopTalk(); root.classList.remove('on'); document.body.classList.remove('kmn-win', 'kmn-on'); if (window.MUZYKA) MUZYKA.close(); if (winObs) winObs.disconnect(); card(null); }
+  function close() { if (window.NACHALO_TEORII) { NACHALO_TEORII.hide(); NACHALO_TEORII.busy = NACHALO_TEORII.sam = false; } if (LOADING) { LOADING = null; if (window.KURS_ZAGRUZKA) KURS_ZAGRUZKA.hide(); } if (SIT) { SIT = null; if (OKN && OKN.sat) OKN.sat(false); } unlock(); on = false; HOLD = false; if (HK && HK.close) try { HK.close(); } catch (e) {} cancelAnimationFrame(raf); stopTalk(); root.classList.remove('on'); document.body.classList.remove('kmn-win', 'kmn-on'); if (window.MUZYKA) MUZYKA.close(); if (winObs) winObs.disconnect(); card(null); }
   function leave() { stopTalk(); if (api) api.exit(); }
   /* окно задания закрыто: обновляем стенды, при свежем прохождении - праздник и проводник к следующему */
   function back(tid, fresh) {

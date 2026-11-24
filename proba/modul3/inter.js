@@ -175,6 +175,7 @@ function create(o) {
       c.fillStyle = 'rgba(0,0,0,.35)'; for (var i = 0; i < 6; i++) c.fillRect(60 + i * 26, 330, 14, 4); c.fillStyle = 'rgba(150,170,255,.10)'; c.fillRect(40, 40, 432, 2); c.fillRect(40, 470, 432, 2); });
     wallTex[kind] = t; t.wrapS = t.wrapT = T.RepeatWrapping; return t; }
   function wallMat(kind) { var m;
+    if (typeof kind === 'function') return kind(G);   /* 24.11 (холл Лётной школы): своя отделка стены - функция даёт материал с userData.tile */
     if (kind === 'plaster') { m = std(S.wall, .9, 0); m.normalMap = ltex('white_plaster_02_nor.jpg'); m.normalScale = new T.Vector2(.6, .6); m.userData.tile = [2.4, 2.4]; }
     else if (kind === 'brick') { m = pbr('brick_wall_001', '#f2e6dc', 1); m.userData.tile = [1.6, 1.6]; }
     else if (kind === 'wood') { m = pbr('laminate_floor_02', '#f3e3cc', .9); m.userData.tile = [2.2, 2.2]; m.userData.rot = true; }
@@ -279,6 +280,7 @@ function create(o) {
   /* ---------- светильники ---------- */
   var loaders = {};
   G.lamp = function (x, H, z, rot, noAdd) { var g = new T.Group(); g.position.set(x, H, z); g.rotation.y = rot || 0;
+    if (S.lampKind === 'none') { if (!noAdd) G.add(g, { shadow: false }); return g; }   /* 24.11: светильники рисует само помещение (холл), от ламп остаётся только запечённый свет */
     if (S.lampKind === 'panel') { var fr = G.rbox(1.36, .76, .04, .08, M.trim); fr.rotation.x = Math.PI / 2; fr.position.y = -.02; g.add(fr);
       var p = G.rbox(1.24, .64, .02, .06, M.lamp); p.rotation.x = Math.PI / 2; p.position.y = -.045; p.userData.noShadow = true; g.add(p); }
     else if (S.lampKind === 'line') { var b = G.box(2.6, .05, .16, M.dark, 0, -.025, 0); g.add(b); var ln = G.box(2.5, .02, .07, M.lamp, 0, -.055, 0); ln.userData.noShadow = true; g.add(ln);

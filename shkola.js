@@ -78,14 +78,20 @@ css.textContent = [
 '.shHint{color:#a7acd2;font-size:14px;margin-top:4px}',
 'body.sh-hide #shTop,body.sh-hide #shBot,body.sh-room #shTop,body.sh-room #shBot,body.sh-room #shTap{display:none!important}',
 '#shTap{position:fixed;z-index:5;width:58px;height:58px;margin:-29px 0 0 -29px;border-radius:50%;border:3px solid #5effc0;box-shadow:0 0 0 8px rgba(94,255,192,.22);pointer-events:none;animation:shP 1.6s ease-in-out infinite;display:none}',
-'@keyframes shP{0%,100%{transform:scale(.85);opacity:.6}50%{transform:scale(1.05);opacity:1}}'
+'@keyframes shP{0%,100%{transform:scale(.85);opacity:.6}50%{transform:scale(1.05);opacity:1}}',
+/* 24.11: холл - лобби от первого лица (holl.js). Меню этажей и поездка - поверх комнаты; на широком экране этажи в два столбика */
+'body.sh-holl #shLift{z-index:12;background:linear-gradient(rgba(10,12,24,.72),rgba(8,9,18,.9));backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);padding:calc(18px + env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) 20px max(16px,env(safe-area-inset-left,0px))}',
+'body.sh-holl #shRide{z-index:14}body.sh-holl #shC{visibility:hidden}',
+'body.sh-holl #shLift .in{max-width:760px}body.sh-holl #shLift .sub{font:800 19px ShU,Unbounded,sans-serif;color:#ffd9a0;margin-bottom:12px}body.sh-holl #shLift .sub small{display:block;font:600 14px ShM;color:#a7acd2;margin-top:3px}',
+'@media (min-width:620px){body.sh-holl #shFls{display:grid;grid-template-columns:1fr 1fr;gap:0 10px}}',
+'@media (max-height:430px){body.sh-holl .shFl{padding:7px 12px;margin-bottom:7px}body.sh-holl .shFl .n{width:38px;height:38px;font-size:16px}body.sh-holl #shLift .sub{font-size:16px;margin-bottom:8px}}'
 ].join('\n');
 
 /* ---------- интерфейс ---------- */
 var C = el('canvas'); C.id = 'shC'; D.body.insertBefore(C, D.body.firstChild);
 var top = el('div', 'sh', '<button id="shBack" type="button" aria-label="Назад" hidden>←</button><div id="shTT"><div id="shT"></div><div id="shDots"></div></div>', D.body); top.id = 'shTop';
 var bot = el('div', 'sh', '', D.body); bot.id = 'shBot';
-var lift = el('div', 'sh', '<div class="in"><div class="sub">Выбери этаж. Этаж = модуль курса.</div><div id="shFls"></div><button class="shBtn alt" id="shLiftX" type="button">Остаться в холле</button></div>', D.body); lift.id = 'shLift';
+var lift = el('div', 'sh', '<div class="in"><div class="sub" id="shLiftS">Выбери этаж. Этаж = модуль курса.</div><div id="shFls"></div><button class="shBtn alt" id="shLiftX" type="button">Остаться в холле</button></div>', D.body); lift.id = 'shLift';
 var ride = el('div', 'sh', '<b id="shRideN">1</b><div class="t" id="shRideT"></div><div class="bar"><i id="shRideB"></i></div>', D.body); ride.id = 'shRide';
 var tap = el('div', null, null, D.body); tap.id = 'shTap';
 for (var i = 0; i < MODS.length; i++) el('i', null, null, $('shDots'));
@@ -119,8 +125,11 @@ function spaceTex() { return texT(function (x, W, H) { var gr = x.createLinearGr
   x.fillStyle = '#7cf3ff'; for (var k = 0; k < 40; k++) x.fillRect(272 + Math.random() * 140, 280 + Math.random() * 75, 4, 2); }, 512, 512); }
 function newScene(bg) { if (S) S.traverse(function (o) { if (o.geometry) o.geometry.dispose(); if (o.material) { if (o.material.map) o.material.map.dispose(); o.material.dispose(); } });
   S = new T.Scene(); S.background = new T.Color(bg || '#0a0c18'); PICK = []; anim = []; need = true; }
-function fit() { var w = innerWidth, h = innerHeight, a = w / h; R.setSize(w, h, false); CAM.aspect = a;
-  CAM.fov = Math.min(88, 2 * Math.atan(Math.tan(32 * Math.PI / 180) / Math.min(a, 1.25)) * 180 / Math.PI); CAM.updateProjectionMatrix(); need = true; }
+/* 24.11: размер холста школы ставим только перед настоящим кадром - пока открыт холл или комната, свой холст память телефона не занимает */
+var fitD = true;
+function fit() { fitD = true; need = true; }
+function fitNow() { fitD = false; var w = innerWidth, h = innerHeight, a = w / h; R.setSize(w, h, false); CAM.aspect = a;
+  CAM.fov = Math.min(88, 2 * Math.atan(Math.tan(32 * Math.PI / 180) / Math.min(a, 1.25)) * 180 / Math.PI); CAM.updateProjectionMatrix(); }
 addEventListener('resize', fit);
 /* камера: позиция + точка взгляда; переходы плавно */
 var camL = new T.Vector3();
@@ -131,7 +140,7 @@ function loop(now) { requestAnimationFrame(loop); var dt = Math.min(.12, (now - 
   if (tw) { var k = Math.min(1, Math.max(0, (performance.now() - tw.t0) / tw.d)), e = k < .5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
     CAM.position.lerpVectors(tw.p0, tw.p1, e); camL.lerpVectors(tw.l0, tw.l1, e); CAM.lookAt(camL); need = true; if (k >= 1) { var f = tw.done; tw = null; if (f) f(); } }
   for (var i = 0; i < anim.length; i++) if (anim[i](dt, now / 1000)) need = true;
-  if (need && S && !paused()) { R.render(S, CAM); need = false; } }
+  if (need && S && !paused()) { if (fitD) fitNow(); R.render(S, CAM); need = false; } }
 function paused() { var w = $('win'); return (w && w.classList.contains('on')) || roomOn(); }
 
 /* нажатие по 3D: луч в предметы с userData.go */
@@ -236,7 +245,21 @@ function floorScene(i) {
 /* ============ СОСТОЯНИЯ ЭКРАНА ============ */
 var MODE = 'hall';
 function setTop(t, back) { $('shT').textContent = t; $('shBack').hidden = !back; dots(); }
+/* ---------- 24.11: холл - лобби небоскрёба от первого лица (holl.js на движке комнат). Нет новой графики или ?holl=0 - простой холл, как раньше ---------- */
+var HOLL = window.KURS_HOLL && !/[?&]holl=0\b/.test(location.search) ? window.KURS_HOLL : null, HALLON = false;
+function hk() { return (window.KOMNATA_OKNO && KOMNATA_OKNO.hall) || {}; }
+window.SHKOLA_HOLL = {
+  info: function () { var done = 0, mods = MODS.map(function (m, i) { var s = modState(i); if (s === 'done') done++; return { n: m.n, t: m.t, st: s, c: col(i), p: Math.round(I.prog(m.id) * 100) }; }); return { mods: mods, next: nextFloor(), done: done }; },
+  menu: function (noPush) { if (HALLON) openLift(!noPush); },
+  progress: function () { openWin(null, 'Мой прогресс'); } };
+function openHall(opt) { MODE = 'hall'; FL = null; HALLON = true; lift.classList.remove('on'); tap.style.display = 'none'; D.body.classList.add('sh-room', 'sh-holl');
+  try { HOLL.open({ mid: 'hall', state: function () { return 'open'; }, task: function () { return false; }, exit: function () {}, fail: hallFail }, opt || null); } catch (e) { if (window.console) console.warn('holl', e); hallFail(); } }
+function hallFail() { HOLL = null; HALLON = false; D.body.classList.remove('sh-room', 'sh-holl'); try { if (window.KURS_ZAGRUZKA) KURS_ZAGRUZKA.hide(); } catch (e) {} hall(); }
+function closeHall() { if (!HALLON) return; HALLON = false; try { HOLL.close(); } catch (e) {} D.body.classList.remove('sh-holl'); }
+/* пока ученик ходит по холлу, Мастерскую заранее не строим (был бы рывок); строим, когда открыто меню лифта или идёт загрузка этажа */
+window.KURS_BUSY = function () { return HALLON && MODE !== 'lift'; };
 function hall(fromLift) {
+  if (HOLL) { $('shLiftS').innerHTML = 'Выбери этаж<small>Один этаж - один модуль курса</small>'; openHall(null); return; }
   MODE = 'hall'; FL = null; lift.classList.remove('on'); hallScene(); fit();
   if (fromLift) camSet(HALL.lift[0].clone(), HALL.lift[1].clone()), camGo(HALL.start[0].clone(), HALL.start[1].clone(), 1); else camSet(HALL.start[0].clone(), HALL.start[1].clone());
   setTop('Холл', false); var nf = nextFloor(), done = MODS.filter(function (m, i) { return modState(i) === 'done'; }).length;
@@ -245,8 +268,8 @@ function hall(fromLift) {
   $('shGoLift').onclick = toLift; $('shCode').onclick = function () { openWin(null, 'Мой прогресс'); };
   showTap();
 }
-function showTap() { if (MODE !== 'hall' || !S) { tap.style.display = 'none'; return; } var v = new T.Vector3(0, 1.4, -6.8).project(CAM); tap.style.left = ((v.x + 1) / 2 * innerWidth) + 'px'; tap.style.top = ((1 - v.y) / 2 * innerHeight) + 'px'; tap.style.display = v.z < 1 ? 'block' : 'none'; }
-function toLift() { if (MODE !== 'hall') return; MODE = 'walk'; tap.style.display = 'none'; bot.innerHTML = 'Идём к лифту...';
+function showTap() { if (MODE !== 'hall' || !S || HALLON) { tap.style.display = 'none'; return; } var v = new T.Vector3(0, 1.4, -6.8).project(CAM); tap.style.left = ((v.x + 1) / 2 * innerWidth) + 'px'; tap.style.top = ((1 - v.y) / 2 * innerHeight) + 'px'; tap.style.display = v.z < 1 ? 'block' : 'none'; }
+function toLift() { if (MODE !== 'hall') return; if (HALLON) { if (hk().toLift) hk().toLift(); return; } MODE = 'walk'; tap.style.display = 'none'; bot.innerHTML = 'Идём к лифту...';
   camGo(HALL.lift[0].clone(), HALL.lift[1].clone(), 1.2, function () { doors.want = 1; setTimeout(function () { openLift(true); }, 500); }); }
 function openLift(fwd) { MODE = 'lift'; tap.style.display = 'none'; if (fwd) push('lift'); setTop('Лифт', true); var nf = nextFloor(), h = '';
   for (var i = MODS.length - 1; i >= 0; i--) { var m = MODS[i], s = modState(i), p = Math.round(I.prog(m.id) * 100);
@@ -256,13 +279,17 @@ function openLift(fwd) { MODE = 'lift'; tap.style.display = 'none'; if (fwd) pus
   bot.innerHTML = ''; bot.style.display = 'none'; }
 $('shFls').addEventListener('click', function (e) { var b = e.target.closest('.shFl'); if (!b) return; var i = +b.dataset.i; if (modState(i) === 'lock') { toast('Этот этаж откроет педагог'); return; } goFloor(i); });
 $('shLiftX').onclick = function () { back(); };
-function goFloor(i) { lift.classList.remove('on'); ride.style.setProperty('--c', col(i)); $('shRideN').textContent = MODS[i].n; $('shRideT').textContent = MODS[i].t; ride.classList.add('on');
+function goFloor(i) { lift.classList.remove('on');
+  if (HALLON && hk().board) { MODE = 'ride'; hk().board(i + 1, function () { rideGo(i); }); return; }   /* заходим в кабину, двери закрываются - потом поездка */
+  rideGo(i); }
+function rideGo(i) { ride.style.setProperty('--c', col(i)); $('shRideN').textContent = MODS[i].n; $('shRideT').textContent = MODS[i].t; ride.classList.add('on');
   var b = $('shRideB'); b.style.transition = 'none'; b.style.width = '0'; void b.offsetWidth; b.style.transition = 'width 1.1s ease-in-out'; b.style.width = '100%';
-  setTimeout(function () { floor(i, null); var tv = tvOf(MODS[i]);   /* 24.11 (Alexandr): этаж - это сразу комната: из лифта садимся к телевизору */
+  setTimeout(function () { closeHall(); floor(i, null); var tv = tvOf(MODS[i]);   /* 24.11 (Alexandr): этаж - это сразу комната: из лифта садимся к телевизору */
     if (tv) { DIRECT = true; enterRoom(i, tv); }
     setTimeout(function () { ride.classList.remove('on'); }, 150); }, 1150); }
 var DIRECT = false;
 function floor(i, z) {
+  closeHall(); D.body.classList.remove('sh-room');
   MODE = 'floor'; push('floor'); tap.style.display = 'none'; lift.classList.remove('on'); var m = MODS[i]; FL = { i: i, m: m, zone: null, cams: floorScene(i) }; fit(); bot.style.display = ''; doors = null;
   camSet(FL.cams.all[0].clone(), FL.cams.all[1].clone());
   setTop(m.n + '. ' + m.t, true); $('shT').style.color = col(i);
@@ -283,7 +310,9 @@ function zone(k, first) { if (!FL) return; FL.zone = k; var m = FL.m, c = col(FL
 }
 /* назад: этаж -> лифт -> холл */
 function back() { if ($('win').classList.contains('on')) { closeWin(); return; }
+  if (MODE === 'floor' && HOLL) { $('shT').style.color = ''; FL = null; bot.style.display = 'none'; openHall({ spawn: { x: .35, z: -4.0, yaw: 0, pitch: .02 }, menu: true }); return; }   /* вышли с этажа: стоим у открытого лифта, меню этажей */
   if (MODE === 'floor') { $('shT').style.color = ''; hallScene(); fit(); camSet(HALL.lift[0].clone(), HALL.lift[1].clone()); doors.open = doors.want = 1; FL = null; openLift(false); return; }
+  if (MODE === 'lift' && HALLON) { lift.classList.remove('on'); MODE = 'hall'; if (hk().menuClosed) hk().menuClosed(); return; }
   if (MODE === 'lift') { lift.classList.remove('on'); bot.style.display = ''; if (doors) doors.want = 0; hall(true); return; } }
 $('shBack').onclick = function () { if (history.state && history.state.sh) history.back(); else back(); };
 function push(k) { try { history.pushState({ sh: k }, ''); } catch (e) {} }
@@ -291,6 +320,7 @@ var ignorePop = false, roomShut = 0;
 addEventListener('popstate', function () {
   if (ignorePop) { ignorePop = false; return; }
   if (ROOM) { exitRoom(true); return; }   /* Мастерская: "назад" телефона - выход из комнаты на этаж */
+  if (HALLON) { if (MODE === 'lift' || $('win').classList.contains('on')) back(); return; }   /* холл-лобби: "назад" закрывает меню лифта или окно */
   if (roomOn() || Date.now() - roomShut < 400) return;   /* комнаты-iframe сами ловят "назад" (komnaty.js) */
   back(); });
 
@@ -302,6 +332,7 @@ function openWin(tid, title) { winTid = tid; winWas = tid ? I.task(tid) : null; 
 function closeWin() { if (!win.classList.contains('on')) return; win.classList.remove('on'); D.body.classList.remove('sh-hide'); var t = winTid, fresh = t && winWas !== 'done' && I.task(t) === 'done'; winTid = null;
   if (ROOM) { try { ROOM.back(t, fresh); } catch (e) {} return; }
   if (window.KURS_KOMNATA && KURS_KOMNATA.on) { try { KURS_KOMNATA.back(t, fresh); } catch (e) {} return; }
+  if (HALLON) { dots(); try { HOLL.back(null, false); } catch (e) {} return; }
   if (MODE === 'floor' && FL) zone(FL.zone); else if (MODE === 'hall') hall(); need = true; if (fresh) toast('Задание пройдено!'); }
 $('winX').addEventListener('click', function (e) { e.stopImmediatePropagation(); closeWin(); }, true);
 var gb = $('gearB'); if (gb) gb.hidden = true; var nx = $('nxB'); if (nx) nx.hidden = true;
@@ -311,7 +342,7 @@ window.KURS_KOMNATA_OUT = function () { roomShut = Date.now(); D.body.classList.
 
 /* ============ КОМНАТЫ ============ */
 var ROOM = null;
-function roomOn() { return !!ROOM || !!(window.KURS_KOMNATA && KURS_KOMNATA.on); }
+function roomOn() { return !!ROOM || HALLON || !!(window.KURS_KOMNATA && KURS_KOMNATA.on); }
 function enterRoom(i, tv) { var m = MODS[i], r = tv ? { type: 'k' } : roomOf(m); if (!r) return; D.body.classList.add('sh-room');
   if (r.type === 'k') { ROOM = tv ? KURS_KOMNATY.m2 : KURS_KOMNATY[m.id];
     ROOM.open({ mid: m.id, color: col(i), name: m.n + '. ' + m.t, state: function (tid) { return I.task(tid); },
@@ -330,7 +361,7 @@ window.POVOROT_GAME = function () { return roomOn(); };
 
 /* ---------- мелочи ---------- */
 var tst = null; function toast(t) { var e = $('toast'); if (!e) return; e.textContent = t; e.classList.add('show'); clearTimeout(tst); tst = setTimeout(function () { e.classList.remove('show'); }, 2200); }
-addEventListener('storage', function (e) { if (e.key === ((window.KURSY && KURSY.store) || 'vz_kurs')) { dots(); if (MODE === 'floor' && FL) zone(FL.zone); } });
+addEventListener('storage', function (e) { if (e.key === ((window.KURSY && KURSY.store) || 'vz_kurs')) { dots(); if (MODE === 'floor' && FL) zone(FL.zone); if (HALLON && hk().refresh) try { hk().refresh(); } catch (er) {} } });
 setInterval(function () { if (MODE === 'hall') showTap(); }, 300);
 
 /* старт: шрифты для вывесок, потом холл */
