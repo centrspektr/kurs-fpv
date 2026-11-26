@@ -62,19 +62,19 @@ function make(C) {
   return { key: key, canonMat: canonMat, uvMap: uvMap, uv2Map: uv2Map }; }
 
 /* ---------- можно ли склеить этот предмет ---------- */
-function okWhy(o) {
+function okWhy(o, tr) {
   if (!o.isMesh || o.isSkinnedMesh || o.isInstancedMesh || o.userData.noMerge) return 'r1';
   var m = o.material, g = o.geometry; if (!m || Array.isArray(m) || !m.isMaterial || m.isShaderMaterial || m.isRawShaderMaterial || m.isMeshDepthMaterial || m.isPointsMaterial) return 'r2';
   if (!g || !g.isBufferGeometry || !g.attributes.position) return 'r3';
   if (fs(o.onBeforeRender) !== NOOP || fs(o.onAfterRender) !== NOOP || !o.frustumCulled || o.layers.mask !== 1) return 'r4';
-  if (m.transparent && !(m.blending === T.AdditiveBlending && !m.depthWrite)) return 'r5';
+  if (m.transparent && !(m.blending === T.AdditiveBlending && !m.depthWrite) && !(tr && m.depthWrite && m.depthTest && m.blending === T.NormalBlending)) return 'r5';   /* tr (opt.transp, 26.11): полупрозрачное, которое пишет глубину (неоновые полосы зданий), тоже можно - внутри одного здания */
   if (g.drawRange.start !== 0 || g.drawRange.count !== Infinity) return 'r6';   /* группы граней при одном материале three не учитывает */
   for (var k in g.morphAttributes) if (g.morphAttributes[k] && g.morphAttributes[k].length) return 'r7';
   for (var n in g.attributes) { var a = g.attributes[n]; if (!a.isBufferAttribute || a.isInterleavedBufferAttribute || !(a.array instanceof Float32Array) || a.normalized) return 'r8';
     if (n !== 'position' && n !== 'normal' && n !== 'uv' && n !== 'uv2' && n !== 'color') return 'r9'; }
   if (g.index && !(g.index.array instanceof Uint16Array || g.index.array instanceof Uint32Array)) return 'r10';
   return ''; }
-function okMesh(o) { return !okWhy(o); }
+function okMesh(o, tr) { return !okWhy(o, tr); }
 
 /* ---------- склейка ---------- */
 var _m = new T.Matrix4(), _n = new T.Matrix3(), _v = new T.Vector3(), _u = new T.Vector3();
@@ -112,7 +112,7 @@ function merge(root, opt) { opt = opt || {}; var w = opt.watch || { dyn: new Set
       if (opt.anchor && opt.anchor(o)) anc = o; }
     if (opt.tag) tag = opt.tag(o, tag);
     if (o.isMesh) { before++;
-      if (!top && okMesh(o) && !w.mat.has(o) && o.children.length === 0) {
+      if (!top && okMesh(o, opt.transp) && !w.mat.has(o) && o.children.length === 0) {
         var info = K.key(o.material), m = o.material, g = o.geometry;
         var t1 = info.bake ? K.uvMap(m) : null, t2 = info.bake ? K.uv2Map(m) : null;
         var ak = Object.keys(g.attributes).sort().map(function (n) { return n + g.attributes[n].itemSize; }).join();
@@ -126,9 +126,10 @@ function merge(root, opt) { opt = opt || {}; var w = opt.watch || { dyn: new Set
   walk(root, true, root, opt.tag0);
   order.forEach(function (k) { var G = groups[k]; if (G.list.length < 2) { after++; return; }
     var me = build(G.list, K.canonMat(G.info), C); G.anc.add(me); after++; made.push({ mesh: me, tag: G.tag });
+    if (opt.audit) G.list.forEach(function (it) { var ch = []; for (var p = it.o.parent; p && p !== G.anc; p = p.parent) ch.push(p); opt.audit.push({ o: it.o, up: ch, mesh: me, m0: msig(it.o.material) }); });
     G.list.forEach(function (it) { if (it.o.parent) it.o.parent.remove(it.o); }); });
   var res = { before: before, after: after, made: made };
-  inner.forEach(function (e) { var r = merge(e[0], { watch: w, skip: opt.skip, anchor: opt.anchor, tag: opt.tag, tag0: e[1] }); res.before += r.before; res.after += r.after; res.made = res.made.concat(r.made); });
+  inner.forEach(function (e) { var r = merge(e[0], { watch: w, skip: opt.skip, anchor: opt.anchor, tag: opt.tag, tag0: e[1], transp: opt.transp, audit: opt.audit }); res.before += r.before; res.after += r.after; res.made = res.made.concat(r.made); });
   return res; }
 
 /* отладка: почему предметы не склеились */
@@ -136,5 +137,12 @@ function why(root, w) { var r = {}; function c(k) { r[k] = (r[k] || 0) + 1; }
   (function walk(o, top) { if (!top) { if (o.userData.noMerge) return c('noMerge'); if (!o.visible) return c('hidden'); if (w && w.dyn.has(o)) c('dyn'); }
     if (o.isMesh) { var y = okWhy(o); if (y) c('notOk:' + y); else if (w && w.mat.has(o)) c('matChange'); else c('ok'); }
     o.children.forEach(function (k) { walk(k, false); }); })(root, true); return r; }
-window.SKLEYKA = { watch: watch, merge: merge, okMesh: okMesh, why: why };
+/* проверка (26.11, ?skdbg): после склейки исходные предметы больше не рисуются. Если код потом прячет, двигает или перекрашивает такой предмет
+   (или группу, в которой он лежал) - на экране это уже не видно. audit(list) запоминает состояние, auditCheck() возвращает список таких случаев:
+   их надо пометить userData.noMerge. list - то, что merge сложил в opt.audit. */
+var AUD = [];
+function path(o) { var s = []; for (var p = o; p; p = p.parent) s.push(p.name || p.type); return s.reverse().join('/'); }
+function audit(list) { list.forEach(function (a) { a.up.concat([a.o]).forEach(function (x) { if (x.__aud) return; x.updateMatrix(); x.__aud = { v: x.visible, m: x.matrix.elements.join(), s: x.isMesh ? msig(x.material) : '', p: path(x), who: a.mesh.name + ':' + (a.o.geometry ? a.o.geometry.type : '') }; AUD.push(x); }); }); }
+function auditCheck() { var out = []; AUD.forEach(function (x) { var a = x.__aud; if (a.bad) return; x.updateMatrix(); var why = x.visible !== a.v ? 'visible' : x.matrix.elements.join() !== a.m ? 'matrix' : (x.isMesh && msig(x.material) !== a.s) ? 'material' : ''; if (why) { a.bad = why; out.push(why + ' ' + a.p + ' [' + a.who + ']' + (x.isMesh && x.material && x.material.color ? ' #' + x.material.color.getHexString() : '')); } }); return out; }
+window.SKLEYKA = { watch: watch, merge: merge, okMesh: okMesh, why: why, audit: audit, auditCheck: auditCheck };
 })();

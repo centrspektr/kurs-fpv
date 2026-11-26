@@ -5,6 +5,9 @@
    Хранится на устройстве: kursy_grafika (low|mid|high - его читают помещения модулей 2, 3, 5), kursy_grafika_ruchn = 1 - выбрано вручную.
    KACHESTVO.level - 'low'|'mid'|'high'; .manual; .set('auto'|'low'|'mid'|'high'); .slow() - "кадры долгие" (только в авто: на ступень ниже);
    .on(fn) - позвать fn(level) при смене; .gpu - название видеокарты; .auto - что выбрал бы авто. ?q=low|mid|high в адресе - на один раз. */
+/* 26.11.2026 (тред "Проверить и улучшить игру курса"): улучшения этой пробы включены только на new.html (или с ?new в адресе).
+   ?ul=0 - выключить их и сравнить, как было. Читают: kosmos-kurs-proba.js, kryshi-proba.js, komnaty.js и др. */
+window.KURS_UL = (/\/new\.html$/.test(location.pathname) || /[?&]new\b/.test(location.search)) && !/[?&]ul=0\b/.test(location.search);
 (function () {
 'use strict';
 var LS = window.localStorage, K = 'kursy_grafika', KR = 'kursy_grafika_ruchn', KA = 'kursy_grafika_avto';
