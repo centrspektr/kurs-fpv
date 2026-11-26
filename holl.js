@@ -308,8 +308,12 @@ function build(X) {
     /* кресло администратора */
     var ch = K.grp(.2, 0, -1.15, .25); g.add(ch); var fab = K.std('#2b3a55', .85, 0); K.cyl(.26, .28, .04, dark, 0, .03, 0, ch, 16); K.cyl(.03, .03, .4, steelM, 0, .25, 0, ch, 8); K.rb(.5, .1, .5, .04, fab, 0, .5, 0, ch); K.rb(.5, .62, .09, .04, fab, 0, .86, -.24, ch);
     G.add(g); X.block(RX, RZ, 1.82, .56); X.block(RX + .2, RZ - 1.15, .3, .3);
-    ST.rec = { o: g, kind: 'q', at: [RX, RZ + 1.55], look: [RX, 1.1, RZ], q: { card: function () { return { sm: 'РЕСЕПШЕН', h: 'Вход и мой прогресс', p: 'Здесь можно войти по своему коду и посмотреть, что уже пройдено.', acts: '<button class="k-b pri" data-a="q:prog">Открыть</button>' }; },
-      act: function () { var S = window.SHKOLA_HOLL; if (S && S.progress) S.progress(); } } }; X.CLICK.push(ST.rec);
+    ST.rec = { o: g, kind: 'q', at: [RX, RZ + 1.55], look: [RX, 1.1, RZ], q: { card: function () { var S = window.SHKOLA_HOLL, w = null; try { w = S && S.who ? S.who() : null; } catch (e) {}
+        if (!S || !S.login) return { sm: 'РЕСЕПШЕН', h: 'Вход и мой прогресс', p: 'Здесь можно войти по своему коду и посмотреть, что уже пройдено.', acts: '<button class="k-b pri" data-a="q:prog">Открыть</button>' };
+        /* 26.11: вход по коду теперь есть прямо здесь (раньше была только надпись) */
+        return { sm: 'РЕСЕПШЕН', h: w ? 'Привет, ' + String(w.first || 'ученик').replace(/[<>&"]/g, '') + '!' : 'Вход и мой прогресс', p: w ? 'Ты вошёл по коду. Здесь видно, что уже пройдено.' : 'Войди по коду от педагога - прогресс сохранится. Можно и без кода.',
+          acts: w ? '<button class="k-b pri" data-a="q:prog">Мой прогресс</button><button class="k-b" data-a="q:code">Мой вход</button>' : '<button class="k-b pri" data-a="q:code">Войти по коду</button><button class="k-b" data-a="q:prog">Мой прогресс</button>' }; },
+      act: function (a) { var S = window.SHKOLA_HOLL; if (a === 'code' && S && S.login) S.login(); else if (S && S.progress) S.progress(); } } }; X.CLICK.push(ST.rec);
   })();
 
   /* ---------- стенд "Мой путь" на стене из реек ---------- */
@@ -398,6 +402,7 @@ function build(X) {
   /* ---------- что видит shkola.js ---------- */
   HK.toLift = function () { X.go(Lf.click); };
   HK.state = function () { return Lf.st; };
+  HK.hold = function (v) { if (Lf.st !== 'menu') X.hold(!!v); };   /* 26.11: пока открыто окно входа - стоим на месте */
   /* меню этажей закрыли без выбора: двери закрываются, можно ходить дальше */
   HK.menuClosed = function () { X.hold(false); if (Lf.st === 'menu' || Lf.st === 'open') { Lf.st = 'closing'; Lf.want = 0; } };
   /* выбран этаж: заходим в кабину, разворачиваемся, двери закрываются - потом cb (школа показывает поездку) */
