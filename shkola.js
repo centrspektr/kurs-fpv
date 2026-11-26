@@ -420,6 +420,19 @@ function exitRoom(byBack) { if (!ROOM) return; var r = ROOM; ROOM = null; D.body
 /* комнаты рассчитаны на горизонтальный экран телефона: в комнате просим повернуть (povorot.js), в здании - любое положение */
 window.POVOROT_GAME = function () { return roomOn(); };
 
+/* 26.11: графика. Комнаты собираются один раз, поэтому новое качество раньше включалось только после перезагрузки страницы, и об этом нигде не говорилось.
+   Теперь после выбора в шестерёнке школа сама предлагает перезапуститься (прогресс хранится на устройстве и не теряется). */
+(function () { var Q = window.KACHESTVO; if (!UL || !Q) return; var was = Q.level, bar = null;
+  el('style', null, '#shQ{position:fixed;z-index:70;left:50%;bottom:calc(14px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);display:none;align-items:center;gap:10px;max-width:calc(100vw - 24px);background:rgba(8,10,24,.94);border:1.5px solid #7cf3ff;border-radius:14px;padding:9px 10px 9px 14px;font:600 14px ShM,Manrope,system-ui,sans-serif;color:#e8ecff}#shQ.on{display:flex}#shQ button{flex:none;border:0;border-radius:10px;padding:9px 12px;font:800 13px ShM,Manrope,system-ui,sans-serif;cursor:pointer}#shQ .y{background:#7cf3ff;color:#06101e}#shQ .n{background:#1a2040;color:#c8cdea}', D.head);
+  function show() { if (!bar) { bar = el('div', 'sh', '<span></span><button type="button" class="y">Применить</button><button type="button" class="n">Позже</button>', D.body); bar.id = 'shQ';
+      ['pointerdown', 'touchstart', 'click'].forEach(function (t) { bar.addEventListener(t, function (e) { e.stopPropagation(); }); });
+      bar.querySelector('.n').onclick = function () { bar.classList.remove('on'); };
+      bar.querySelector('.y').onclick = function () { var u = location.href.replace(/([?&])q=(low|mid|high)(&|$)/, function (m, a, b, c) { return c ? a : ''; }); if (u === location.href) location.reload(); else location.replace(u); }; }
+    var NM = { low: 'низкая', mid: 'средняя', high: 'высокая' }; bar.querySelector('span').textContent = 'Графика: ' + (Q.manual ? NM[Q.level] : 'авто (' + NM[Q.level] + ')') + '. Нужен перезапуск школы.'; bar.classList.add('on'); }
+  D.addEventListener('click', function (e) { var b = e.target && e.target.closest && e.target.closest('#kchR button'); if (!b) return; setTimeout(function () { if (Q.level !== was) show(); else if (bar) bar.classList.remove('on'); }, 0); }, true);
+  var iv = setInterval(function () { var sm = D.querySelector('#kchR small'); if (sm) { sm.textContent = '"Авто" подбирает графику под устройство и само снижает её, если кадры идут медленно. Тормозит - выбери "Низкая".'; clearInterval(iv); } }, 500);
+})();
+
 /* ---------- мелочи ---------- */
 var tst = null; function toast(t) { var e = $('toast'); if (!e) return; e.textContent = t; e.classList.add('show'); clearTimeout(tst); tst = setTimeout(function () { e.classList.remove('show'); }, 2200); }
 addEventListener('storage', function (e) { if (e.key === ((window.KURSY && KURSY.store) || 'vz_kurs')) { dots(); if (MODE === 'floor' && FL) zone(FL.zone); if (HALLON && hk().refresh) try { hk().refresh(); } catch (er) {} } });

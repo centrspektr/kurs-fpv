@@ -110,8 +110,12 @@ function create(o) {
   G.hdr = !!composer;
   G.resize = function (w, h, dpr) { dpr = Math.min(dpr, dprCap); lastSize = [w, h]; ren.setPixelRatio(dpr); ren.setSize(w, h, false); cam.aspect = w / h; cam.updateProjectionMatrix();
     if (composer) { composer.setPixelRatio(dpr); composer.setSize(w, h); fin.uniforms.px.value.set(1 / (w * dpr), 1 / (h * dpr)); } };
+  /* 26.11 (Лётная школа, o.shadowEvery): мебель стоит на месте, а карта теней пересчитывалась каждый кадр - вся комната рисовалась дважды.
+     Теперь тени считаются раз в N кадров и сразу, когда двигается свет (G.shadowDirty). Картинка та же, команд рисования почти вдвое меньше. */
+  var shEvery = o.shadowEvery | 0, shN = 0; if (shEvery > 1 && ren.shadowMap.enabled) ren.shadowMap.autoUpdate = false; else shEvery = 0;
+  G.shadowDirty = function () { shN = 0; };
   var tAll = 0;
-  G.render = function (dt) { tAll += dt; for (var i = 0; i < G.frames.length; i++) G.frames[i](dt, tAll);
+  G.render = function (dt) { tAll += dt; if (shEvery && ren.shadowMap.enabled && --shN <= 0) { ren.shadowMap.needsUpdate = true; shN = shEvery; } for (var i = 0; i < G.frames.length; i++) G.frames[i](dt, tAll);
     if (mirror.visible) for (i = 0; i < G.pairs.length; i++) { var p = G.pairs[i]; p[1].position.copy(p[0].position); p[1].rotation.copy(p[0].rotation); p[1].scale.copy(p[0].scale); p[1].visible = p[0].visible; }
     if (composer) { fin.uniforms.time.value = tAll % 10; composer.render(dt); } else ren.render(sc, cam); };
   G.frame = function (f) { G.frames.push(f); };
@@ -301,12 +305,12 @@ function create(o) {
   /* ключевой свет стоит над той комнатой, где ученик */
   var boxMode = false; /* 21.11: G.lightBox ставит неподвижную область теней под длинный коридор/холл */
   function shadowMap(w, h) { var z = key.shadow.mapSize; if (z.x === w && z.y === h) return; z.set(w, h); if (key.shadow.map) { key.shadow.map.dispose(); key.shadow.map = null; } }
-  G.lightRoom = function (cx, cz, H, half) { key.position.set(cx + 1.2, (H || 3.2) + 5, cz + 1.8); key.target.position.set(cx, 0, cz); key.target.updateMatrixWorld();
+  G.lightRoom = function (cx, cz, H, half) { shN = 0; key.position.set(cx + 1.2, (H || 3.2) + 5, cz + 1.8); key.target.position.set(cx, 0, cz); key.target.updateMatrixWorld();
     if (boxMode && key.castShadow) { boxMode = false; shadowMap(ms, ms); var c0 = key.shadow.camera; c0.up.set(0, 1, 0); c0.left = -6.5; c0.right = 6.5; c0.top = 6.5; c0.bottom = -6.5; c0.near = .5; c0.far = 14; c0.updateProjectionMatrix(); }
     if (half && key.castShadow) { var c = key.shadow.camera; if (c.right !== half) { c.left = -half; c.right = half; c.top = half; c.bottom = -half; c.far = (H || 3.2) + 9; c.updateProjectionMatrix(); } } };
   /* 21.11: тени на всю область x0..x1, z0..z1 сразу и неподвижно - при ходьбе по коридору тени дверей больше не появляются и не пропадают кусками.
      Число точек карты теней то же, что было (ms*ms), только карта вытянута вдоль коридора. */
-  G.lightBox = function (x0, z0, x1, z1, H) { H = H || 3.2; var cx = (x0 + x1) / 2, cz = (z0 + z1) / 2;
+  G.lightBox = function (x0, z0, x1, z1, H) { shN = 0; H = H || 3.2; var cx = (x0 + x1) / 2, cz = (z0 + z1) / 2;
     key.position.set(cx + 1.2, H + 5, cz + 1.8); key.target.position.set(cx, 0, cz); key.target.updateMatrixWorld();
     if (!key.castShadow) return; boxMode = true;
     var c = key.shadow.camera; c.up.set(0, 0, 1); /* так карта теней лежит вдоль мировых осей x/z, а не по диагонали - точки не тратятся впустую */

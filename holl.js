@@ -422,7 +422,7 @@ function build(X) {
 }
 
 /* ---------- хук помещения и само помещение ---------- */
-var HK = { pre: function (cfg) { cfg.okno = { n: [[-1.05, 1.05, 2.55]], w: [[-D / 2 + .25, D / 2 - .25, H - .3]] }; },
+var HK = { pre: function (cfg) { cfg.okno = { n: [[-1.05, 1.05, 2.55]], w: [[-D / 2 + .25, D / 2 - .25, H - .3]] }; cfg.spill = { w: 1 }; cfg.marks = [{ x: 0, z: NZ + .4, r: 3.4, c: WARM, a: .9 }];   /* 26.11: свет от окна-стены и от лифта на полу */ },
   build: function (X) { ST = {}; return build(X); } };
 window.KOMNATA_OKNO = window.KOMNATA_OKNO || {}; window.KOMNATA_OKNO.hall = HK;
 

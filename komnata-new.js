@@ -584,7 +584,7 @@ function make(cfg) {
     if (T.RoomEnvironment) { var pm = new T.PMREMGenerator(R); S.environment = pm.fromScene(new T.RoomEnvironment(), .04).texture; }
     CAM = new T.PerspectiveCamera(64, innerWidth / innerHeight, .05, 200);
     if (window.INTER && cfg.grafika !== false) { var gs = (!cfg.styleFix && (/[?&]s=([ABC])/.exec(location.search) || [])[1]) || cfg.style || 'C';
-      try { GX = INTER.create({ renderer: R, scene: S, camera: CAM, style: gs, accent: gs === 'A' ? '#e0409a' : MC, quality: gq(), mirror: !window.KACHESTVO || gq() === 'high', tex: cfg.tex || 'proba/modul3/tex/' }); gfit(); } catch (e) { GX = null; } }
+      try { GX = INTER.create({ renderer: R, scene: S, camera: CAM, style: gs, accent: gs === 'A' ? '#e0409a' : MC, quality: gq(), shadowEvery: UL ? (gq() === 'high' && !MOB ? 2 : 20) : 0, mirror: !window.KACHESTVO || gq() === 'high', tex: cfg.tex || 'proba/modul3/tex/' }); gfit(); } catch (e) { GX = null; } }
     var OKH = GX && window.KOMNATA_OKNO && KOMNATA_OKNO[cfg.mid]; if (OKH && OKH.pre) try { OKH.pre(cfg); } catch (e) { OKH = null; } HK = OKH;   /* 18.11 (проба new.html): теория у большого окна - teoriya-okno.js */
     mats(); room();
     if (cfg.monitor) monitor(cfg.monitor);
@@ -773,7 +773,35 @@ function make(cfg) {
   /* ---------- 21.11 (проба new.html): экран загрузки, склейка предметов, прогрев - движение начинается, когда всё готово ---------- */
   var FIN = false, MERGED = false, LOADT = 0;
   var BYSTRO = !!(window.KURS_ZAGRUZKA && window.SKLEYKA) && !/[?&]bystro=0\b/.test(location.search);
-  function finish() { if (FIN || !GX) { FIN = true; return; } FIN = true; adoptG(); try { GX.bakeEnv(0, 1.6, 0); } catch (e) {} }
+  /* 26.11 (KMN_UL): мягкие тени под мебелью и свет от окон на полу. Это две плоские "наклейки" на пол
+     (2 команды рисования и несколько сотен треугольников на всю комнату), настоящие тени и свет не считаются - телефон не нагружается. */
+  function floorBake() { if (!UL || !GX || !FLOOR || !FLOOR.parent) return;
+    var sp = cfg.spill || { n: 1, w: 1, e: 1 }, ok = cfg.okno || {}, colS = new T.Color(cfg.spillColor || '#9a4dff'), ww = Math.min(14, D - 3);
+    function tex() { var c = document.createElement('canvas'); c.width = c.height = 64; var x = c.getContext('2d'), g = x.createRadialGradient(32, 32, 0, 32, 32, 32); g.addColorStop(0, 'rgba(255,255,255,1)'); g.addColorStop(.35, 'rgba(255,255,255,.62)'); g.addColorStop(.7, 'rgba(255,255,255,.2)'); g.addColorStop(1, 'rgba(255,255,255,0)'); x.fillStyle = g; x.fillRect(0, 0, 64, 64); var t = new T.CanvasTexture(c); t.generateMipmaps = false; t.minFilter = T.LinearFilter; return t; }
+    function B() { this.p = []; this.u = []; this.c = []; this.i = []; }
+    /* прямоугольник на полу: x0..x1, z0..z1; uv по углам (x0z0, x1z0, x1z1, x0z1) */
+    B.prototype.q = function (x0, z0, x1, z1, uv, col, y) { var b = this.p.length / 3; this.p.push(x0, y, z0, x1, y, z0, x1, y, z1, x0, y, z1); for (var k = 0; k < 4; k++) { this.u.push(uv[k][0], uv[k][1]); this.c.push(col.r, col.g, col.b); } this.i.push(b, b + 2, b + 1, b, b + 3, b + 2); };
+    B.prototype.mesh = function (mat, ro) { if (!this.i.length) return null; var g = new T.BufferGeometry(); g.setAttribute('position', new T.Float32BufferAttribute(this.p, 3)); g.setAttribute('uv', new T.Float32BufferAttribute(this.u, 2)); g.setAttribute('color', new T.Float32BufferAttribute(this.c, 3)); g.setIndex(this.i);
+      var m = new T.Mesh(g, mat); m.renderOrder = ro; m.userData.noMerge = true; m.userData.noMirror = true; m.userData.noShadow = true; m.frustumCulled = false; FLOOR.parent.add(m); return m; };
+    var t = tex(), sh = new B(), gl = new B(), blk = new T.Color(0, 0, 0), e = .42, xs, zs, us, i, j;
+    /* тень: середина сплошная, края мягкие (9 частей) */
+    BOX.forEach(function (b) { if ((TABLE && b === TABLE.box) || Math.abs(b[0]) > W / 2 - .15 || Math.abs(b[1]) > D / 2 - .15 || b[2] > 4 || b[3] > 4 || (b[2] > 1.6 && b[3] > 1.6)) return;
+      xs = [b[0] - b[2] - e, b[0] - b[2] + .08, b[0] + b[2] - .08, b[0] + b[2] + e]; zs = [b[1] - b[3] - e, b[1] - b[3] + .08, b[1] + b[3] - .08, b[1] + b[3] + e]; us = [0, .5, .5, 1];
+      for (i = 0; i < 3; i++) for (j = 0; j < 3; j++) sh.q(xs[i], zs[j], xs[i + 1], zs[j + 1], [[us[i], us[j]], [us[i + 1], us[j]], [us[i + 1], us[j + 1]], [us[i], us[j + 1]]], blk, .006); });
+    /* свет от окна: полоса вдоль стены, гаснет вглубь комнаты */
+    function band(side, a0, a1, len, k) { var c = colS.clone().multiplyScalar(k), m = Math.min(2.2, (a1 - a0) / 3), as = [a0 - .6, a0 + m, a1 - m, a1 + .6], uu = [0, .5, .5, 1];
+      for (i = 0; i < 3; i++) { var p0 = as[i], p1 = as[i + 1], u0 = uu[i], u1 = uu[i + 1];
+        if (side === 'n') gl.q(p0, -D / 2, p1, -D / 2 + len, [[u0, .5], [u1, .5], [u1, 1], [u0, 1]], c, .009);
+        else if (side === 'w') gl.q(-W / 2, p0, -W / 2 + len, p1, [[u0, .5], [u0, 1], [u1, 1], [u1, .5]], c, .009);
+        else gl.q(W / 2 - len, p0, W / 2, p1, [[u0, 1], [u0, .5], [u1, .5], [u1, 1]], c, .009); } }
+    if (sp.n) (ok.n || []).forEach(function (h) { band('n', h[0], h[1], 5.2, 1); });
+    if (sp.w) (ok.w || []).forEach(function (h) { band('w', h[0], h[1], 5.2, 1); });
+    if (sp.e && cfg.window !== false) band('e', -1 - ww / 2, -1 + ww / 2, 3.6, .45);
+    (cfg.marks || []).forEach(function (q) { var c = new T.Color(q.c).multiplyScalar(q.a || 1); gl.q(q.x - q.r, q.z - q.r, q.x + q.r, q.z + q.r, [[0, 0], [1, 0], [1, 1], [0, 1]], c, .009); });
+    var dark = GX.S && GX.S.dark;
+    sh.mesh(new T.MeshBasicMaterial({ map: t, vertexColors: true, transparent: true, opacity: cfg.shadowK != null ? cfg.shadowK : .5, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2, toneMapped: false }), 1);
+    gl.mesh(new T.MeshBasicMaterial({ map: t, vertexColors: true, transparent: true, opacity: cfg.spillK != null ? cfg.spillK : .3, blending: T.AdditiveBlending, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -3, polygonOffsetUnits: -3 }), 2); }
+  function finish() { if (FIN || !GX) { FIN = true; return; } FIN = true; floorBake(); adoptG(); try { GX.bakeEnv(0, 1.6, 0); } catch (e) {} }
   function noMerge(o) { if (o) (o.userData || (o.userData = {})).noMerge = true; }
   function skleit() { if (MERGED || !window.SKLEYKA) return; MERGED = true;
     noMerge(FLOOR); noMerge(GUIDE); if (MON) noMerge(MON.g); Object.keys(STANDS).forEach(function (k) { noMerge(STANDS[k].g); }); if (dotG) noMerge(dotG); DOTS.forEach(noMerge);
