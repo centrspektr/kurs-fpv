@@ -916,7 +916,7 @@ function cityBack(nm,sig){ if(BACK&&BACK.nm===nm&&BACK.sig===sig) return BACK; v
     if(by.has(x)){ (own[by.get(x)]=own[by.get(x)]||[]).push(y); anc.add(y); }
     if(x.material&&x.material.depthTest===false){ y.material=x.material.clone(); y.material.depthTest=true; } walk(x,y); } })(LK.g,cp);
   cp.visible=true; var r={before:0,after:0,made:[]};
-  try{ r=SKLEYKA.merge(cp,{watch:{dyn:dyn,mat:dmat},anchor:function(o){ return anc.has(o); }}); }catch(e){ if(window.console) console.warn('skleyka: копия города',e); }
+  try{ r=SKLEYKA.merge(cp,{watch:{dyn:dyn,mat:dmat},transp:true,anchor:function(o){ return anc.has(o); }}); if(SKDBG) console.log("[skleyka] копия: почему нет",JSON.stringify(SKLEYKA.why(cp,{dyn:dyn,mat:dmat}))); }catch(e){ if(window.console) console.warn('skleyka: копия города',e); }
   var o=new THREE.Group(); o.add(cp); o.scale.setScalar(CF); var gb0=BACK&&BACK.glow; if(gb0){ var gi=GLB.indexOf(gb0); if(gi>=0) GLB.splice(gi,1); if(gb0.mesh) gb0.mesh.geometry.dispose(); }
   BACK={o:o,cp:cp,pairs:pairs,own:own,nm:nm,sig:sig,made:r.made}; try{ BACK.glow=glowBatch(o); }catch(e){ if(window.console) console.warn('огоньки: копия города',e); } skLog('город под крышами',r,t0); return BACK; }
 function cityAround(L){ if(!L.open) return; var nm=LK.nodes.filter(function(n){ return n.model; }).length;
@@ -1644,8 +1644,12 @@ var TN=0, TS=0, TW=0;
 function tune(raw){ if(document.hidden||raw>.5||winOn||st==='gate'||st==='falling'||document.body.classList.contains('intro')) return; /* 12.11: на подлёте к городу резкость не дёргаем - от этого был рывок при торможении */ TN++; TS+=raw; if(TS<2) return; var avg=TS/TN; TN=0; TS=0; if(avg>1/38&&(DPR>DPRMIN+.01||!LITE)){ if(++TW<2) return; TW=0; if(DPR>DPRMIN+.01){ DPR=Math.max(DPRMIN,DPR-.15); R.setPixelRatio(DPR); size(); } else { lite(); if(window.KACHESTVO) KACHESTVO.slow(); } } else TW=0; }
 /* совсем слабый телефон: убираем часть мелочей - половину дронов и роботов, они только для красоты */
 var LITE=false; function lite(){ LITE=true; (LK.drones||[]).forEach(function(q,i){ if(i%2) q.g.visible=false; }); (LK.bots||[]).forEach(function(q,i){ if(i%2) q.g.visible=false; }); }
-function frame(){ var raw=clock.getDelta(), dt=Math.min(raw,.05); tm+=dt; fc++; tune(raw);
-  if(ROOM){ requestAnimationFrame(frame); return; } /* модуль-помещение (komnata.js) рисует себя сам, город стоит */
+function frame(){ var raw=clock.getDelta(), dt=Math.min(raw,.05), KOM=window.KURS_KOMNATA; tm+=dt; fc++;
+  /* 26.11 (проба): в модулях-помещениях скорость города не меряем - у комнат свой счёт кадров. Раньше медленная комната снижала качество графики дважды (тут и в самой комнате) */
+  if(!(UL&&(ROOM||(KOM&&KOM.on)))) tune(raw);
+  if(ROOM){ requestAnimationFrame(frame); return; }
+  /* 26.11 (проба): модули 3 и 5 открыты поверх города отдельным окном - город под ним не виден, а рисовался каждый кадр (около 500 команд). Теперь стоит, пока комната закрывает экран */
+  if(UL&&KOM&&KOM.solid){ if(fly) stepFly(dt); requestAnimationFrame(frame); return; } /* модуль-помещение (komnata.js) рисует себя сам, город стоит */
   if(winOn&&!fly&&(!LIVE||(mob&&fc%2))){ requestAnimationFrame(frame); return; } /* под окном задания космос стоит: бережём батарею; за стеклом экрана - живой, на телефоне через кадр */
   if(fly) stepFly(dt);
   else if(st==='gate'){ camP.lerp(V(0,0,46-gp*62),Math.min(1,dt*4)); camL.set(0,0,-30); speed=Math.abs(46-gp*62-camP.z)*6; }

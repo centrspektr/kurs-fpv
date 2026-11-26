@@ -94,6 +94,11 @@
     D.body.appendChild(btn); upd();
   }
   D.addEventListener('fullscreenchange', upd); D.addEventListener('webkitfullscreenchange', upd);
+  /* 26.11 (проба): пока открыто окно задания, кнопка закрывала его заголовок - на это время прячем */
+  function winWatch() { var w = D.getElementById('win'); if (!w || !W.KURS_UL || !W.MutationObserver) return;
+    var f = function () { if (btn) btn.style.display = w.classList.contains('on') ? 'none' : ''; };
+    new MutationObserver(f).observe(w, { attributes: true, attributeFilter: ['class'] }); f(); }
+  if (D.readyState === 'loading') D.addEventListener('DOMContentLoaded', winWatch); else winWatch();
   if (D.body) build(); else D.addEventListener('DOMContentLoaded', build);
   W.KURS_EKRAN = { go: go, ios: tipIOS, inapp: tipInApp };
 })();
