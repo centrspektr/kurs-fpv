@@ -8,6 +8,7 @@
 /* 26.11.2026 (тред "Проверить и улучшить игру курса"): улучшения этой пробы включены только на new.html (или с ?new в адресе).
    ?ul=0 - выключить их и сравнить, как было. Читают: kosmos-kurs-proba.js, kryshi-proba.js, komnaty.js и др. */
 window.KURS_UL = (/\/new\.html$/.test(location.pathname) || /[?&]new\b/.test(location.search)) && !/[?&]ul=0\b/.test(location.search);
+if (window.KURS_UL) document.documentElement.classList.add('ul');   /* для стилей, которые пока только на пробе */
 (function () {
 'use strict';
 var LS = window.localStorage, K = 'kursy_grafika', KR = 'kursy_grafika_ruchn', KA = 'kursy_grafika_avto';
@@ -31,6 +32,10 @@ function guess() {
   else if ((mem <= 4 || cpu <= 4) && lvl === 'high') lvl = 'mid';
   if (MOB && lvl === 'high') lvl = 'mid';
   return lvl; }
+/* 26.11 (проба): сильный телефон - город и крыши рисуем резче (до 1.5 вместо 1.1, как уже в комнатах). Кадры стали долгими - курс сам снижает резкость
+   и запоминает её (kursy_grafika_rezk), ниже прежних 1.1 из-за этого не опускаемся. ?rezk=1 - считать телефон сильным (для проверки) */
+var KZ = 'kursy_grafika_rezk';
+var STRONG = MOB && (/adreno.*\b(6[3-9]\d|[7-9]\d\d)\b|apple|mali-g(7\d|[67]\d\d)|immortalis|xclipse/.test(GPU.toLowerCase()) || /[?&]rezk=1\b/.test(location.search));
 var AUTO = guess();
 /* авто: если раньше уже снижали из-за долгих кадров - помним это (kursy_grafika_avto) */
 var saved = g(KA); if (saved && ORD.indexOf(saved) >= 0 && ORD.indexOf(saved) < ORD.indexOf(AUTO)) AUTO = saved;
@@ -43,12 +48,15 @@ function emit() { subs.forEach(function (f) { try { f(level); } catch (e) {} });
 var Q = window.KACHESTVO = {
   get level() { return level; }, get manual() { return manual; }, get auto() { return AUTO; }, gpu: GPU, mob: MOB,
   on: function (f) { subs.push(f); },
-  set: function (v) { if (v === 'auto') { manual = false; s(KR, null); s(KA, null); AUTO = guess(); level = AUTO; s(K, level); }
+  set: function (v) { if (v === 'auto') { manual = false; s(KR, null); s(KA, null); s(KZ, null); AUTO = guess(); level = AUTO; s(K, level); }
     else if (ORD.indexOf(v) >= 0) { manual = true; s(KR, '1'); level = v; s(K, v); } emit(); },
+  get strong() { return STRONG; }, rezk: function (v) { s(KZ, v == null ? null : String(v)); },
   /* кадры долгие: в авто - на ступень ниже (запоминаем), вручную - ничего не делаем */
   slow: function () { if (manual || qp) return false; var i = ORD.indexOf(level); if (i <= 0) return false; level = ORD[i - 1]; AUTO = level; s(KA, level); s(K, level); emit(); return true; },
   /* предел резкости для сцены: город, крыши */
-  dpr: function (mob) { var d = window.devicePixelRatio || 1; return level === 'low' ? Math.min(d, mob ? .9 : 1) : level === 'mid' ? Math.min(d, mob ? 1.1 : 1.25) : Math.min(d, mob ? 1.25 : 1.75); }
+  dpr: function (mob) { var d = window.devicePixelRatio || 1;
+    if (window.KURS_UL && mob && STRONG && level !== 'low') { var c = parseFloat(g(KZ)); return Math.min(d, c >= 1.1 && c < 1.5 ? c : 1.5); }
+    return level === 'low' ? Math.min(d, mob ? .9 : 1) : level === 'mid' ? Math.min(d, mob ? 1.1 : 1.25) : Math.min(d, mob ? 1.25 : 1.75); }
 };
 
 /* ---- строка "Графика" в панели шестерёнки (#muzP из muzyka.js) ---- */
