@@ -7,7 +7,7 @@
 (function () {
 'use strict';
 var KOMNATY = { m3: 'proba/modul3/index.html', m5: 'proba/modul3/gonki.html' };   /* 11.11: модуль 5 - гоночный клуб от первого лица */
-var ov = null, cur = null;
+var ov = null, cur = null, onT = 0;   /* onT - когда комната полностью закрыла экран (26.11: с этого момента город под ней не рисуется) */
 var css = document.createElement('style');
 css.textContent = '#komOv{position:fixed;inset:0;z-index:15;background:#05060d;opacity:0;transition:opacity .5s}#komOv.on{opacity:1}#komOv iframe{position:absolute;inset:0;width:100%;height:100%;border:0;display:block}';
 document.head.appendChild(css);
@@ -15,7 +15,7 @@ function open(mid, ready) {
   if (!KOMNATY[mid]) return false; close(true); cur = mid;
   ov = document.createElement('div'); ov.id = 'komOv';
   var f = document.createElement('iframe'); f.src = KOMNATY[mid]; f.title = 'Модуль'; f.allow = 'autoplay; fullscreen';
-  f.onload = function () { ov.classList.add('on'); if (ready) setTimeout(ready, 400); try { f.contentWindow.focus(); } catch (e) {} };
+  onT = 0; f.onload = function () { if (!ov) return; ov.classList.add('on'); onT = performance.now() + 700; if (ready) setTimeout(ready, 400); try { f.contentWindow.focus(); } catch (e) {} };
   ov.appendChild(f); document.body.appendChild(ov);
   try { history.pushState({ komnata: mid }, ''); } catch (e) {}
   return true;
@@ -33,7 +33,7 @@ window.KURS_KOMNATA = { has: function (mid) { return !!KOMNATY[mid]; }, open: op
   task: function (tid) { return window.KURS_OPEN_TASK ? window.KURS_OPEN_TASK(tid) : false; },
   /* окно задания закрылось - назад в комнату: клавиатура снова в комнате, стенды обновляются */
   back: function (tid, fresh) { if (!ov) return; var f = ov.querySelector('iframe'); try { f.focus(); f.contentWindow.focus(); var w = f.contentWindow; if (w.AKB && w.AKB.back) w.AKB.back(tid, fresh); else if (w.AKB && w.AKB.refresh) w.AKB.refresh(); } catch (e) {} },
-  get on() { return !!ov; } };
+  get on() { return !!ov; }, get solid() { return !!ov && onT > 0 && performance.now() > onT; } };
 /* клавиши, нажатые, пока фокус остался на странице курса (после кнопки окна задания), передаём в комнату */
 function winOn() { var w = document.getElementById('win'); return w && w.classList.contains('on'); }
 ['keydown', 'keyup'].forEach(function (tp) { addEventListener(tp, function (e) { if (!ov || winOn()) return; var f = ov.querySelector('iframe'); if (!f || document.activeElement === f) return;

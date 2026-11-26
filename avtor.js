@@ -59,6 +59,8 @@
     '#avM{margin:6px 0 2px;padding-top:8px;border-top:1px solid rgba(255,255,255,.16);color:#c9cde8;font:600 11.5px/1.35 system-ui,sans-serif}' +
     '#avM .avL{display:block;margin-top:4px;color:#7cf3ff}' +
     '.avF{margin:14px 4px 0;text-align:center;color:var(--dim,#8b98a5);font:600 11.5px/1.4 system-ui,sans-serif;opacity:.8}' +
+    /* 26.11 (проба): на телефоне круглая кнопка "дальше" закрывала конец строки автора в окне задания */
+    '@media (pointer:coarse) and (max-height:560px){.ul #win .avF{padding:0 84px}}' +
     '.avD{margin:8px 0 0;text-align:center;color:var(--dim,#a7acd2);font:600 12px/1.4 system-ui,sans-serif}' +
     '#avU{position:fixed;inset:0;z-index:200;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(2,4,12,.72)}' +
     '#avU[hidden]{display:none}' +

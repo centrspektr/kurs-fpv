@@ -56,7 +56,8 @@ function size(){ R.setSize(innerWidth,innerHeight,false); C.aspect=innerWidth/in
 size(); addEventListener('resize',size);
 
 function tex(draw,w,h){ var n=document.createElement('canvas'); n.width=w; n.height=h||w; draw(n.getContext('2d'),w,h||w); return new THREE.CanvasTexture(n); }
-function glowTex(c){ return tex(function(x,s){ var g=x.createRadialGradient(s/2,s/2,0,s/2,s/2,s/2); g.addColorStop(0,'#fff'); g.addColorStop(.12,c); g.addColorStop(.4,c+'55'); g.addColorStop(1,c+'00'); x.fillStyle=g; x.fillRect(0,0,s,s); },128); }
+function glowTex(c){ var t=glowTex0(c); t.glowC=c; /* 26.11: по этой метке огоньки собираются в один объект (glowBatch) */ return t; }
+function glowTex0(c){ return tex(function(x,s){ var g=x.createRadialGradient(s/2,s/2,0,s/2,s/2,s/2); g.addColorStop(0,'#fff'); g.addColorStop(.12,c); g.addColorStop(.4,c+'55'); g.addColorStop(1,c+'00'); x.fillStyle=g; x.fillRect(0,0,s,s); },128); }
 var DOT=glowTex('#ffffff');
 function rgb(c){ var k=new THREE.Color(c); return Math.round(k.r*255)+','+Math.round(k.g*255)+','+Math.round(k.b*255); }
 
@@ -846,7 +847,83 @@ function cityMoving(){ if(CMOV) return CMOV; var all=[], t0=tm, mv=new Set(); LK
   function rec(){ return all.map(function(o){ return o.position.toArray().concat(o.quaternion.toArray(),o.scale.toArray(),[o.visible?1:0]); }); }
   var a=rec(); [1.3,2.9,4.4].forEach(function(t){ tm=t0+t; life(LK,.3); rec().forEach(function(r,i){ for(var j=0;j<r.length;j++) if(Math.abs(r[j]-a[i][j])>1e-6){ mv.add(all[i]); break; } }); }); tm=t0;
   return CMOV=mv; }
-function cityAround(L){ if(!L.open) return; var nm=LK.nodes.filter(function(n){ return n.model; }).length; if(L.city&&L.cityN===nm) return; /* догрузились модели - пересобираем */
+/* ===== 26.11.2026 (проба new.html, тред "Проверить и улучшить игру курса"): склейка неподвижных деталей города и крыш =====
+   Было: город - около 1000 команд рисования на кадр, крыши модулей 1, 4, 6 - 1000-1400 (из них 800 - копия города внизу).
+   Телефон тратит на это весь кадр. Теперь неподвижные детали с одинаковым видом сливаются в один объект (skleyka.js): картинка та же.
+   Здания модулей и киоски (на них нажимают, они гаснут и загораются) в самом городе не склеиваются.
+   Копия города под крышами - одна на все три крыши (раньше у каждой своя), у своего здания прячется его копия.
+   ?ul=0 - как было; ?skdbg - числа в консоли и проверка "что из склеенного потом пытались изменить" (KURS_GOROD.skAudit()). */
+var UL=!!window.KURS_UL&&!!window.SKLEYKA, SKDBG=/[?&]skdbg\b/.test(location.search), SKA=SKDBG?[]:null;
+function skWatch(L,n){ var t0=tm, w, bn=L.botsNew; L.botsNew=false; /* роботов и их ворота ставит первый кадр города (к этому времени догружаются модели зданий) */ try{ w=SKLEYKA.watch(L.g,function(i){ tm=t0+.9+i*.737; life(L,.25); },n||12); } finally { tm=t0; L.botsNew=bn; } return w; }
+function skLog(what,r,t0){ if(SKDBG&&window.console){ console.log('[skleyka] '+what+': '+r.before+' -> '+r.after+' предметов, '+Math.round(performance.now()-t0)+' мс'); if(SKA){ SKLEYKA.audit(SKA); SKA.length=0; } } }
+/* сам город: всё, кроме зданий модулей и киосков */
+function skCity(){ if(!UL||LK.skl) return; LK.skl=1; var t0=performance.now();
+  try{ var skip=new Set(); LK.nodes.forEach(function(n){ skip.add(n.g); if(n.bld) skip.add(n.bld); });
+    var w=skWatch(LK), r=SKLEYKA.merge(LK.g,{watch:w,audit:SKA,skip:function(o){ return skip.has(o)||o.isLight; }}); CMOV=null; skLog('город',r,t0);
+    /* здания модулей и киоски: склеиваем только внутри одного здания (оно гаснет и загорается целиком, поэтому одинаковые детали остаются одинаковыми).
+       Киоск, который ещё ждёт готовую модель (она прячет здание из кода), не трогаем */
+    t0=performance.now(); var rb={before:0,after:0}; LK.nodes.forEach(function(n){ if(!n.bld||(MODELI[n.st0]&&!n.rb&&!(NEWB&&NB[n.st0]))) return;
+      var q=SKLEYKA.merge(n.bld,{watch:w,audit:SKA,transp:true}); rb.before+=q.before; rb.after+=q.after; }); skLog('здания города',rb,t0); }catch(e){ if(window.console) console.warn('skleyka: город',e); }
+  try{ LK.glow=glowBatch(LK.g,LK.glow); }catch(e){ if(window.console) console.warn('огоньки: город',e); } }
+/* крыша модуля: декорации; зоны заданий, ворота с ответами (userData.noMerge в kryshi-proba.js), копию города и дрон-проводник не трогаем */
+function skRoof(L){ if(!UL||L.skl||!L.kr) return; L.skl=1; var t0=performance.now();
+  try{ var skip=new Set(); L.nodes.forEach(function(n){ skip.add(n.g); if(n.bld) skip.add(n.bld); }); if(L.city) skip.add(L.city); if(L.gd) skip.add(L.gd.g); L.pulses.forEach(function(q){ skip.add(q.sp); }); L.threads.forEach(function(q){ skip.add(q.ln); });
+    var r=SKLEYKA.merge(L.g,{watch:skWatch(L),audit:SKA,skip:function(o){ return skip.has(o)||o.isLight; }}); skLog('крыша '+L.id,r,t0); }catch(e){ if(window.console) console.warn('skleyka: крыша',e); }
+  try{ L.glow=glowBatch(L.g,L.glow,new Set(L.city?[L.city]:[])); }catch(e){ if(window.console) console.warn('огоньки: крыша',e); } }
+/* ----- огоньки одним объектом (26.11) -----
+   В городе около 180 светящихся точек (фонари, маяки, огни дронов), каждая была отдельной командой рисования.
+   glowBatch собирает их в один объект: те же места, размеры, цвета и мигание (каждый кадр читаются с настоящих огоньков,
+   поэтому остальной код не меняется), а рисуется всё за один раз. Сами огоньки уходят на невидимый слой. */
+var GLOWM=null, GLB=[];
+function glowMat(){ if(GLOWM) return GLOWM; GLOWM=new THREE.ShaderMaterial({ transparent:true, depthWrite:false, blending:THREE.AdditiveBlending, fog:true, uniforms:THREE.UniformsUtils.merge([THREE.UniformsLib.fog]),
+  vertexShader:'attribute vec2 corner; attribute vec2 gsize; attribute vec3 gcol; attribute vec4 tint; varying vec2 vC; varying vec3 vG; varying vec4 vT;\n#include <common>\n#include <fog_pars_vertex>\nvoid main(){ vC=corner; vG=gcol; vT=tint; vec4 mvPosition=viewMatrix*vec4(position,1.0); mvPosition.xy+=corner*gsize; gl_Position=projectionMatrix*mvPosition;\n#include <fog_vertex>\n}',
+  fragmentShader:'varying vec2 vC; varying vec3 vG; varying vec4 vT;\n#include <common>\n#include <fog_pars_fragment>\nvoid main(){ float r=min(1.0,length(vC)*2.0); vec3 c=mix(vec3(1.0),vG,min(1.0,r/0.12)); float a=r<0.12?1.0:(r<0.4?mix(1.0,0.3333,(r-0.12)/0.28):mix(0.3333,0.0,(r-0.4)/0.6)); gl_FragColor=vec4(c*vT.rgb,a*vT.a);\n#include <encodings_fragment>\n#include <fog_fragment>\n}' });
+  GLOWM.toneMapped=false; return GLOWM; }
+function isGlow(o){ var m=o.isSprite&&o.material; return !!(m&&m.map&&m.map.glowC&&m.blending===THREE.AdditiveBlending&&m.depthTest!==false&&!o.userData.noBatch); }
+/* B={root,mesh,list}: пересобирается, когда появились новые огоньки (роботы) */
+var OGON=!/[?&]ogon=0\b/.test(location.search); /* ?ogon=0 - огоньки по отдельности, как раньше */
+function glowBatch(root,B,skip){ if(!UL||!OGON) return null; B=B||{root:root,mesh:null,list:[]}; var list=[];
+  (function walk(o){ if(skip&&skip.has(o)) return; if(isGlow(o)){ list.push(o); o.layers.set(5); } for(var i=0;i<o.children.length;i++) walk(o.children[i]); })(root);
+  if(B.mesh){ if(B.mesh.parent) B.mesh.parent.remove(B.mesh); B.mesh.geometry.dispose(); B.mesh=null; } B.list=list; var n=list.length; if(!n) return B;
+  var g=new THREE.BufferGeometry(), P=new Float32Array(n*12), Cn=new Float32Array(n*8), Sz=new Float32Array(n*8), Gc=new Float32Array(n*12), Tn=new Float32Array(n*16), I2=new Uint16Array(n*6), k=new THREE.Color(), q=[[-.5,-.5],[.5,-.5],[.5,.5],[-.5,.5]];
+  for(var i=0;i<n;i++){ k.set(list[i].material.map.glowC); for(var j=0;j<4;j++){ Cn[i*8+j*2]=q[j][0]; Cn[i*8+j*2+1]=q[j][1]; Gc[i*12+j*3]=k.r; Gc[i*12+j*3+1]=k.g; Gc[i*12+j*3+2]=k.b; }
+    I2[i*6]=i*4; I2[i*6+1]=i*4+1; I2[i*6+2]=i*4+2; I2[i*6+3]=i*4; I2[i*6+4]=i*4+2; I2[i*6+5]=i*4+3; }
+  g.setAttribute('position',new THREE.BufferAttribute(P,3).setUsage(THREE.DynamicDrawUsage)); g.setAttribute('corner',new THREE.BufferAttribute(Cn,2)); g.setAttribute('gsize',new THREE.BufferAttribute(Sz,2).setUsage(THREE.DynamicDrawUsage));
+  g.setAttribute('gcol',new THREE.BufferAttribute(Gc,3)); g.setAttribute('tint',new THREE.BufferAttribute(Tn,4).setUsage(THREE.DynamicDrawUsage)); g.setIndex(new THREE.BufferAttribute(I2,1));
+  var me=new THREE.Mesh(g,glowMat()); me.frustumCulled=false; me.matrixAutoUpdate=false; me.renderOrder=2; me.name='ogonki'; me.userData.noMerge=true; root.add(me); B.mesh=me; if(GLB.indexOf(B)<0) GLB.push(B); return B; }
+function glowUpd(B){ var L0=B.list, n=L0.length, me=B.mesh; if(!n||!me) return; var g=me.geometry, P=g.attributes.position.array, Sz=g.attributes.gsize.array, Tn=g.attributes.tint.array, top=B.root.parent;
+  for(var i=0;i<n;i++){ var sp=L0[i], m=sp.material, e=sp.matrixWorld.elements, vis=m.visible!==false&&m.opacity>0, p=sp; while(vis&&p&&p!==top){ if(!p.visible) vis=false; p=p.parent; }
+    var sx=vis?Math.sqrt(e[0]*e[0]+e[1]*e[1]+e[2]*e[2]):0, sy=vis?Math.sqrt(e[4]*e[4]+e[5]*e[5]+e[6]*e[6]):0, c=m.color, o=m.opacity, a=i*12, b=i*8, d=i*16;
+    for(var j=0;j<4;j++){ P[a]=e[12]; P[a+1]=e[13]; P[a+2]=e[14]; a+=3; Sz[b]=sx; Sz[b+1]=sy; b+=2; Tn[d]=c.r; Tn[d+1]=c.g; Tn[d+2]=c.b; Tn[d+3]=o; d+=4; } }
+  g.attributes.position.needsUpdate=true; g.attributes.gsize.needsUpdate=true; g.attributes.tint.needsUpdate=true; }
+/* перед кадром: положения считаем один раз сами (S.autoUpdate выключен), потом обновляем огоньки тех уровней, что сейчас в сцене */
+function glowFrame(){ if(!UL) return; S.updateMatrixWorld(); for(var i=0;i<GLB.length;i++){ var B=GLB[i], p=B.root; while(p&&p!==S) p=p.parent; if(p===S) glowUpd(B); } }
+/* роботы-доставщики и их ворота появляются позже города: склеиваем их отдельно (ворота - между собой, робота - внутри него).
+   Колёса - гладкие цилиндры, их вращение не видно, поэтому они тоже склеены */
+function skBots(){ if(!UL||!LK.skl) return; var t0=performance.now();
+  try{ var mine=new Set(), dyn=new Set(); LK.bots.forEach(function(q){ mine.add(q.g); dyn.add(q.g); q.eyes.forEach(function(e){ dyn.add(e); }); dyn.add(q.lamp); });
+    (LK.bgates||[]).forEach(function(q){ mine.add(q.g); dyn.add(q.door); q.ls.forEach(function(l){ dyn.add(l); }); });
+    var r=SKLEYKA.merge(LK.g,{watch:{dyn:dyn,mat:new Set()},audit:SKA,skip:function(o){ return o.parent===LK.g&&!mine.has(o); }}); CMOV=null; skLog('роботы и ворота',r,t0); LK.glow=glowBatch(LK.g,LK.glow); }catch(e){ if(window.console) console.warn('skleyka: роботы',e); } }
+/* копия города под крышей: одна на все крыши. Движется то же, что и раньше (пары sync), остальное склеено */
+var BACK=null;
+function cityBack(nm,sig){ if(BACK&&BACK.nm===nm&&BACK.sig===sig) return BACK; var t0=performance.now();
+  if(BACK){ if(BACK.o.parent) BACK.o.parent.remove(BACK.o); BACK.made.forEach(function(q){ q.mesh.geometry.dispose(); }); }
+  skCity(); CMOV=null; var mv=cityMoving(), w=skWatch(LK,8), cp=LK.g.clone(true), pairs=[], skip=new Set(), own={}, anc=new Set(), dyn=new Set(), dmat=new Set(), by=new Map();
+  LK.pulses.forEach(function(q){ skip.add(q.sp); }); LK.drones.filter(function(q){ return !q.patrol; }).slice(2).forEach(function(q){ skip.add(q.g); });
+  LK.nodes.forEach(function(n){ skip.add(n.wf); if(n.rb){ by.set(n.g,n.id); if(n.bld) by.set(n.bld,n.id); } }); GATES.forEach(function(q){ skip.add(q.m); }); if(mob) LK.lamps.forEach(function(q,j){ if(j%2) skip.add(q); }); if(LK.glow&&LK.glow.mesh) skip.add(LK.glow.mesh); /* у копии свои огоньки */
+  (function walk(a,b){ for(var i=0;i<a.children.length;i++){ var x=a.children[i], y=b.children[i]; if(skip.has(x)){ y.visible=false; continue; }
+    if(mv.has(x)||w.dyn.has(x)){ pairs.push([x,y]); dyn.add(y); } if(w.mat.has(x)) dmat.add(y);
+    if(by.has(x)){ (own[by.get(x)]=own[by.get(x)]||[]).push(y); anc.add(y); }
+    if(x.material&&x.material.depthTest===false){ y.material=x.material.clone(); y.material.depthTest=true; } walk(x,y); } })(LK.g,cp);
+  cp.visible=true; var r={before:0,after:0,made:[]};
+  try{ r=SKLEYKA.merge(cp,{watch:{dyn:dyn,mat:dmat},transp:true,anchor:function(o){ return anc.has(o); }}); if(SKDBG) console.log("[skleyka] копия: почему нет",JSON.stringify(SKLEYKA.why(cp,{dyn:dyn,mat:dmat}))); }catch(e){ if(window.console) console.warn('skleyka: копия города',e); }
+  var o=new THREE.Group(); o.add(cp); o.scale.setScalar(CF); var gb0=BACK&&BACK.glow; if(gb0){ var gi=GLB.indexOf(gb0); if(gi>=0) GLB.splice(gi,1); if(gb0.mesh) gb0.mesh.geometry.dispose(); }
+  BACK={o:o,cp:cp,pairs:pairs,own:own,nm:nm,sig:sig,made:r.made}; try{ BACK.glow=glowBatch(o); }catch(e){ if(window.console) console.warn('огоньки: копия города',e); } skLog('город под крышами',r,t0); return BACK; }
+function cityAround(L){ if(!L.open) return; var nm=LK.nodes.filter(function(n){ return n.model; }).length;
+  if(UL){ var me0=LK.by[L.mid], D0=Math.max(220,TOPH[me0.st0]*CF), B=cityBack(nm,LK.nodes.map(function(n){ return n.st||''; }).join());
+    for(var id in B.own) B.own[id].forEach(function(y){ y.visible=id!==L.mid; });
+    B.cp.position.set(-me0.p[0],-PY,-me0.p[2]); B.o.rotation.y=Math.PI-Math.atan2(-me0.p[0],CZ-me0.p[2]); B.o.position.set(0,PY-D0,L.zc); if(B.o.parent!==L.g) L.g.add(B.o); L.city=B.o; L.sync=B.pairs; L.cityN=nm; return; }
+  if(L.city&&L.cityN===nm) return; /* догрузились модели - пересобираем */
   if(L.city) L.g.remove(L.city); L.cityN=nm;
   var me=LK.by[L.mid], D=Math.max(220,TOPH[me.st0]*CF), mv=cityMoving(), cp=LK.g.clone(true), pairs=[], skip=new Set([me.g,me.bld]); LK.pulses.forEach(function(q){ skip.add(q.sp); });
   LK.drones.filter(function(q){ return !q.patrol; }).slice(2).forEach(function(q){ skip.add(q.g); }); /* снизу хватит пары дронов и патрульных: бережём телефон */
@@ -937,14 +1014,14 @@ function botsInit(){ LK.botsNew=false; var P=V(0,0,0), T=V(0,0,0);
     var din=3.4/len; /* въезд на 3,4 ед. вглубь ворот - там робота уже не видно */
     for(var k=0;k<(mob?1:2);k++){ var b=mkBot(MC[(j+k)%MC.length]); LK.g.add(b.g);
       b.cv=cv; b.len=len; b.a=t0-din; b.b=t1+din; b.ga=gs[0]; b.gb=gs[1]; b.t=t0+(t1-t0)*(k?.7:.25); b.dir=k?-1:1; b.sp=(3.2+Math.random()*1.2)/len; b.ph=Math.random()*6; b.wait=0; LK.bots.push(b); }
-    (LK.bgates=LK.bgates||[]).push.apply(LK.bgates,gs); }); }
+    (LK.bgates=LK.bgates||[]).push.apply(LK.bgates,gs); }); skBots(); }
 var BOTN=new THREE.Vector3();
 function botsLife(L,dt){ if(L.botsNew) botsInit();
   L.bots.forEach(function(q){ if(q.wait>0){ q.wait-=dt; if(q.wait<=0){ q.dir=-q.dir; q.g.visible=true; } else return; }
     q.t+=dt*q.sp*q.dir; if(q.t>q.b){ q.t=q.b; q.wait=1.5+Math.random()*2; q.g.visible=false; } if(q.t<q.a){ q.t=q.a; q.wait=1.5+Math.random()*2; q.g.visible=false; }
     var u=Math.max(0,Math.min(1,q.t)); q.cv.getPoint(u,q.g.position); q.cv.getTangent(u,tt); tt.y=0; tt.normalize(); if(u!==q.t) q.g.position.addScaledVector(tt,(q.t-u)*q.len); if(q.dir<0) tt.negate();
     q.g.position.y=PY; q.g.position.addScaledVector(BOTN.set(-tt.z,0,tt.x),.9); q.g.rotation.y=Math.atan2(tt.x,tt.z);
-    for(var i=0;i<q.wh.length;i++) q.wh[i].rotation.x+=dt*q.sp*q.len/.24; q.lamp.material.opacity=Math.sin(tm*7+q.ph)>0?1:.2;
+    if(!UL) for(var i=0;i<q.wh.length;i++) q.wh[i].rotation.x+=dt*q.sp*q.len/.24; /* 26.11: колёса - гладкие цилиндры, вращение не видно; в пробе они склеены */ q.lamp.material.opacity=Math.sin(tm*7+q.ph)>0?1:.2;
     var bl=((tm+q.ph)%4)<.12?.15:1; q.eyes[0].scale.y=q.eyes[1].scale.y=bl; });
   (L.bgates||[]).forEach(function(G){ var near=L.bots.some(function(q){ return (q.ga===G||q.gb===G)&&Math.abs(q.t-G.t)*q.len<3.8&&(q.g.visible||q.wait>0&&q.wait<.6); });
     G.o+=Math.max(-dt*2.5,Math.min(dt*2.5,(near?1:0)-G.o)); G.door.scale.y=1-G.o*.94; var on=G.o>.02&&G.o<.98||near; G.ls.forEach(function(s,i){ s.material.opacity=on?(Math.sin(tm*9+i*3)>0?1:.15):.12; }); }); }
@@ -1093,7 +1170,7 @@ var backB=$('back'), flash=$('flash'), cap=$('cap'), wel=$('wel'), hud=$('hud'),
 var win=$('win'), wbg=$('wbg'), pane=$('wpane'), winOn=false, winMode='', winTask=null, wasDone=false;
 function setLevel(L){ if(PBR&&!L.g.userData.tm){ L.g.userData.tm=1; L.g.traverse(function(o){ var m=o.material; if(m&&(m.isMeshBasicMaterial||m.isSpriteMaterial||m.isPointsMaterial||m.isLineBasicMaterial)) m.toneMapped=false; }); } /* неон и подписи - без тон-маппинга, цвета чистые */ LV.forEach(function(q){ q.g.visible=q===L; if(q===L){ if(!q.g.parent) S.add(q.g); } else if(q.g.parent) S.remove(q.g); }); /* в сцене только текущий уровень */ LV.forEach(function(q){ q.nodes.forEach(function(n){ if(q!==L) hideEl(n.el); }); });
   if(curL) curL.sv=[spin,tilt,zoom]; var sv=L.sv||[0,0,1]; spin=sv[0]; tilt=sv[1]; zoom=sv[2];
-  if(L.open) cityAround(L); if(KRY) KRY.level(L); curL=L; L.t0=tm; cur=null; back=[]; acc=0; osdOff(); lvlStars(); topOn=false; topUI(); S.fog=L.fog||null; mixT=L.mix; rollT=L.mix?.06:0;
+  if(L.open) cityAround(L); if(KRY) KRY.level(L); skRoof(L); curL=L; L.t0=tm; cur=null; back=[]; acc=0; osdOff(); lvlStars(); topOn=false; topUI(); S.fog=L.fog||null; mixT=L.mix; rollT=L.mix?.06:0;
   if(L.mix){ bgT.set(L.c).multiplyScalar(.08).add(BG_B); galT.set(L.c).lerp(new THREE.Color('#ffffff'),.35); } else { bgT.copy(BG_A); galT.set('#ffffff'); }
   $('hudL').textContent=L.name; hud.classList.add('on'); backB.classList.add('on'); refresh(); }
 function capTxt(n){ var s=n.st;
@@ -1314,7 +1391,7 @@ function roomIn(n,col){ hideCap(); st='room'; hud.classList.remove('on'); backB.
       exit:function(){ roomOut(n); } });
     flashOff(); }); }
 /* для проверки и ссылок: войти в узел города по id (модуль m2 - сразу в его здание) */
-window.KURS_GOROD={ where:function(){ return (curL&&curL.id)+'|'+st; }, cam:function(p,l){ st='cam'; fly=null; camP.fromArray(p); camL.fromArray(l); }, /* для снимков: поставить камеру */ pos:function(id){ var n=LK&&LK.by[id]; return n?n.p.concat([TOPH[n.st0]||n.h||0]):null; }, enter:function(id){ var n=LK&&LK.by[id]; if(n){ refresh(); arrive(n); enter(n); } } };
+window.KURS_GOROD={ _glb:SKDBG?GLB:null, skAudit:function(){ return window.SKLEYKA&&SKLEYKA.auditCheck?SKLEYKA.auditCheck():[]; }, where:function(){ return (curL&&curL.id)+'|'+st; }, cam:function(p,l){ st='cam'; fly=null; camP.fromArray(p); camL.fromArray(l); }, /* для снимков: поставить камеру */ pos:function(id){ var n=LK&&LK.by[id]; return n?n.p.concat([TOPH[n.st0]||n.h||0]):null; }, enter:function(id){ var n=LK&&LK.by[id]; if(n){ refresh(); arrive(n); enter(n); } } };
 function roomOut(n){ flashOn(n.c+'dd',function(){ if(ROOM) ROOM.close(); ROOM=null; refresh(); lvlStars(); setLevel(LK); var B=viewOf(n); camP.copy(B.p); camL.copy(B.l); hud.classList.add('on'); backB.classList.add('on'); arrive(n); flashOff(); }); }
 function closeWin(after){ if(!winOn) return; var c=cur?cur.c+'cc':null; clearInterval(bTm); if(GL) GL.stop(); scrBack(cur); flashOn(c,function(){ win.classList.remove('on'); winOn=false; LIVE=false; document.body.classList.remove('livebg'); refresh(); lvlStars();
   if(ROOM){ var rn=cur; flashOff(); if(after) after(); else ROOM.back(rn&&rn.tid,!wasDone&&rn&&rn.st==='done'); return; }
@@ -1564,11 +1641,15 @@ function hoverPick(calm){ var h=null; if(calm&&curL&&mxy){ var r=new THREE.Rayca
   hov=calm?(hovEl||h):null; if(hov===cur) hov=null; cv.style.cursor=h?'pointer':''; }
 /* разгрузка (правка 22.10 вечер, п.1): каждые 2 с смотрим среднее время кадра; если телефон не успевает (меньше ~38 кадров в секунду) - рисуем чуть мельче (DPR), город не тормозит */
 var TN=0, TS=0, TW=0;
-function tune(raw){ if(document.hidden||raw>.5||winOn||st==='gate'||st==='falling'||document.body.classList.contains('intro')) return; /* 12.11: на подлёте к городу резкость не дёргаем - от этого был рывок при торможении */ TN++; TS+=raw; if(TS<2) return; var avg=TS/TN; TN=0; TS=0; if(avg>1/38&&(DPR>DPRMIN+.01||!LITE)){ if(++TW<2) return; TW=0; if(DPR>DPRMIN+.01){ DPR=Math.max(DPRMIN,DPR-.15); R.setPixelRatio(DPR); size(); } else { lite(); if(window.KACHESTVO) KACHESTVO.slow(); } } else TW=0; }
+function tune(raw){ if(document.hidden||raw>.5||winOn||st==='gate'||st==='falling'||document.body.classList.contains('intro')) return; /* 12.11: на подлёте к городу резкость не дёргаем - от этого был рывок при торможении */ TN++; TS+=raw; if(TS<2) return; var avg=TS/TN; TN=0; TS=0; if(avg>1/38&&(DPR>DPRMIN+.01||!LITE)){ if(++TW<2) return; TW=0; if(DPR>DPRMIN+.01){ if(UL&&mob&&DPR>1.11){ DPR=DPR>1.31?1.3:1.1; if(window.KACHESTVO&&KACHESTVO.rezk) KACHESTVO.rezk(DPR); } /* 26.11 (проба): повышенную резкость сильного телефона снимаем быстро и запоминаем */ else DPR=Math.max(DPRMIN,DPR-.15); R.setPixelRatio(DPR); size(); } else { lite(); if(window.KACHESTVO) KACHESTVO.slow(); } } else TW=0; }
 /* совсем слабый телефон: убираем часть мелочей - половину дронов и роботов, они только для красоты */
 var LITE=false; function lite(){ LITE=true; (LK.drones||[]).forEach(function(q,i){ if(i%2) q.g.visible=false; }); (LK.bots||[]).forEach(function(q,i){ if(i%2) q.g.visible=false; }); }
-function frame(){ var raw=clock.getDelta(), dt=Math.min(raw,.05); tm+=dt; fc++; tune(raw);
-  if(ROOM){ requestAnimationFrame(frame); return; } /* модуль-помещение (komnata.js) рисует себя сам, город стоит */
+function frame(){ var raw=clock.getDelta(), dt=Math.min(raw,.05), KOM=window.KURS_KOMNATA; tm+=dt; fc++;
+  /* 26.11 (проба): в модулях-помещениях скорость города не меряем - у комнат свой счёт кадров. Раньше медленная комната снижала качество графики дважды (тут и в самой комнате) */
+  if(!(UL&&(ROOM||(KOM&&KOM.on)))) tune(raw);
+  if(ROOM){ requestAnimationFrame(frame); return; }
+  /* 26.11 (проба): модули 3 и 5 открыты поверх города отдельным окном - город под ним не виден, а рисовался каждый кадр (около 500 команд). Теперь стоит, пока комната закрывает экран */
+  if(UL&&KOM&&KOM.solid){ if(fly) stepFly(dt); requestAnimationFrame(frame); return; } /* модуль-помещение (komnata.js) рисует себя сам, город стоит */
   if(winOn&&!fly&&(!LIVE||(mob&&fc%2))){ requestAnimationFrame(frame); return; } /* под окном задания космос стоит: бережём батарею; за стеклом экрана - живой, на телефоне через кадр */
   if(fly) stepFly(dt);
   else if(st==='gate'){ camP.lerp(V(0,0,46-gp*62),Math.min(1,dt*4)); camL.set(0,0,-30); speed=Math.abs(46-gp*62-camP.z)*6; }
@@ -1614,7 +1695,7 @@ function frame(){ var raw=clock.getDelta(), dt=Math.min(raw,.05); tm+=dt; fc++; 
     for(var gi=GATES.length-1;gi>=0;gi--){ var ga=GATES[gi]; ga.t+=dt; ga.m.scale.setScalar(Math.min(1,ga.t/.4)); ga.m.material.color.offsetHSL(dt*.15,0,0); ga.m.material.opacity=Math.max(0,Math.min(1,(3.2-ga.t)/.6)); if(ga.t>3.2){ ga.L.g.remove(ga.m); GATES.splice(gi,1); } }
     for(var bi=BURST.length-1;bi>=0;bi--){ var bs=BURST[bi]; bs.t+=dt; bs.sp.position.addScaledVector(bs.v,dt); bs.v.y-=dt*9; bs.sp.material.opacity=Math.max(0,1-bs.t/1.6); if(bs.t>1.6){ bs.L.g.remove(bs.sp); BURST.splice(bi,1); } }
   }
-  if(!(KRY&&KRY.render(R,S,C))) R.render(S,C);
+  glowFrame(); if(!(KRY&&KRY.render(R,S,C))) R.render(S,C);
   /* подписи узлов: кнопки поверх 3D */
   var fpx=innerHeight/2/Math.tan(C.fov*Math.PI/360), cx0=-9, cy0=-9, cr=0, calm=!fly&&(st==='over'||st==='node');
   if(HOVER&&(fc%3===0||!calm)) hoverPick(calm);
@@ -1651,7 +1732,7 @@ function frame(){ var raw=clock.getDelta(), dt=Math.min(raw,.05); tm+=dt; fc++; 
 refresh();
 arrow.onclick=function(){ if(target&&!fly&&(st==='over'||st==='node')) goTo(target); };
 /* разгрузка: все шейдеры готовим заранее (иначе первый вход в модуль дёргается), потом скрытые уровни убираем из сцены - их не пересчитываем каждый кадр */
-try{ R.compile(S,C); }catch(e){} /* текстуры не грузим заранее: их больше тысячи, телефону тяжело - они грузятся, когда нужны */
+skCity(); if(UL) S.autoUpdate=false; /* положения предметов считает glowFrame один раз за кадр */ try{ S.updateMatrixWorld(); R.compile(S,C); }catch(e){} /* текстуры не грузим заранее: их больше тысячи, телефону тяжело - они грузятся, когда нужны */
 LV.forEach(function(q){ if(q!==curL) S.remove(q.g); });
 frame();
 })();
