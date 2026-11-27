@@ -95,6 +95,8 @@ U.oshibka = S(screen(16, 16, 96, 64) + '<path d="M28 66 Q52 30 70 46 L96 28" str
 U.trenirovka = S([['разминка: 1-2 круга', C], ['одна цель на день', Y], ['упал - выдохни', P], ['устал - отдых', G]].map(function (a, i) { var y = 28 + i * 26; return circ(46, y, 8, 'none', a[1], 2.4) + T(46, y + 4, String(i + 1), { s: 10, w: 800, c: a[1] }) + T(64, y + 4, a[0], { s: 13, a: 'start' }); }).join(''), '');
 
 window.UROK_PIC = window.UROK_PIC || {};
+/* 27.11: тот же набор для рисования отдаём второму файлу схем (shkola-kartinki2.js) */
+window.UROK_KIT = { S: S, T: T, L: L, A: A, rect: rect, circ: circ, no: no, ok: ok, man: man, dside: dside, dtop: dtop, batt: batt, pult: pult, screen: screen, gate: gate, col: { C: C, P: P, Y: Y, G: G, R: R, W: W, DIM: DIM, BG: BG } };
 Object.keys(U).forEach(function (k) { window.UROK_PIC['u:' + k] = U[k]; });
 })();
 
