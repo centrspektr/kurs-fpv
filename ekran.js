@@ -70,7 +70,7 @@
       '<ol><li>Нажмите <b>⋮</b> в углу браузера.</li><li>Выберите <b>Добавить на главный экран</b> или <b>Установить приложение</b>.</li><li>Запускайте курс значком <b>Курс FPV</b>.</li></ol>' +
       '<div class="bt">' + (inst ? '<button type="button" data-a="inst" class="pri">Установить</button>' : '') + '<button type="button" data-a="x"' + (inst ? '' : ' class="pri"') + '>Понятно</button></div>');
   }
-  function lockLand() { try { if (screen.orientation && screen.orientation.lock) { var p = screen.orientation.lock('landscape'); if (p && p.catch) p.catch(function () {}); } } catch (e) {} }
+  function lockLand() { if (W.EKRAN_PORT) return; try { if (screen.orientation && screen.orientation.lock) { var p = screen.orientation.lock('landscape'); if (p && p.catch) p.catch(function () {}); } } catch (e) {} }
   function go() {
     if (fsEl()) { try { (D.exitFullscreen || D.webkitExitFullscreen).call(D); } catch (e) {} return; }
     if (INAPP) { tipInApp(); return; }
@@ -87,7 +87,7 @@
     btn.classList.toggle('mal', on);
   }
   function build() {
-    if (btn || !D.body) return;
+    if (btn || !D.body || W.EKRAN_NOBTN) return;   /* Лётная школа: кнопка в шестерёнке, не поверх экрана */
     btn = D.createElement('button'); btn.type = 'button'; btn.id = 'ekB';
     ['touchstart', 'pointerdown'].forEach(function (t) { btn.addEventListener(t, function (e) { e.stopPropagation(); }, { passive: true }); });
     btn.addEventListener('click', function (e) { e.preventDefault(); e.stopPropagation(); go(); });

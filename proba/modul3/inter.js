@@ -47,7 +47,10 @@ function create(o) {
   G.world = world; G.mirrorGroup = mirror;
   var KQ = (function () { try { return window.KACHESTVO || (parent !== window && parent.KACHESTVO) || null; } catch (e) { return null; } })();   /* 21.11: в пробе new.html отражение в полу только на высоком качестве */
   if (o.mirror == null && KQ && Q !== 'high') o.mirror = false;
-  var MIRROR = Q !== 'low' && S.mirror > 0 && o.mirror !== false, MIR = new WeakMap(), MIRS = [];   /* 21.11: o.mirror = false - без отражения в полу (среднее качество) */
+  /* 27.11 (Лётная школа, o.live): качество меняется на ходу (G.tier). Отражение в полу тогда собираем, если его попросили (o.mirror === true), а показываем только на высоком. */
+  var LIVE = !!o.live, mirOn = Q === 'high';
+  var MIRROR = LIVE ? (S.mirror > 0 && o.mirror === true) : (Q !== 'low' && S.mirror > 0 && o.mirror !== false), MIR = new WeakMap(), MIRS = [];
+  if (LIVE) { mirOn = mirOn && MIRROR; mirror.visible = mirOn; }   /* 21.11: o.mirror = false - без отражения в полу (среднее качество) */
   G.mirrorOf = function (o) { return MIR.get(o) || null; };
   G.show = function (o, on) { o.visible = on; var c = MIR.get(o); if (c) c.visible = on; };
 
@@ -74,15 +77,16 @@ function create(o) {
     /* прозрачное и светящееся наложением в карту окружения не пишем (иначе в ней мусор) */
     sc.traverse(function (m) { var mt = m.material; if (!mt || !m.visible) return; var tr = m.isPoints || m.isSprite || m.isLine || (Array.isArray(mt) ? mt.some(function (q) { return q.transparent; }) : (mt.transparent || mt.blending !== T.NormalBlending || mt.wireframe)); if (!tr) return;
       if (m.userData.floor) { mt.transparent = false; op.push(m); } else { m.visible = false; hid.push(m); } });
-    sc.fog = null; sc.position.set(-x, -y, -z); sc.updateMatrixWorld(true); mirror.visible = false;
-    var e = pm.fromScene(sc, .035, .1, 60).texture; sc.position.copy(p); sc.updateMatrixWorld(true); mirror.visible = true; sc.fog = f; sc.background = bg;
+    var mv = mirror.visible; sc.fog = null; sc.position.set(-x, -y, -z); sc.updateMatrixWorld(true); mirror.visible = false;
+    var e = pm.fromScene(sc, .035, .1, 60).texture; sc.position.copy(p); sc.updateMatrixWorld(true); mirror.visible = LIVE ? mv : true; sc.fog = f; sc.background = bg;
     hid.forEach(function (m) { m.visible = true; }); op.forEach(function (m) { m.material.transparent = true; });
     sc.environment = e; return e; };
   var composer = null, bloom = null, fin = null;
   var gl = ren.getContext(), GL2 = ren.capabilities.isWebGL2;
   var canHDR = GL2 && !!(ren.extensions.get('EXT_color_buffer_float') || ren.extensions.get('EXT_color_buffer_half_float'));
-  if (Q !== 'low' && T.EffectComposer && canHDR) {
-    var RTC = Q === 'high' && T.WebGLMultisampleRenderTarget ? T.WebGLMultisampleRenderTarget : T.WebGLRenderTarget;
+  var fxMs = false;
+  function fxMake(msaa) {
+    var RTC = msaa && T.WebGLMultisampleRenderTarget ? T.WebGLMultisampleRenderTarget : T.WebGLRenderTarget;
     var rt = new RTC(4, 4, { type: T.HalfFloatType, format: T.RGBAFormat, minFilter: T.LinearFilter, magFilter: T.LinearFilter });
     composer = new T.EffectComposer(ren, rt); composer.addPass(new T.RenderPass(sc, cam));
     bloom = new T.UnrealBloomPass(new T.Vector2(256, 256), S.bloom[0], S.bloom[1], S.bloom[2]); composer.addPass(bloom);
@@ -104,14 +108,22 @@ function create(o) {
         ' vec2 d = vUv - 0.5; float v = smoothstep(0.35, 0.95, length(d) * 1.25); c *= 1.0 - v * vig;',
         ' float g = fract(sin(dot(vUv * (time + 1.0), vec2(12.9898, 78.233))) * 43758.5453) - 0.5; c += g * 0.012;',
         ' gl_FragColor = vec4(c, 1.0); }'].join('\n') });
-    composer.addPass(fin);
-    ren.toneMapping = T.NoToneMapping;
-  } else { ren.toneMapping = T.ACESFilmicToneMapping; ren.toneMappingExposure = S.exposure; }
+    composer.addPass(fin); fxMs = RTC !== T.WebGLRenderTarget;
+  }
+  function fxDrop() { if (!composer) return; try { composer.renderTarget1.dispose(); composer.renderTarget2.dispose(); if (bloom && bloom.dispose) bloom.dispose(); } catch (e) {} composer = null; bloom = null; fin = null; }
+  var canFx = !!(T.EffectComposer && canHDR); G.canFx = canFx;
+  if (Q !== 'low' && canFx) { fxMake(Q === 'high'); ren.toneMapping = T.NoToneMapping; }
+  else { ren.toneMapping = T.ACESFilmicToneMapping; ren.toneMappingExposure = S.exposure; }
   G.hdr = !!composer;
-  G.resize = function (w, h, dpr) { dpr = Math.min(dpr, dprCap); lastSize = [w, h]; ren.setPixelRatio(dpr); ren.setSize(w, h, false); cam.aspect = w / h; cam.updateProjectionMatrix();
+  G.resize = function (w, h, dpr) { dpr = Math.min(dpr, dprCap); lastSize = [w, h]; lastDpr = dpr; ren.setPixelRatio(dpr); ren.setSize(w, h, false); cam.aspect = w / h; cam.updateProjectionMatrix();
     if (composer) { composer.setPixelRatio(dpr); composer.setSize(w, h); fin.uniforms.px.value.set(1 / (w * dpr), 1 / (h * dpr)); } };
+  /* 26.11 (Лётная школа, o.shadowEvery): мебель стоит на месте, а карта теней пересчитывалась каждый кадр - вся комната рисовалась дважды.
+     Теперь тени считаются раз в N кадров и сразу, когда двигается свет (G.shadowDirty). Картинка та же, команд рисования почти вдвое меньше. */
+  var shEvery = o.shadowEvery | 0, shN = 0, lastDpr = 1; if (shEvery > 1 && (ren.shadowMap.enabled || LIVE)) ren.shadowMap.autoUpdate = false; else shEvery = 0;
+  G.shadowEvery = function (n) { if (shEvery) { shEvery = Math.max(2, n | 0); shN = 0; } };
+  G.shadowDirty = function () { shN = 0; };
   var tAll = 0;
-  G.render = function (dt) { tAll += dt; for (var i = 0; i < G.frames.length; i++) G.frames[i](dt, tAll);
+  G.render = function (dt) { tAll += dt; if (shEvery && ren.shadowMap.enabled && --shN <= 0) { ren.shadowMap.needsUpdate = true; shN = shEvery; } for (var i = 0; i < G.frames.length; i++) G.frames[i](dt, tAll);
     if (mirror.visible) for (i = 0; i < G.pairs.length; i++) { var p = G.pairs[i]; p[1].position.copy(p[0].position); p[1].rotation.copy(p[0].rotation); p[1].scale.copy(p[0].scale); p[1].visible = p[0].visible; }
     if (composer) { fin.uniforms.time.value = tAll % 10; composer.render(dt); } else ren.render(sc, cam); };
   G.frame = function (f) { G.frames.push(f); };
@@ -175,6 +187,7 @@ function create(o) {
       c.fillStyle = 'rgba(0,0,0,.35)'; for (var i = 0; i < 6; i++) c.fillRect(60 + i * 26, 330, 14, 4); c.fillStyle = 'rgba(150,170,255,.10)'; c.fillRect(40, 40, 432, 2); c.fillRect(40, 470, 432, 2); });
     wallTex[kind] = t; t.wrapS = t.wrapT = T.RepeatWrapping; return t; }
   function wallMat(kind) { var m;
+    if (typeof kind === 'function') return kind(G);   /* 24.11 (холл Лётной школы): своя отделка стены - функция даёт материал с userData.tile */
     if (kind === 'plaster') { m = std(S.wall, .9, 0); m.normalMap = ltex('white_plaster_02_nor.jpg'); m.normalScale = new T.Vector2(.6, .6); m.userData.tile = [2.4, 2.4]; }
     else if (kind === 'brick') { m = pbr('brick_wall_001', '#f2e6dc', 1); m.userData.tile = [1.6, 1.6]; }
     else if (kind === 'wood') { m = pbr('laminate_floor_02', '#f3e3cc', .9); m.userData.tile = [2.2, 2.2]; m.userData.rot = true; }
@@ -221,7 +234,7 @@ function create(o) {
         [[0, 0, .9 * kx, 0], [w, 0, w - .9 * kx, 0]].forEach(function (e) { var g = c.createLinearGradient(e[0], e[1], e[2], e[3]); g.addColorStop(0, hexA(ACC, .8)); g.addColorStop(1, hexA(ACC, 0)); c.fillStyle = g; c.fillRect(0, 0, w, h); }); c.globalAlpha = 1; }
       c.globalCompositeOperation = 'source-over'; var e = .7;
       edge(c, 0, 0, e * kx, 0, .42); c.fillRect(0, 0, w, h); edge(c, w, 0, w - e * kx, 0, .42); c.fillRect(0, 0, w, h); edge(c, 0, 0, 0, e * kz, .42); c.fillRect(0, 0, w, h); edge(c, 0, h, 0, h - e * kz, .42); c.fillRect(0, 0, w, h); });
-    fl.lightMapIntensity = .62; if (MIRROR) { fl.transparent = true; fl.opacity = 1 - S.mirror; }
+    fl.lightMapIntensity = .62; if (MIRROR && (!LIVE || mirOn)) { fl.transparent = true; fl.opacity = 1 - S.mirror; }
     var q = new QB(); q.quad([[x0, 0, z1], [x1, 0, z1], [x1, 0, z0], [x0, 0, z0]], [0, 1, 0], [[x0 / ft, z1 / ft], [x1 / ft, z1 / ft], [x1 / ft, z0 / ft], [x0 / ft, z0 / ft]], [[0, 1], [1, 1], [1, 0], [0, 0]]);
     var floor = new T.Mesh(q.geo(), fl); floor.receiveShadow = true; floor.userData.floor = true; floor.userData.noMirror = true; floor.userData.noShadow = true; floor.renderOrder = -1; grp.add(floor);
     /* потолок */
@@ -279,6 +292,7 @@ function create(o) {
   /* ---------- светильники ---------- */
   var loaders = {};
   G.lamp = function (x, H, z, rot, noAdd) { var g = new T.Group(); g.position.set(x, H, z); g.rotation.y = rot || 0;
+    if (S.lampKind === 'none') { if (!noAdd) G.add(g, { shadow: false }); return g; }   /* 24.11: светильники рисует само помещение (холл), от ламп остаётся только запечённый свет */
     if (S.lampKind === 'panel') { var fr = G.rbox(1.36, .76, .04, .08, M.trim); fr.rotation.x = Math.PI / 2; fr.position.y = -.02; g.add(fr);
       var p = G.rbox(1.24, .64, .02, .06, M.lamp); p.rotation.x = Math.PI / 2; p.position.y = -.045; p.userData.noShadow = true; g.add(p); }
     else if (S.lampKind === 'line') { var b = G.box(2.6, .05, .16, M.dark, 0, -.025, 0); g.add(b); var ln = G.box(2.5, .02, .07, M.lamp, 0, -.055, 0); ln.userData.noShadow = true; g.add(ln);
@@ -294,17 +308,19 @@ function create(o) {
   /* ---------- свет ---------- */
   var hemi = new T.HemisphereLight(col(S.hemi[0]), col(S.hemi[1]), S.hemi[2]); sc.add(hemi);
   var key = new T.DirectionalLight(col(S.key[0]), S.key[1]); sc.add(key); sc.add(key.target);
-  if (Q !== 'low') { key.castShadow = true; var ms = Q === 'high' ? 2048 : 1024; key.shadow.mapSize.set(ms, ms); key.shadow.radius = 5; key.shadow.bias = -.0006; key.shadow.normalBias = .02;
+  var ms = Q === 'high' ? 2048 : 1024;
+  if (Q !== 'low' || LIVE) { key.castShadow = Q !== 'low'; key.shadow.mapSize.set(ms, ms); key.shadow.radius = 5; key.shadow.bias = -.0006; key.shadow.normalBias = .02;
     var kc = key.shadow.camera; kc.left = -6.5; kc.right = 6.5; kc.top = 6.5; kc.bottom = -6.5; kc.near = .5; kc.far = 14; }
   /* ключевой свет стоит над той комнатой, где ученик */
   var boxMode = false; /* 21.11: G.lightBox ставит неподвижную область теней под длинный коридор/холл */
   function shadowMap(w, h) { var z = key.shadow.mapSize; if (z.x === w && z.y === h) return; z.set(w, h); if (key.shadow.map) { key.shadow.map.dispose(); key.shadow.map = null; } }
-  G.lightRoom = function (cx, cz, H, half) { key.position.set(cx + 1.2, (H || 3.2) + 5, cz + 1.8); key.target.position.set(cx, 0, cz); key.target.updateMatrixWorld();
+  var lastLight = null;
+  G.lightRoom = function (cx, cz, H, half) { lastLight = [0, cx, cz, H, half]; shN = 0; key.position.set(cx + 1.2, (H || 3.2) + 5, cz + 1.8); key.target.position.set(cx, 0, cz); key.target.updateMatrixWorld();
     if (boxMode && key.castShadow) { boxMode = false; shadowMap(ms, ms); var c0 = key.shadow.camera; c0.up.set(0, 1, 0); c0.left = -6.5; c0.right = 6.5; c0.top = 6.5; c0.bottom = -6.5; c0.near = .5; c0.far = 14; c0.updateProjectionMatrix(); }
     if (half && key.castShadow) { var c = key.shadow.camera; if (c.right !== half) { c.left = -half; c.right = half; c.top = half; c.bottom = -half; c.far = (H || 3.2) + 9; c.updateProjectionMatrix(); } } };
   /* 21.11: тени на всю область x0..x1, z0..z1 сразу и неподвижно - при ходьбе по коридору тени дверей больше не появляются и не пропадают кусками.
      Число точек карты теней то же, что было (ms*ms), только карта вытянута вдоль коридора. */
-  G.lightBox = function (x0, z0, x1, z1, H) { H = H || 3.2; var cx = (x0 + x1) / 2, cz = (z0 + z1) / 2;
+  G.lightBox = function (x0, z0, x1, z1, H) { lastLight = [1, x0, z0, x1, z1, H]; shN = 0; H = H || 3.2; var cx = (x0 + x1) / 2, cz = (z0 + z1) / 2;
     key.position.set(cx + 1.2, H + 5, cz + 1.8); key.target.position.set(cx, 0, cz); key.target.updateMatrixWorld();
     if (!key.castShadow) return; boxMode = true;
     var c = key.shadow.camera; c.up.set(0, 0, 1); /* так карта теней лежит вдоль мировых осей x/z, а не по диагонали - точки не тратятся впустую */
@@ -317,6 +333,19 @@ function create(o) {
     while (asp >= 2 && w < Math.min(4096, ms * 4) && h > 256) { w *= 2; h /= 2; asp /= 4; }
     while (asp <= .5 && h < Math.min(4096, ms * 4) && w > 256) { h *= 2; w /= 2; asp *= 4; }
     shadowMap(w, h); };
+  /* 27.11 (o.live): набор эффектов на ходу, без пересборки комнаты. t: 0 - low (без теней, свечения и отражения), 1 - mid (тени, свечение), 2 - high (ещё отражение в полу и сглаживание).
+     Смена теней или свечения заставляет видеокарту заново собрать программы материалов - это одна заметная заминка, поэтому вызывать редко (grafika-avto.js так и делает). */
+  var curT = Q === 'high' ? 2 : Q === 'mid' ? 1 : 0; G.tierNow = function () { return curT; };
+  G.tier = function (t) { if (!LIVE) return false; t = Math.max(0, Math.min(2, t | 0)); if (t === curT) return true; curT = t; var wantFx = t > 0 && canFx, wantSh = t > 0, wantMs = t > 1 && !!T.WebGLMultisampleRenderTarget, wantMir = t > 1 && MIRROR, chg = false;
+    if (wantFx) { if (!composer || fxMs !== wantMs) { fxDrop(); fxMake(wantMs); } if (ren.toneMapping !== T.NoToneMapping) { ren.toneMapping = T.NoToneMapping; chg = true; } }
+    else if (composer || ren.toneMapping !== T.ACESFilmicToneMapping) { fxDrop(); ren.toneMapping = T.ACESFilmicToneMapping; ren.toneMappingExposure = S.exposure; chg = true; }
+    if (ren.shadowMap.enabled !== wantSh) { ren.shadowMap.enabled = wantSh; key.castShadow = wantSh; chg = true;
+      if (wantSh && lastLight) { if (lastLight[0]) G.lightBox(lastLight[1], lastLight[2], lastLight[3], lastLight[4], lastLight[5]); else G.lightRoom(lastLight[1], lastLight[2], lastLight[3], lastLight[4]); } }
+    if (mirOn !== wantMir) { mirOn = wantMir; mirror.visible = wantMir;
+      sc.traverse(function (m) { if (m.isMesh && m.userData.floor && m.material) { m.material.transparent = wantMir; m.material.opacity = wantMir ? 1 - S.mirror : 1; m.material.needsUpdate = true; } }); }
+    if (chg) sc.traverse(function (m) { var mt = m.material; if (!mt) return; if (Array.isArray(mt)) mt.forEach(function (q) { q.needsUpdate = true; }); else mt.needsUpdate = true; });
+    shN = 0; ren.shadowMap.needsUpdate = true; G.hdr = !!composer; G.quality = t > 1 ? 'high' : t ? 'mid' : 'low';
+    if (lastSize) G.resize(lastSize[0], lastSize[1], lastDpr); return true; };
 
   /* ---------- дверь: портал, раздвижные створки, табличка ---------- */
   G.door = function (d) { /* d: { x, z, axis:'x'|'z' (вдоль какой оси стена), w, h, th (толщина стены), no, title, state } */

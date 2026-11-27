@@ -135,7 +135,10 @@ function create(o) {
   U.ax = 0; U.ay = 0; var smT = 0; (function sm(t) { requestAnimationFrame(sm); var dt = smT ? Math.min(.1, (t - smT) / 1000) : .016; smT = t; if (Math.abs(U.ax) + Math.abs(U.ay) < 1e-5) { U.ax = U.ay = 0; return; } var k = 1 - Math.exp(-dt * SM), x = U.ax * k, y = U.ay * k; U.ax -= x; U.ay -= y; if (o.walk()) o.look(x, y); else U.ax = U.ay = 0; })(0);
   /* следим, чтобы захват снимался, когда открыто окно задания или нельзя ходить */
   if (canLock) mouseHelp({ canvas: cv, locked: U.locked, lock: U.lock, walk: o.walk, look: o.look });
-  setInterval(function () { var w = o.walk(); document.body.classList.toggle('fps-walk', !!w); if (!o.noMouse && (!w || (o.lockOk && !o.lockOk()))) U.unlock(); }, 200);
+  /* 26.11: в Лётной школе управлений два (холл и этаж). Раньше каждое раз в 200 мс ставило общий класс fps-walk по-своему,
+     и на телефоне джойстик с кнопками мигал или пропадал. Теперь класс стоит, если ходить можно хотя бы в одной комнате. */
+  var WK = window.__fpsWalk || (window.__fpsWalk = []); WK.push(o.walk);
+  setInterval(function () { var w = o.walk(), any = false; for (var wi = 0; wi < WK.length; wi++) { try { if (WK[wi]()) { any = true; break; } } catch (e) {} } document.body.classList.toggle('fps-walk', any); if (!o.noMouse && (!w || (o.lockOk && !o.lockOk()))) U.unlock(); }, 200);
   if (TOUCH) {
     /* джойстик слева */
     var J = document.createElement('div'); J.className = 'fpsj' + (V2 ? ' v2' : ''); J.innerHTML = '<i></i>'; root.appendChild(J); var kn = J.firstChild, jid = null, jc = null;

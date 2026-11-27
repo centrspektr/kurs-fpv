@@ -60,6 +60,8 @@ function make(cfg) {
   var anim = null; /* сценарий камеры (вход, провал в стол) */
   var paused = false, winP = false, winObs = null, K = window.VZ_KURS, I = window.VZ_KURS_INFO;
   var mod = K && K.mods.find(function (m) { return m.id === cfg.mid; });
+  if (!mod) mod = { id: cfg.mid, n: cfg.n || '', t: cfg.title || '', tasks: [] };   /* 24.11: помещение без модуля курса (холл Лётной школы, holl.js) */
+  var HK = null, HOLD = false;   /* HK - хук помещения (KOMNATA_OKNO[mid]); HOLD - ученик стоит (открыто меню лифта) */
 
   function hexRgb(h) { var c = new T.Color(h); return Math.round(c.r * 255) + ',' + Math.round(c.g * 255) + ',' + Math.round(c.b * 255); }
 
@@ -72,6 +74,7 @@ function make(cfg) {
   function grp(x, y, z, ry, p) { var g = new T.Group(); g.position.set(x || 0, y || 0, z || 0); g.rotation.y = ry || 0; (p || S).add(g); return g; }
   function rr(x, X, Y, w, h, r) { x.beginPath(); x.moveTo(X + r, Y); x.arcTo(X + w, Y, X + w, Y + h, r); x.arcTo(X + w, Y + h, X, Y + h, r); x.arcTo(X, Y + h, X, Y, r); x.arcTo(X, Y, X + w, Y, r); x.closePath(); }
   function wrap(x, s, X, Y, maxW, lh, maxL) { var w = String(s).split(' '), line = '', n = 0; for (var i = 0; i < w.length; i++) { var t = line ? line + ' ' + w[i] : w[i]; if (x.measureText(t).width > maxW && line) { if (maxL && ++n >= maxL) { x.fillText(line + '...', X, Y); return Y; } x.fillText(line, X, Y); Y += lh; line = w[i]; } else line = t; } if (line) x.fillText(line, X, Y); return Y; }
+  function lines(x, s, maxW) { var w = String(s).split(' '), line = '', n = 1; for (var i = 0; i < w.length; i++) { var t = line ? line + ' ' + w[i] : w[i]; if (x.measureText(t).width > maxW && line) { n++; line = w[i]; } else line = t; } return n; }
   /* препятствие: прямоугольник в мире (cx, cz, полуширины) с поворотом 0 или 90 градусов */
   function block(x, z, hw, hd, ry) { var s = Math.abs(Math.sin(ry || 0)) > .7; BOX.push([x, z, s ? hd : hw, s ? hw : hd]); }
   function fwd(ry, d, x, z) { return [x + Math.sin(ry) * d, z + Math.cos(ry) * d]; }
@@ -88,7 +91,10 @@ function make(cfg) {
   var IMG = {}, SVGCSS = '.kk-t{fill:#cbd5ff;font:600 12px system-ui,sans-serif;text-anchor:middle}.kk-tb{fill:#fff;font:800 12px system-ui,sans-serif;text-anchor:middle}.kk-ts{fill:#cbd5ff;font:700 10px system-ui,sans-serif;text-anchor:middle}.kk-m{font-family:ui-monospace,monospace}';
   function svgImg(k, cb) {
     if (IMG[k]) { if (IMG[k].complete && IMG[k].naturalWidth) cb(IMG[k]); else IMG[k].addEventListener('load', function () { cb(IMG[k]); }); return; }
-    var s = (K && K.pic && K.pic(k)) || ''; if (!s) return;
+    if (String(k).indexOf('e:') === 0) {   /* 24.11: картинка-эмодзи для уроков (shkola-uroki.js): большой значок в мягком круге */
+      var e = String(k).slice(2).replace(/[<&]/g, ''), es = '<svg xmlns="http://www.w3.org/2000/svg" width="720" height="420" viewBox="0 0 720 420"><defs><radialGradient id="g"><stop offset="0" stop-color="' + MC + '" stop-opacity=".34"/><stop offset="1" stop-color="' + MC + '" stop-opacity="0"/></radialGradient></defs><circle cx="360" cy="210" r="205" fill="url(#g)"/><circle cx="360" cy="210" r="150" fill="none" stroke="' + MC + '" stroke-opacity=".35" stroke-width="3"/><text x="360" y="212" font-size="190" text-anchor="middle" dominant-baseline="central" font-family="Apple Color Emoji,Segoe UI Emoji,Noto Color Emoji,sans-serif">' + e + '</text></svg>';
+      var ie = new Image(); IMG[k] = ie; ie.onload = function () { cb(ie); }; ie.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(es); return; }
+    var s = (window.UROK_PIC && UROK_PIC[k]) || (K && K.pic && K.pic(k)) || ''; if (!s) return;   /* 24.11: схемы уроков (shkola-kartinki.js) */
     s = s.replace('<svg ', '<svg xmlns="http://www.w3.org/2000/svg" width="720" height="420" ').replace('class="kpic"', '').replace('>', '><style>' + SVGCSS + '</style>');
     var im = new Image(); IMG[k] = im; im.onload = function () { cb(im); }; im.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(s);
   }
@@ -116,11 +122,20 @@ function make(cfg) {
   /* ---------- помещение ---------- */
   var doorL, doorR, GX = null;
   function gq() { if (window.KACHESTVO) return KACHESTVO.level; /* 21.11 (проба): качество из шестерёнки или подобранное само */ var m = /[?&]q=(high|mid|low)/.exec(location.search); if (m) return m[1]; var s = lsG('kursy_grafika'); if (s) return s; var mem = navigator.deviceMemory || 4, cpu = navigator.hardwareConcurrency || 4; return MOB ? ((mem <= 3 || cpu <= 4) ? 'low' : 'mid') : 'high'; }
-  function gfit() { if (GX) GX.resize(innerWidth, innerHeight, Math.min(devicePixelRatio || 1, GX.quality === 'high' ? 2 : GX.quality === 'mid' ? (window.KACHESTVO ? 1.25 : 1.5) : (window.KACHESTVO ? 1 : 1.25))); }
+  /* 27.11 (KMN_UL, проход 4): автонастройка графики на лету - grafika-avto.js меряет кадры и выбирает ступень (эффекты + резкость), GX.tier переключает эффекты без пересборки комнаты.
+     ?avto=0 - как было раньше (качество выбирается один раз при входе). */
+  var AV = null, TN = ['low', 'mid', 'high'], QPAR = /[?&]q=(low|mid|high)\b/.test(location.search), FPSDBG = /[?&]fps\b/.test(location.search);
+  var LQ = !!window.KMN_UL && !!window.GRAFIKA_AVTO && !!window.KACHESTVO && !/[?&]avto=0\b/.test(location.search);
+  function avMake(canFx) { var Q = window.KACHESTVO; AV = GRAFIKA_AVTO.make({ mob: MOB, dprMax: devicePixelRatio || 1, guess: Q.guess0 || Q.auto, manual: (Q.manual || QPAR) ? Q.level : null, canFx: canFx,
+    store: { get: lsG, set: function (k, v) { if (v == null) { try { localStorage.removeItem(k); } catch (e) {} } else lsS(k, v); } }, apply: avApply }); }
+  var RICH = null;   /* лучи из окон и пылинки: видны со средней ступени */
+  function avApply(r, was) { if (!GX) return; if (GX.tier && r.t !== was.t) { GX.tier(r.t); GX.shadowEvery(r.t > 1 && !MOB ? 2 : 20); } if (RICH) RICH.visible = r.t > 0; gfit(); var Q = window.KACHESTVO; if (Q && Q.sync && !AV.manual) Q.sync(TN[r.t]); }
+  function gfit() { if (GX && AV) { GX.resize(innerWidth, innerHeight, Math.min(devicePixelRatio || 1, AV.rung().d)); return; } if (GX) GX.resize(innerWidth, innerHeight, Math.min(devicePixelRatio || 1, GX.quality === 'high' ? 2 : GX.quality === 'mid' ? (window.KACHESTVO ? 1.25 : 1.5) : (window.KACHESTVO ? 1 : 1.25))); }
   /* помещение в новой графике: зал, ворота, тамбур за воротами, окно на город */
   function roomG() { var gw = 3.2, gh = 3.5, lamps = [], ww = Math.min(14, D - 3), i, k;
+    if (cfg.lamps) lamps = cfg.lamps; else
     for (i = -1; i <= 1; i++) for (k = -1.5; k <= 1.5; k++) lamps.push([i * W / 3.2, k * D / 4.4, 1.35, 0]);
-    var g = GX.room({ x0: -W / 2, z0: -D / 2, x1: W / 2, z1: D / 2, h: H, holes: { s: [[-gw / 2, gw / 2, gh]], e: cfg.window !== false ? [[-1 - ww / 2, -1 + ww / 2, H - 1.0, H - 3.3]] : [], n: (cfg.okno && cfg.okno.n) || [] }, lamps: lamps, walls: { n: GX.S.feature } });
+    var g = GX.room({ x0: -W / 2, z0: -D / 2, x1: W / 2, z1: D / 2, h: H, holes: { s: [[-gw / 2, gw / 2, gh]], e: cfg.window !== false ? [[-1 - ww / 2, -1 + ww / 2, H - 1.0, H - 3.3]] : [], n: (cfg.okno && cfg.okno.n) || [], w: (cfg.okno && cfg.okno.w) || [] }, lamps: lamps, glows: cfg.glows, walls: cfg.walls || { n: GX.S.feature } });
     g.traverse(function (m) { if (m.userData.floor) FLOOR = m; });
     if (cfg.window !== false) GX.window({ axis: 'z', c: W / 2, a0: -1 - ww / 2, a1: -1 + ww / 2, y0: H - 3.3, y1: H - 1.0, out: 1 });
     GX.room({ x0: -gw / 2, z0: D / 2 + .24, x1: gw / 2, z1: D / 2 + 3.4, h: gh + .1, holes: { n: [[-gw / 2, gw / 2, gh]] }, lamps: [[0, D / 2 + 1.8, .8, 0]] });
@@ -252,15 +267,17 @@ function make(cfg) {
     var sc = new T.Mesh(new T.PlaneGeometry(w, h), new T.MeshBasicMaterial({ map: tx, toneMapped: false })); sc.position.z = .01; g.add(sc);
     var pl = new T.PointLight(MC, .55, 10, 2); pl.position.set(0, 0, 1.6); g.add(pl);
     var list = o.slides;
-    MON = { k: 0, t0: 0, a: 1, list: list, talk: false, said: -1, g: g,
+    MON = { k: 0, t0: 0, a: 1, list: list, base: list, talk: false, said: -1, g: g, w: w, h: h,
       draw: function (a) {
-        var s = list[MON.k], i = MON.k; cx.globalAlpha = 1; cx.fillStyle = '#050816'; cx.fillRect(0, 0, cw, ch);
+        var list = MON.list, s = list[MON.k], i = MON.k; cx.globalAlpha = 1; cx.fillStyle = '#050816'; cx.fillRect(0, 0, cw, ch);
         var gr = cx.createRadialGradient(cw * .2, ch * .1, 10, cw * .2, ch * .1, cw * .9); gr.addColorStop(0, 'rgba(' + MCr + ',.22)'); gr.addColorStop(1, 'rgba(0,0,0,0)'); cx.fillStyle = gr; cx.fillRect(0, 0, cw, ch);
         cx.globalAlpha = a; cx.textAlign = 'left';
         cx.fillStyle = MC; cx.font = '800 30px ' + MONO; cx.textBaseline = 'top'; cx.fillText((o.tag || 'ТЕОРИЯ') + ' · ' + (i + 1) + '/' + list.length, 60, 46);
         cx.fillStyle = '#fff'; cx.font = '800 72px ' + DISP; var y = wrap(cx, s.h, 60, 104, cw * .5, 84, 3);
-        cx.fillStyle = '#cfd7ff'; cx.font = '600 40px ' + FONT; wrap(cx, s.p, 60, Math.max(ch * .48, y + 110), cw * .45, 54, 6);
-        if (s.pic) svgImg(s.pic, function (im) { if (list[MON.k] !== s) return; cx.globalAlpha = a; var iw = cw * .44, ih = iw * 420 / 720; cx.drawImage(im, cw * .53, (ch - ih) / 2 + 10, iw, ih); tx.needsUpdate = true; });
+        cx.fillStyle = '#cfd7ff'; var pf = 40;   /* 26.11: текст слайда крупнее, если влезает в 6 строк (с телефона читать легче) */
+        if (UL) { pf = 48; for (; pf > 40; pf -= 4) { cx.font = '600 ' + pf + 'px ' + FONT; if (lines(cx, s.p, cw * .45) * pf * 1.32 <= ch - 70 - Math.max(ch * .46, y + 104)) break; } }
+        cx.font = '600 ' + pf + 'px ' + FONT; wrap(cx, s.p, 60, UL ? Math.max(ch * .46, y + 104) : Math.max(ch * .48, y + 110), cw * .45, Math.round(pf * 1.32) + (UL ? 0 : 1), UL ? 7 : 6);
+        if (s.pic) svgImg(s.pic, function (im) { if (MON.list[MON.k] !== s) return; cx.globalAlpha = a; var iw = cw * .44, ih = iw * 420 / 720; cx.drawImage(im, cw * .53, (ch - ih) / 2 + 10, iw, ih); tx.needsUpdate = true; });
         cx.globalAlpha = 1; for (var j = 0; j < list.length; j++) { cx.fillStyle = j === i ? MC : 'rgba(255,255,255,.18)'; cx.fillRect(60 + j * 64, ch - 54, 52, 8); }
         if (MON.talk && !BYSTRO) { cx.fillStyle = MC; for (j = 0; j < 5; j++) { var hh = 10 + Math.abs(Math.sin(Date.now() / 160 + j)) * 26; cx.fillRect(cw - 110 + j * 14, ch - 46 - hh, 8, hh); } }
         if (BYSTRO) { if (!MON.scan) { MON.scan = document.createElement('canvas'); MON.scan.width = 4; MON.scan.height = 4; var sx = MON.scan.getContext('2d'); sx.fillStyle = 'rgba(255,255,255,.035)'; sx.fillRect(0, 0, 4, 1); MON.scanP = cx.createPattern(MON.scan, 'repeat'); }
@@ -268,7 +285,7 @@ function make(cfg) {
         else { cx.strokeStyle = 'rgba(255,255,255,.035)'; cx.lineWidth = 1; for (j = 0; j < ch; j += 4) { cx.beginPath(); cx.moveTo(0, j); cx.lineTo(cw, j); cx.stroke(); } }
         tx.needsUpdate = true;
       },
-      go: function (k) { MON.k = (k + list.length) % list.length; MON.t0 = 0; MON.a = .1; MON.said = -1; if (window.GOLOS && MON.talk) { MON.talk = false; GOLOS.stop(); } if (BYSTRO) { MON.draw(1); sc.material.color.setScalar(.1); } }
+      go: function (k) { var list = MON.list; MON.k = (k + list.length) % list.length; if (LES && MON.k === list.length - 1) toTasks(); MON.t0 = 0; MON.a = .1; MON.said = -1; if (window.GOLOS && MON.talk) { MON.talk = false; GOLOS.stop(); } if (BYSTRO) { MON.draw(1); sc.material.color.setScalar(.1); } }
     };
     /* 21.11 (проба): экран теории перерисовывается только при смене слайда; появление - яркостью экрана, "эквалайзер" голоса - маленьким
        отдельным экраном. Раньше весь экран 1600 точек перерисовывался и заново отправлялся в видеокарту 6 раз в секунду - отсюда заикание */
@@ -287,14 +304,23 @@ function make(cfg) {
       if (MON.eq) { MON.eq.visible = !!MON.talk; if (MON.talk && Math.floor(t * 8) !== MON.tb) { MON.tb = Math.floor(t * 8); MON.eqDraw(); } } }
     else if (MON.a < 1) { MON.a = Math.min(1, MON.a + dt * 2); MON.draw(MON.a); }
     else if (MON.talk && Math.floor(t * 6) !== MON.tb) { MON.tb = Math.floor(t * 6); MON.draw(1); }
-    var G = window.GOLOS, near = (OKN ? !!SIT : pos.distanceTo(MON.g.position) < 11) && !paused && !anim, can = G && G.on && G.can && G.can();
-    if (can && near && MON.said !== MON.k && !SPEAK) { var s = MON.list[MON.k]; MON.said = MON.k; MON.talk = true; G.say(s.say || (s.h + '. ' + s.p), { onend: function () { MON.talk = false; MON.draw(1); setTimeout(function () { if (on && !paused && MON.said === MON.k) MON.go(MON.k + 1); }, 1800); } }); return; }
-    if (!MON.talk) { MON.t0 += dt; if (MON.t0 > (can && near ? 30 : 9)) MON.go(MON.k + 1); }
+    var G = window.GOLOS, near = (OKN ? (!!SIT || MON.heard) : pos.distanceTo(MON.g.position) < 11) && !paused && !anim, can = G && G.on && G.can && G.can() && !(window.NACHALO_TEORII && (NACHALO_TEORII.busy || NACHALO_TEORII.sam));   /* 24.11 Лётная школа: пока печатается заставка или выбран режим "читаю сам" - Лера молчит */
+    if (can && near && MON.said !== MON.k && !SPEAK) { var s = MON.list[MON.k]; MON.said = MON.k; MON.talk = true; if (SIT) MON.heard = true;   /* 24.11 (Alexandr): начала рассказывать в кресле - встал и ходишь по залу, Лера рассказывает дальше */
+      var sTxt = s.say || (s.h + '. ' + s.p), sT0 = performance.now(), sK = MON.k, sL = MON.list,
+        fin = function () { if (LES && sK >= sL.length - 1) { if (!LES.done) { LES.done = true; hint(LES.end || (toTasks() ? 'Урок окончен. Нажми "К заданиям" вверху' : 'Урок окончен. Встань с кресла - дальше тест'), 7000); if (api && api.lessonEnd) try { api.lessonEnd(); } catch (e) {} } return; } setTimeout(function () { if (on && !paused && MON.said === MON.k && MON.k === sK && MON.list === sL) MON.go(MON.k + 1); }, 1800); };
+      G.say(sTxt, { onend: function () { MON.talk = false; MON.draw(1);
+        /* 26.11: запись не загрузилась (нет сети) - фраза "кончается" сразу, и весь урок пролетал за 18 секунд. Даём время прочитать слайд самому */
+        var took = (performance.now() - sT0) / 1000, need = Math.max(5, sTxt.length / 13);
+        if (UL && took < Math.min(2.5, need * .3) && MON.said === sK && MON.list === sL) { if (!MON.mute) { MON.mute = true; hint('Голос не загрузился - читай с экрана. Листать можно стрелками ‹ ›', 6000); }
+          setTimeout(function () { if (on && MON.said === sK && MON.k === sK && MON.list === sL) fin(); }, (need - took) * 1000); return; }
+        fin(); } }); return; }
+    if (!MON.talk && !(window.NACHALO_TEORII && (NACHALO_TEORII.sam || NACHALO_TEORII.busy) && SIT)) { MON.t0 += dt; if (MON.t0 > (can && near ? 30 : 9)) MON.go(MON.k + 1); }   /* "читаю сам" - слайды сами не листаются */
   }
   var SPEAK = false; /* приветствие говорит - монитор ждёт */
 
   /* ---------- стол с мини-игрой ---------- */
-  var PROBA = /\/((new|g|index)\.html)?$/.test(location.pathname);   /* правки 11.11 сначала в пробе курса */
+  var PROBA = /\/((new|g|index|shkola)\.html)?$/.test(location.pathname);   /* 24.11: и Лётная школа - управление как в "Побеге" */   /* правки 11.11 сначала в пробе курса */
+  var UL = !!window.KMN_UL;   /* 26.11 (проверка Лётной школы): обход препятствий, крупный экран урока сидя, ровный темп урока без голоса. Включает shkola.html; ?ul=0 - как было */
   var TABLE = null;
   var QK = null; /* 18.11 (проба new.html): мини-квест с предметами - window.KOMNATA_KVEST[mid](ctx), см. masterskaya-kvest.js */
   function qLock() { try { return QK && QK.table ? QK.table() : null; } catch (e) { return null; } }
@@ -334,19 +360,34 @@ function make(cfg) {
       c.shadowBlur = 0; c.font = '700 38px ' + FONT; c.fillStyle = '#cfd7ff'; c.fillText('задание ' + n + ' · нажми на стол', 50, 150); c.font = '900 110px ' + FONT; c.textAlign = 'right'; c.fillText('🛠', w - 40, 100); });
     var pan = new T.Mesh(new T.PlaneGeometry(2.6, .49), new T.MeshBasicMaterial({ map: ptx, toneMapped: false })); pan.position.set(0, .6, SBT ? .735 : .81); g.add(pan);
     box(2.7, .58, .04, mDark, 0, .6, SBT ? .705 : .78, g);
-    block(o.x, o.z, 1.8, .9, o.ry);
+    block(o.x, o.z, 1.8, .9, o.ry); var tbBox = BOX[BOX.length - 1];
     var at = fwd(o.ry || 0, 2.0, o.x, o.z);
-    TABLE = { o: o, g: g, n: n, center: new T.Vector3(o.x, 1.0, o.z) };
-    CLICK.push({ o: g, kind: 'table', tid: o.task, at: at, look: [o.x, 1.0, o.z] });
+    TABLE = { o: o, g: g, n: n, center: new T.Vector3(o.x, 1.0, o.z), box: tbBox };
+    CLICK.push(TABLE.click = { o: g, kind: 'table', tid: o.task, at: at, look: [o.x, 1.0, o.z] });
   }
   var smokeTx = null;
   function SMOKE() { return smokeTx || (smokeTx = tex(64, 64, function (c) { var g = c.createRadialGradient(32, 32, 2, 32, 32, 30); g.addColorStop(0, 'rgba(255,255,255,.9)'); g.addColorStop(1, 'rgba(255,255,255,0)'); c.fillStyle = g; c.fillRect(0, 0, 64, 64); })); }
 
   /* ---------- декорации ---------- */
   var DECOR = {
-    shelf: function (o) { var g = grp(o.x, 0, o.z, o.ry), cols = ['#ef4444', '#f59e0b', '#22c55e', '#3b82f6', '#a855f7', '#ec4899'];
-      [-1, 1].forEach(function (s) { box(.08, 3.2, .6, mSteel, s * 1.5, 1.6, 0, g); });
-      for (var i = 0; i < 5; i++) { box(3.1, .05, .6, mSteel, 0, .3 + i * .7, 0, g); for (var j = 0; j < 5; j++) { box(.48, .3, .45, M({ color: cols[(i + j * 2) % cols.length], roughness: .55 }), -1.15 + j * .58, .48 + i * .7, .02, g); box(.3, .06, .01, M({ color: '#fff', roughness: .9 }), -1.15 + j * .58, .5 + i * .7, .25, g); } }
+    shelf: function (o) {   /* 24.11 (Лётная школа, замечание Alexandr): стеллаж прорисован - стойки с перфорацией, фанерные полки, ящики-лотки с открытым передом и подписями, катушки провода, картонные коробки */
+      var g = grp(o.x, 0, o.z, o.ry), SH = ({
+        post: M({ color: '#2a2e38', roughness: .45, metalness: .7 }), ply: M({ color: '#c9a678', roughness: .75 }), plyE: M({ color: '#a8835a', roughness: .8 }),
+        bin: [M({ color: '#2f4a7a', roughness: .5 }), M({ color: '#3b3f48', roughness: .5 }), M({ color: '#d9822b', roughness: .5 })], lab: M({ color: '#f3f1ea', roughness: .9 }),
+        kraft: M({ color: '#b78d5c', roughness: .9 }), tape: M({ color: '#d9c49a', roughness: .5 }), steel: M({ color: '#b9c0cc', roughness: .3, metalness: .9 }),
+        wire: [M({ color: '#d63b3b', roughness: .45 }), M({ color: '#1d1d22', roughness: .45 }), M({ color: '#e8c33c', roughness: .45 }), M({ color: '#3a7bd5', roughness: .45 })], hole: M({ color: '#111318', roughness: .8 }) }), i, j;
+      [-1.5, 1.5].forEach(function (x) { [-.27, .27].forEach(function (z) { box(.05, 3.2, .05, SH.post, x, 1.6, z, g); for (var k = 0; k < 14; k++) box(.012, .05, .052, SH.hole, x + (x > 0 ? -.02 : .02), .25 + k * .21, z, g, 1); }); });
+      [-1, 1].forEach(function (s2) { var br = box(.02, 3.3, .02, SH.post, 0, 1.6, -.28, g); br.rotation.z = s2 * .82; br.scale.y = 1.15; });   /* крест на задней стенке */
+      for (i = 0; i < 5; i++) { var y = .3 + i * .7; box(3.04, .03, .58, SH.ply, 0, y, 0, g); box(3.04, .05, .02, SH.plyE, 0, y, .29, g);
+        if (i === 0 || i === 4) { for (j = 0; j < 3; j++) { var bw = [.9, .8, .95][j], bh = i ? .36 : .42, bx = -1.0 + j * 1.0; box(bw, bh, .5, SH.kraft, bx, y + .015 + bh / 2, 0, g); box(bw + .005, .02, .1, SH.tape, bx, y + .02 + bh, 0, g, 1); box(.22, .08, .005, SH.lab, bx - bw / 4, y + bh * .62, .252, g, 1); } continue; }
+        if (i === 2) { for (j = 0; j < 4; j++) { var sx = -1.08 + j * .72, sp = cyl(.17, .17, .16, SH.wire[j], sx, y + .19, 0, g, 22); sp.rotation.x = Math.PI / 2; [-.09, .09].forEach(function (dz) { var fl = cyl(.21, .21, .015, SH.post, sx, y + .19, dz, g, 22); fl.rotation.x = Math.PI / 2; }); var ax = cyl(.03, .03, .2, SH.steel, sx, y + .19, 0, g, 10); ax.rotation.x = Math.PI / 2; } continue; }
+        var bm = SH.bin[i === 1 ? 0 : 1];
+        for (j = 0; j < 5; j++) { var x0 = -1.16 + j * .58, by = y + .015;
+          box(.52, .02, .48, bm, x0, by + .01, 0, g); box(.02, .3, .48, bm, x0 - .25, by + .15, 0, g); box(.02, .3, .48, bm, x0 + .25, by + .15, 0, g); box(.52, .3, .02, bm, x0, by + .15, -.23, g);
+          var fr = box(.52, .16, .02, bm, x0, by + .09, .23, g); fr.rotation.x = -.18;   /* низкий передний бортик с наклоном - видно, что внутри */
+          box(.2, .07, .006, SH.lab, x0, by + .1, .247, g, 1);
+          for (var q = 0; q < 4; q++) { var it = cyl(.035, .035, .05, (j + q) % 3 === 0 ? SH.wire[2] : SH.steel, x0 - .12 + (q % 2) * .2, by + .06 + (q > 1 ? .03 : 0), -.05 + (q % 2) * .08, g, 8); it.rotation.z = q * .7; } }
+        if (i === 3) for (j = 0; j < 5; j++) box(.08, .3, .02, SH.bin[2], -1.16 + j * .58 + .18, y + .17, .235, g, 1);   /* оранжевые язычки-метки на сером ряду */ }
       block(o.x, o.z, 1.6, .4, o.ry); return g; },
     droneWall: function (o) { if (PROBA && window.SBDron) return droneWallP(o); var g = grp(o.x, 0, o.z, o.ry), pb = M({ color: '#141829', roughness: .85 }); box(4.4, 2.4, .05, mSteel, 0, 2.6, -.02, g); box(4.2, 2.2, .06, pb, 0, 2.6, 0, g); box(4.4, .04, .04, glow(MC), 0, 3.8, .04, g, 1);
       ['#ea580c', '#7cf3ff', '#ffd36e'].forEach(function (c, i) { var q = quad([.45, .7, .95][i], c); q.rotation.x = Math.PI / 2; q.position.set(-1.35 + i * 1.35, 2.65, .12); g.add(q); });
@@ -388,11 +429,11 @@ function make(cfg) {
     dotG = new T.Group(); S.add(dotG); var dm = glow('#ffd36e', .8), dg = new T.CircleGeometry(.07, 12);
     for (var i = 0; i < 40; i++) { var d = new T.Mesh(dg, dm.clone()); d.rotation.x = -Math.PI / 2; d.position.y = .02; dotG.add(d); DOTS.push(d); }
   }
-  function nextTarget() { NEXT = null; var nx = I && I.next && I.next(); if (nx && nx.m === cfg.mid) NEXT = nx.t;
+  function nextTarget() { NEXT = null; if (LES) return null; var nx = I && I.next && I.next(); if (nx && nx.m === cfg.mid) NEXT = nx.t;
     /* общий "дальше" ведёт в другой модуль - в комнате ведём к первому открытому непройденному заданию этого модуля */
     if (!NEXT && api) NEXT = mod.tasks.find(function (t) { return api.state(t) === 'open'; }) || null; return NEXT; }
   function guideTick(t, dt) {
-    var c = NEXT && (CLICK.find(function (z) { return (z.kind === 'stand' || z.kind === 'table') && z.tid === NEXT; }));
+    var c = cfg.guideTo ? cfg.guideTo() : NEXT && (CLICK.find(function (z) { return (z.kind === 'stand' || z.kind === 'table') && z.tid === NEXT; }));
     if (c) gTo.set(c.look[0], 2.9, c.look[2]); else gTo.set(pos.x - Math.sin(yaw + .5) * 4.5, 3.3, pos.z - Math.cos(yaw + .5) * 4.5);
     GUIDE.position.lerp(gTo, Math.min(1, dt * 1.2)); GUIDE.position.y += Math.sin(t * 2) * .004; GUIDE.rotation.y += dt * .5; GUIDE.userData.spin(.8);
     /* светящийся путь от ученика к стоянке у следующего задания */
@@ -415,12 +456,47 @@ function make(cfg) {
     root.querySelector('[data-k="exit"]').onclick = function () { if (anim) return; leave(); };
     ui.snd.onclick = function () { var G = window.GOLOS; if (!G) return; G.setOn(!G.on); sndUI(); if (!G.on && MON) { MON.talk = false; } else if (MON) MON.said = -1; };
     ui.card.addEventListener('pointerdown', function (e) { e.stopPropagation(); });
+    if (UL) { ui.st.addEventListener('pointerdown', function (e) { if (api && api.tasks) e.stopPropagation(); }); ui.st.addEventListener('click', function () { if (on && !anim && !paused && api && api.tasks) try { api.tasks(); } catch (er) {} }); }
     ui.help.addEventListener('pointerdown', function (e) { e.stopPropagation(); }); ui.help.onclick = function () { helpT(!helpOn); ui.help.blur(); };
     ui.hint.addEventListener('pointerdown', function (e) { if (!helpOn) return; e.stopPropagation(); helpT(false); });
     ui.card.addEventListener('click', function (e) { var b = e.target.closest('[data-a]'); if (b) doAct(b.dataset.a); });
+    if (cfg.noExit) root.querySelector('[data-k="exit"]').style.display = 'none';
+    if (window.KMN_GEAR) gearUI();
   }
-  function sndUI() { var G = window.GOLOS; ui.snd.textContent = G && G.on ? '🔊' : '🔇'; ui.snd.hidden = !G; ui.vol.hidden = !G || !G.setVol; if (G && G.vol != null) ui.vol.value = Math.round(G.vol * 100); }
-  function hud() { var d = 0; mod.tasks.forEach(function (t) { if (api && api.state(t) === 'done') d++; }); ui.st.textContent = '★ ' + d + ' / ' + mod.tasks.length; }
+  /* 24.11 (Лётная школа, замечания Alexandr): справа вверху только шестерёнка (muzyka.js) - в ней "Управление", голос вкл/выкл и ползунки;
+     звёзды по центру; название модуля печатается одной строкой и гаснет, остаётся стрелка назад; табличка предмета узкая справа. */
+  function gearUI() {
+    root.classList.add('k-gear');
+    var st = document.createElement('style'); st.textContent = [
+      '#kmn.k-gear .k-top{background:none}#kmn.k-gear .k-hello{display:none}',
+      '#kmn.k-gear .k-top [data-k=help],#kmn.k-gear .k-top [data-k=snd],#kmn.k-gear .k-top .k-vol{display:none!important}',
+      '#kmn.k-gear .k-st{position:absolute;left:50%;top:calc(14px + env(safe-area-inset-top,0px));transform:translateX(-50%)}',
+      '#kmn.k-gear .k-ttl small,#kmn.k-gear .k-ttl b{display:none}',
+      '#kmn.k-gear .k-ttl{flex:none;max-width:calc(50vw - 110px);transition:opacity .9s}#kmn.k-gear .k-ttl.gone{opacity:0}',
+      '#kmn.k-gear .k-ttl i{display:block;font:700 15px ' + FONT + ';font-style:normal;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-shadow:0 2px 10px rgba(0,0,0,.7)}',
+      '#kmn.k-gear .k-ttl i em{font-style:normal;color:var(--kc);font-weight:800;letter-spacing:.08em}',
+      '#kmn.k-gear .k-card{left:auto;right:max(12px,env(safe-area-inset-right,0px));top:calc(66px + env(safe-area-inset-top,0px));bottom:auto;transform:translateX(24px);width:min(270px,32vw);min-width:200px;max-height:calc(100% - 150px);overflow:auto;padding:12px 14px;font-size:13.5px;line-height:1.4}',
+      '#kmn.k-gear .k-card.on{transform:none}#kmn.k-gear .k-card h3{font-size:16px}',
+      '#muzP .kmnG{display:none;gap:6px;margin:0 0 8px}body.kmn-on #muzP .kmnG{display:grid}body.kmn-on #muzP{max-height:calc(100% - 80px);overflow-y:auto;overscroll-behavior:contain}',
+      '#muzP .kmnG button{min-height:40px;border-radius:10px;border:1px solid rgba(255,255,255,.25);background:rgba(255,255,255,.06);color:#fff;font:700 13px system-ui,sans-serif;cursor:pointer;text-align:left;padding:0 12px}'
+    ].join(''); document.head.appendChild(st);
+    var tl = root.querySelector('.k-ttl'); ui.ttlL = document.createElement('i'); tl.appendChild(ui.ttlL); ui.ttl = tl;
+    (function mount(n) { var p = document.getElementById('muzP'); if (!p) { if (n < 80) setTimeout(function () { mount(n + 1); }, 250); return; }
+      if (p.querySelector('.kmnG')) return; var g = document.createElement('div'); g.className = 'kmnG';
+      g.innerHTML = '<button type="button" data-g="help">? Управление</button><button type="button" data-g="snd"></button>'; p.insertBefore(g, p.firstChild);
+      g.onclick = function (e) { var b = e.target.closest('[data-g]'); if (!b || !on) return; if (window.MUZYKA) MUZYKA.close();
+        if (b.dataset.g === 'help') helpT(!helpOn); else ui.snd.onclick(); };
+      ui.gSnd = g.querySelector('[data-g=snd]'); sndUI(); })(0);
+  }
+  var ttlT = [];
+  function ttlType() { if (!ui.ttlL) return; ttlT.forEach(clearTimeout); ttlT = []; var a = ui.ttlS.textContent, b = ui.ttlB.textContent, txt = a + ' · ' + b;
+    ui.ttl.classList.remove('gone'); ui.ttlL.innerHTML = '';
+    var step = RED ? 0 : 32; for (var i = 1; i <= txt.length; i++) (function (k) { ttlT.push(setTimeout(function () {
+      var t = txt.slice(0, k), x = t.slice(0, Math.min(k, a.length)).replace(/[<&]/g, ''), y = t.slice(a.length).replace(/[<&]/g, ''); ui.ttlL.innerHTML = '<em>' + x + '</em>' + y; }, 400 + k * step)); })(i);
+    ttlT.push(setTimeout(function () { ttlT.push(setTimeout(function () { ui.ttl.classList.add('gone'); }, 3500)); }, 420 + txt.length * step)); }   /* гаснет через 3,5 с после последней буквы */
+  function sndUI() { var G = window.GOLOS; if (ui.gSnd) ui.gSnd.textContent = G && G.on ? '🔊 Голос Леры: вкл' : '🔇 Голос Леры: выкл'; ui.snd.textContent = G && G.on ? '🔊' : '🔇'; ui.snd.hidden = !G; ui.vol.hidden = !G || !G.setVol; if (G && G.vol != null) ui.vol.value = Math.round(G.vol * 100); }
+  function hud() { if (cfg.hud) { ui.st.textContent = cfg.hud(); return; } var d = 0, mod = hudMod(); mod.tasks.forEach(function (t) { if (api && api.state(t) === 'done') d++; }); ui.st.textContent = '★ ' + d + ' / ' + mod.tasks.length + (UL && api && api.tasks ? ' · задания' : ''); if (UL) ui.st.classList.toggle('k-stb', !!(api && api.tasks)); }
+  function hudMod() { var m = UL && LES && api && api.mid && K && K.mods.find(function (q) { return q.id === api.mid; }); return m || mod; }   /* 26.11: на этаже другого модуля счётчик показывал задания Мастерской */
   var hintT = 0;
   var helpOn = false; /* 14.11: подсказка управления - по кнопке "?": нажал - открылась, нажал ещё раз (или на неё) - закрылась */
   function helpT(on) { clearTimeout(hintT); helpOn = !!on; ui.help.classList.toggle('on', helpOn); ui.hint.style.pointerEvents = helpOn ? 'auto' : ''; ui.hint.style.whiteSpace = helpOn ? 'normal' : ''; ui.hint.style.textAlign = helpOn ? 'center' : '';
@@ -451,7 +527,7 @@ function make(cfg) {
   function kidFirst() { try { var P = JSON.parse(lsG((window.KURSY || {}).meKey || 'spk_vzlet') || 'null'), c = P && parseInt(P.cls, 10); return c > 0 && c <= 6; } catch (e) { return false; } }
   function doAct(a) {
     var c = sel; if (!c) return;
-    if (a.indexOf('q:') === 0) { if (QK && QK.act) QK.act(a.slice(2), c); return; }
+    if (a.indexOf('q:') === 0) { if (c.q && c.q.act) c.q.act(a.slice(2), c); else if (QK && QK.act) QK.act(a.slice(2), c); return; }
     if ((a === 'game0' || a === 'game1') && qLock()) a = 'lock';
     if (a === 'lock') { ui.card.classList.remove('shake'); void ui.card.offsetWidth; ui.card.classList.add('shake'); return; }
     if (a === 'task') { stopTalk(); if (api.task(c.tid) === false) doAct('lock'); return; }
@@ -508,16 +584,25 @@ function make(cfg) {
   /* ---------- построение сцены (один раз) ---------- */
   function build() {
     buildUI();
-    R = new T.WebGLRenderer({ antialias: !MOB, powerPreference: 'high-performance' });
+    if (LQ && window.INTER && cfg.grafika !== false) try { avMake(true); } catch (e) { AV = null; }
+    /* 27.11: на телефоне сглаживание краёв включаем, когда авто держит простую ступень с запасом по резкости (0:1.25 и выше) - там нет свечения, которое сглаживает само.
+       На ручной "Низкой" и на самой нижней ступени всё как раньше: без сглаживания. */
+    var aa0 = !MOB || !!(AV && !AV.manual && AV.rung().t === 0 && AV.index() >= 2);
+    R = new T.WebGLRenderer({ antialias: aa0, powerPreference: 'high-performance' });
     R.setPixelRatio(Math.min(devicePixelRatio, MOB ? 1.5 : 2)); R.setSize(innerWidth, innerHeight);
     R.outputEncoding = T.sRGBEncoding; R.toneMapping = T.ACESFilmicToneMapping; R.toneMappingExposure = .92;
     R.shadowMap.enabled = true; R.shadowMap.type = T.PCFSoftShadowMap; cv = R.domElement; root.prepend(cv);
     S = new T.Scene(); S.background = new T.Color('#05060f'); S.fog = new T.Fog('#070914', 28, 70);
     if (T.RoomEnvironment) { var pm = new T.PMREMGenerator(R); S.environment = pm.fromScene(new T.RoomEnvironment(), .04).texture; }
     CAM = new T.PerspectiveCamera(64, innerWidth / innerHeight, .05, 200);
-    if (window.INTER && cfg.grafika !== false) { var gs = (/[?&]s=([ABC])/.exec(location.search) || [])[1] || cfg.style || 'C';
-      try { GX = INTER.create({ renderer: R, scene: S, camera: CAM, style: gs, accent: gs === 'A' ? '#e0409a' : MC, quality: gq(), mirror: !window.KACHESTVO || gq() === 'high', tex: cfg.tex || 'proba/modul3/tex/' }); gfit(); } catch (e) { GX = null; } }
-    var OKH = GX && window.KOMNATA_OKNO && KOMNATA_OKNO[cfg.mid]; if (OKH && OKH.pre) try { OKH.pre(cfg); } catch (e) { OKH = null; }   /* 18.11 (проба new.html): теория у большого окна - teoriya-okno.js */
+    if (window.INTER && cfg.grafika !== false) { var gs = (!cfg.styleFix && (/[?&]s=([ABC])/.exec(location.search) || [])[1]) || cfg.style || 'C';
+      var q0 = AV ? TN[AV.rung().t] : gq(), KQ0 = window.KACHESTVO;
+      try { GX = INTER.create({ renderer: R, scene: S, camera: CAM, style: gs, accent: gs === 'A' ? '#e0409a' : MC, quality: q0, shadowEvery: UL ? (q0 === 'high' && !MOB ? 2 : 20) : 0,
+          mirror: AV ? (q0 === 'high' || (!AV.manual && KQ0.guess0 === 'high')) : (!window.KACHESTVO || gq() === 'high'), live: !!AV, tex: cfg.tex || 'proba/modul3/tex/' });
+        if (AV && !GX.canFx && AV.rung().t) { avMake(false); GX.tier(0); }
+        if (AV) { KQ0.on(function () { if (!AV) return; AV.set((KQ0.manual || QPAR) ? KQ0.level : 'auto'); }); if (KQ0.sync && !AV.manual) KQ0.sync(TN[AV.rung().t]); window.GRAFIKA_LIVE = true; }
+        gfit(); } catch (e) { GX = null; AV = null; } }
+    var OKH = GX && window.KOMNATA_OKNO && KOMNATA_OKNO[cfg.mid]; if (OKH && OKH.pre) try { OKH.pre(cfg); } catch (e) { OKH = null; } HK = OKH;   /* 18.11 (проба new.html): теория у большого окна - teoriya-okno.js */
     mats(); room();
     if (cfg.monitor) monitor(cfg.monitor);
     (cfg.stands || []).forEach(stand);
@@ -528,11 +613,17 @@ function make(cfg) {
       sel: function () { return sel; }, arrived: function () { return arrived; }, recard: function () { if (sel) card(sel); }, go: function (c) { go(c); }, unsel: function () { sel = null; card(null); }, refresh: function () { refreshAll(); }, mats: { steel: mSteel, wood: mWood, dark: mDark, metal: mMetal } }); } catch (e) { QK = null; if (window.console) console.warn('kvest', e); }
     S.children.concat(GX ? GX.world.children : []).forEach(function (o) { if (!preK.has(o)) o.userData.noMerge = true; });   /* 21.11: предметы квеста двигаются по нажатию - не склеиваем */
     if (OKH && OKH.build) try { OKN = OKH.build({ T: T, S: S, CAM: CAM, GX: GX, root: root, CLICK: CLICK, TICK: TICK, MON: MON, pos: pos, W: W, D: D, H: H, MC: MC, MOB: MOB, RED: RED, box: box, cyl: cyl, grp: grp, M: M, glow: glow, tex: tex, block: block, quad: quad, hint: hint, ring: ring,
-      sitting: function () { return !!SIT; }, sit: function () { sit(); },
+      sitting: function () { return !!SIT; }, sit: function () { sit(); }, cfg: cfg, toast: toast, fwd: fwd,
+      /* 24.11 (холл): хуку - подойти к предмету, что выбрано, карточка, полёт камеры, стоять на месте */
+      go: function (c) { go(c); }, sel: function () { return sel; }, arrived: function () { return arrived; }, recard: function () { if (sel) card(sel); }, unsel: function () { sel = null; card(null); },
+      place: function (p, l) { pos.copy(p); var v = aimAt(l); pos.y = EYE; yaw = v[0]; pitch = v[1]; target = null; lookAt = null; vel.set(0, 0, 0); },
+      yaw: function () { return yaw; }, hold: function (v) { HOLD = !!v; if (HOLD) { target = null; lookAt = null; vel.set(0, 0, 0); keys = {}; unlock(); } }, refresh: function () { refreshAll(); },
+      fly: function (to, look, d, done) { var from = pos.clone(), fy = yaw, fp = pitch; from.y = to.y = EYE; pos.copy(to); var a = look ? aimAt(look) : [yaw, pitch]; pos.copy(from); target = null; lookAt = null; vel.set(0, 0, 0); sel = null; card(null); unlock();
+        anim = { t: 0, d: RED ? .2 : d, step: function (u) { var e = ease(u); pos.lerpVectors(from, to, e); yaw = fy + angD(fy, a[0]) * e; pitch = fp + (a[1] - fp) * e; bob = e * 6; }, end: function () { pos.y = EYE; if (done) done(); } }; },
       anim: function () { return !!anim; }, view: function (p, l) { pos.copy(p); var v = aimAt(l); yaw = v[0]; pitch = v[1]; SIT = { uT: 1e9, y: yaw, p: pitch }; } });   /* view - для снимков: поставить камеру */ } catch (e) { OKN = null; if (window.console) console.warn('okno', e); }
     if (cfg.signs) cfg.signs.forEach(function (s) { label(s[0], s[1], s[2] || MC, s[3], s[4], s[5], s[6]); });
     guideBuild(); adoptG(); if (GX) setTimeout(function () { if (FIN) return; adoptG(); try { GX.bakeEnv(0, 1.6, 0); } catch (e) {} }, 1500);
-    addEventListener('resize', function () { if (!on) return; CAM.aspect = innerWidth / innerHeight; if (!anim) CAM.fov = fov0(); CAM.updateProjectionMatrix(); R.setSize(innerWidth, innerHeight); gfit(); });
+    addEventListener('resize', function () { if (!on) return; CAM.aspect = innerWidth / innerHeight; if (!anim) { var sf = SIT && sitFit(); CAM.fov = sf ? sf.fov : fov0(); } CAM.updateProjectionMatrix(); R.setSize(innerWidth, innerHeight); gfit(); });
     input(); built = true;
   }
 
@@ -547,7 +638,7 @@ function make(cfg) {
     addEventListener('pointerup', function (e) { if (!on || !drag || drag.id !== e.pointerId) return; var d = drag; drag = null; if (d.moved || anim || paused) return;
       if (MLOOK && e.pointerType === 'mouse') { if (locked()) interact(); else if (window.FPSUPR && FPSUPR.v3) { /* 17.11: как в "Побеге" - любой щелчок захватывает курсор, по предмету ещё и подходим */ var lk = function () { try { var r = cv.requestPointerLock(); if (r && r.catch) r.catch(function () {}); } catch (er) {} }; tap(e.clientX, e.clientY); if (!(sel && arrived)) lk(); } else { if (sel && arrived) tap(e.clientX, e.clientY); else { try { cv.requestPointerLock(); } catch (er) {} } } return; }
       tap(e.clientX, e.clientY); });
-    if (MLOOK) { addEventListener('mousemove', function (e) { if (!on || anim || paused) return; if (!locked() && (e.buttons || e.target !== cv)) return; /* 12.11: как в "Побеге" - камера идёт за пальцем по тачпаду и без нажатия */ var m = window.FPSUPR && FPSUPR.mv ? FPSUPR.mv(e) : [e.movementX || 0, e.movementY || 0]; if (!m || Math.abs(m[0]) > 250 || Math.abs(m[1]) > 250) return; /* браузер иногда присылает ложный рывок; 18.11 (проба): и скачок в момент захвата */ lkX -= m[0] * .0023; lkY -= m[1] * .0023; lookAt = null; });
+    if (MLOOK) { addEventListener('mousemove', function (e) { if (!on || anim || paused) return; if (!locked() && (e.buttons || e.target !== cv)) return; if (UL && SIT && !locked()) return; /* 26.11: в кресле мышь без захвата камеру не водит - иначе, пока тянешься к кнопкам, взгляд уезжает в потолок */ /* 12.11: как в "Побеге" - камера идёт за пальцем по тачпаду и без нажатия */ var m = window.FPSUPR && FPSUPR.mv ? FPSUPR.mv(e) : [e.movementX || 0, e.movementY || 0]; if (!m || Math.abs(m[0]) > 250 || Math.abs(m[1]) > 250) return; /* браузер иногда присылает ложный рывок; 18.11 (проба): и скачок в момент захвата */ lkX -= m[0] * .0023; lkY -= m[1] * .0023; lookAt = null; });
       var lkX = 0, lkY = 0, lkT = 0; (function sm(t) { requestAnimationFrame(sm); var dt = lkT ? Math.min(.1, (t - lkT) / 1000) : .016; lkT = t; if (!on || (Math.abs(lkX) + Math.abs(lkY) < 1e-5)) { lkX = lkY = 0; return; } var k = 1 - Math.exp(-dt * ((window.FPSUPR && FPSUPR.SM) || 22)), x = lkX * k, y = lkY * k; lkX -= x; lkY -= y; yaw += x; pitch = Math.max(-1.1, Math.min(.85, pitch + y)); })(0);
       if (window.FPSUPR && FPSUPR.mouseHelp) FPSUPR.mouseHelp({ canvas: cv, locked: locked, lock: function () { try { var r = cv.requestPointerLock(); if (r && r.catch) r.catch(function () {}); } catch (er) {} }, walk: function () { return on && !paused && !anim; }, look: function (dx, dy) { yaw += dx; pitch = Math.max(-1.1, Math.min(.85, pitch + dy)); lookAt = null; } });
       document.addEventListener('pointerlockchange', function () { var L = locked(); if (!L) keys = {}; document.body.classList.toggle('kmn-lock', L); if (L && !lockHint) { lockHint = true; hint('Мышь поворачивает камеру. Щелчок или E - подойти и открыть. Esc - вернуть стрелку.', 6000); } }); }
@@ -562,13 +653,14 @@ function make(cfg) {
     addEventListener('keyup', function (e) { keys[e.code] = 0; if (!e.code || e.key === 'Fn' || e.key === 'Meta' || e.key === 'OS') keys = {}; });
     /* 18.11: клавиша не должна залипать (Alexandr нажал Fn - бег вперёд не останавливался): окно потеряло фокус - все клавиши отпущены */
     addEventListener('blur', function () { keys = {}; }); document.addEventListener('visibilitychange', function () { keys = {}; });
-    if (PROBA && window.FPSUPR) FU = FPSUPR.create({ canvas: cv, root: root, noMouse: true, walk: function () { return on && !paused && !anim; }, act: function () { if (!anim) interact(); }, jump: function () { if (!anim && jy <= 0) jv = FPSUPR.JV; },
+    if (PROBA && window.FPSUPR) FU = FPSUPR.create({ canvas: cv, root: root, noMouse: true, walk: function () { return on && !paused && !anim && !HOLD; }, act: function () { if (!anim) interact(); }, jump: function () { if (!anim && jy <= 0) jv = FPSUPR.JV; },
       look: function (dx, dy) { yaw += dx; pitch = Math.max(-1.1, Math.min(.85, pitch + dy)); lookAt = null; } });
   }
   var FU = null;
   /* Enter / E: если уже подошли - главное действие карточки (начать задание, собрать дрон, слушать); если нет - подойти к тому, что в центре взгляда или ближе всего впереди */
   var jy = 0, jv = 0;
   function interact() {
+    if (HOLD) return;
     if (sel && arrived) { var b = ui.card.querySelector('.k-b.pri') || ui.card.querySelector('.k-b[data-a]'); if (b) doAct(b.dataset.a); else if (sel.kind === 'info') { sel = null; card(null); } return; }
     /* 18.11: предмет квеста рядом (до 2.6 м) и примерно впереди - берём его, целиться точно не нужно */
     var fq = new T.Vector3(-Math.sin(yaw), 0, -Math.cos(yaw)), nq = null, nd = 1e9; CLICK.forEach(function (c) { if (!c.item) return; var d = new T.Vector3(c.look[0] - pos.x, 0, c.look[2] - pos.z), L = d.length(); if (L > 2.6 || (L > .3 && d.dot(fq) / L < .2)) return; if (L < nd) { nd = L; nq = c; } }); if (nq) { go(nq); return; }
@@ -583,17 +675,34 @@ function make(cfg) {
     var o = hit.object, c = null; while (o && !c) { c = CLICK.find(function (z) { return z.o === o; }); o = o.parent; } return { c: c, p: hit.point, d: hit.distance }; }
   function hover(e) { if (MOB || paused || anim) return; var h = pick(e.clientX, e.clientY); cv.style.cursor = h && h.c ? 'pointer' : 'default'; }
   function tap(cx, cy) {
+    if (HOLD) return;
     var h = pick(cx, cy); if (!h) return;
     if (h.c) { if (sel === h.c && arrived && (h.c.kind === 'q' || (h.c.kind === 'table' && qLock()))) { var qb = ui.card.querySelector('.k-b.pri'); if (qb) doAct(qb.dataset.a); return; }
       if (sel === h.c && arrived) { var a = h.c.kind === 'stand' ? 'task' : h.c.kind === 'table' ? 'game' + (kidFirst() ? 1 : 0) : null; if (a) { if (a === 'task' && stState(h.c.tid) === 'lock') doAct('lock'); else doAct(a); } return; }
       go(h.c); return; }
-    sel = null; card(null); target = h.p.clone(); clampP(target); target.y = EYE; lookAt = null; arrived = false;
+    sel = null; card(null); target = h.p.clone(); clampP(target); target.y = EYE; lookAt = null; arrived = false; plan();
   }
   function go(c) { if (OKN && c.kind === 'mon') { if (SIT) { sel = c; arrived = true; card(c); return; } var sc = CLICK.find(function (z) { return z.kind === 'seat'; }); if (sc) c = sc; }
     if (SIT && c.kind === 'seat') return;
-    sel = c; arrived = false; target = new T.Vector3(c.at[0], EYE, c.at[1]); clampP(target); lookAt = new T.Vector3(c.look[0], c.look[1], c.look[2]); card(c); stopTalkIfNotMon(c); }
+    sel = c; arrived = false; target = new T.Vector3(c.at[0], EYE, c.at[1]); clampP(target); lookAt = new T.Vector3(c.look[0], c.look[1], c.look[2]); plan(); card(c); stopTalkIfNotMon(c); }
   function stopTalkIfNotMon(c) { if (c.kind !== 'mon' && MON && MON.talk) { /* голос монитора не обрываем, он тихо дочитает */ } }
   function clampP(p) { p.x = Math.max(-W / 2 + .7, Math.min(W / 2 - .7, p.x)); p.z = Math.max(-D / 2 + .7, Math.min(D / 2 - .7, p.z)); }
+  /* 26.11 (KMN_UL): обход мебели. Раньше ученик упирался в стол и "шёл на месте": цель за препятствием, скольжение даёт ноль.
+     Теперь путь строится по углам препятствий (их в комнате пара десятков), считается один раз на каждый поход. */
+  var via = null, viaT = null, stuckT = 0, stuckP = null;
+  function segHit(ax, az, bx, bz, skip) { for (var i = 0; i < BOX.length; i++) { if (skip && skip[i]) continue; var b = BOX[i], hx = b[2] + .34, hz = b[3] + .34, t0 = 0, t1 = 1, dx = bx - ax, dz = bz - az, ok = true;
+      var pq = [[-dx, ax - (b[0] - hx)], [dx, (b[0] + hx) - ax], [-dz, az - (b[1] - hz)], [dz, (b[1] + hz) - az]];
+      for (var k = 0; k < 4 && ok; k++) { var p = pq[k][0], q = pq[k][1]; if (Math.abs(p) < 1e-9) { if (q <= 0) ok = false; } else { var r = q / p; if (p < 0) { if (r > t1) ok = false; else if (r > t0) t0 = r; } else { if (r < t0) ok = false; else if (r < t1) t1 = r; } } }
+      if (ok && t1 - t0 > 1e-6) return true; } return false; }
+  function plan() { via = null; viaT = target; stuckT = 0; stuckP = null; if (!UL || !target || !BOX.length) return;
+    var skip = {}, i, n = 0; for (i = 0; i < BOX.length; i++) { var b = BOX[i]; if ((Math.abs(pos.x - b[0]) < b[2] + .35 && Math.abs(pos.z - b[1]) < b[3] + .35) || (Math.abs(target.x - b[0]) < b[2] + .35 && Math.abs(target.z - b[1]) < b[3] + .35)) skip[i] = 1; }
+    if (!segHit(pos.x, pos.z, target.x, target.z, skip)) return;
+    var N = [[pos.x, pos.z], [target.x, target.z]], m = .5, lx = W / 2 - .45, lz = D / 2 - .45;
+    for (i = 0; i < BOX.length; i++) { var c = BOX[i]; for (var k = 0; k < 4; k++) { var x = c[0] + (k & 1 ? 1 : -1) * (c[2] + m), z = c[1] + (k & 2 ? 1 : -1) * (c[3] + m); if (Math.abs(x) > lx || Math.abs(z) > lz || inBox(x, z)) continue; N.push([x, z]); } }
+    var dist = [], prev = [], done = []; for (i = 0; i < N.length; i++) { dist.push(i ? 1e9 : 0); prev.push(-1); done.push(0); }
+    for (;;) { var u = -1; for (i = 0; i < N.length; i++) if (!done[i] && dist[i] < 1e9 && (u < 0 || dist[i] < dist[u])) u = i; if (u < 0 || u === 1) break; done[u] = 1;
+      for (i = 1; i < N.length; i++) { if (done[i]) continue; var w = Math.hypot(N[i][0] - N[u][0], N[i][1] - N[u][1]); if (dist[u] + w >= dist[i]) continue; if (++n > 20000) break; if (segHit(N[u][0], N[u][1], N[i][0], N[i][1], (u < 2 || i < 2) ? skip : null)) continue; dist[i] = dist[u] + w; prev[i] = u; } }
+    if (prev[1] < 0) return; var out = []; for (i = prev[1]; i > 0; i = prev[i]) out.unshift(new T.Vector3(N[i][0], EYE, N[i][1])); if (out.length) via = out; }
   function blocked(x, z, fx, fz) { if (fx != null && inBox(fx, fz)) return inBox(x, z) && depth(x, z) > depth(fx, fz) + 1e-4; return inBox(x, z); }
   function inBox(x, z) { return depth(x, z) > 0; }
   /* насколько точка залезла в препятствие (0 - свободна); если игрок уже внутри, выпускаем его наружу */
@@ -601,23 +710,33 @@ function make(cfg) {
 
   /* ---------- кресло у окна (18.11, проба): сел - начинается теория, голова сама следит за кораблями за окном ---------- */
   var OKN = null, SIT = null;
+  /* 26.11 (KMN_UL): после последнего слайда урока кнопка "Встать" зовёт к заданиям этажа (их даёт школа: api.tasks) */
+  function toTasks() { if (!UL || !LES || !api || !api.tasks) return false; LES.toT = true; var b = ui.up && ui.up.querySelector('[data-u="up"]'); if (b) { b.textContent = 'К заданиям ›'; b.classList.add('k-go'); } return true; }
+  function upText() { var b = ui.up && ui.up.querySelector('[data-u="up"]'); if (b) { b.textContent = 'Встать'; b.classList.remove('k-go'); } }
   function upUI() { if (ui.up) return; var d = document.createElement('div'); d.className = 'k-up'; d.innerHTML = '<button class="k-b" data-u="prev" aria-label="Назад">‹</button><button class="k-b pri" data-u="up">Встать</button><button class="k-b" data-u="next" aria-label="Дальше">›</button>';
     var cs = document.createElement('style'); cs.textContent = '#kmn .k-up{position:absolute;left:50%;top:calc(66px + env(safe-area-inset-top,0px));transform:translate(-50%,-8px);display:flex;gap:8px;opacity:0;pointer-events:none;transition:opacity .4s,transform .4s;z-index:3}#kmn .k-up.on{opacity:1;transform:translate(-50%,0);pointer-events:auto}#kmn .k-up .k-b{min-height:40px;backdrop-filter:blur(10px);background:rgba(10,14,32,.6)}#kmn .k-up .k-b.pri{background:var(--kc);color:#14120a;border-color:transparent}';
+    if (UL) cs.textContent += '#kmn .k-st.k-stb{cursor:pointer;pointer-events:auto}#kmn .k-up .k-b.k-go{animation:kGo 1.4s ease-in-out infinite}@keyframes kGo{50%{box-shadow:0 0 0 7px rgba(255,255,255,.22)}}#kmn.k-sit .k-st{opacity:0;pointer-events:none}#kmn .k-st{transition:opacity .4s}#kmn.k-sit .k-up{top:calc(10px + env(safe-area-inset-top,0px))}body.kmn-sit .fpsb .fpsv{display:none!important}body.kmn-sit .fpsj{opacity:.55}';
     document.head.appendChild(cs); root.appendChild(d); ui.up = d;
     d.addEventListener('pointerdown', function (e) { e.stopPropagation(); });
-    d.addEventListener('click', function (e) { var b = e.target.closest('[data-u]'); if (!b) return; b.blur(); if (b.dataset.u === 'up') standUp(null); else if (MON) MON.go(MON.k + (b.dataset.u === 'next' ? 1 : -1)); }); }
+    d.addEventListener('click', function (e) { var b = e.target.closest('[data-u]'); if (!b) return; b.blur(); if (b.dataset.u === 'up') { var tt = LES && LES.toT; standUp(null); if (tt && !SIT) { LES.toT = false; upText(); setTimeout(function () { if (on && api && api.tasks) try { api.tasks(); } catch (er) {} }, RED ? 250 : 800); } } else if (MON) MON.go(MON.k + (b.dataset.u === 'next' ? 1 : -1)); }); }
+  /* 26.11: сидя экран урока занимает почти весь экран телефона (раньше - 40% ширины, буквы по 9 точек). Угол обзора подбираем под телевизор */
+  function sitFit() { if (!UL || !MON || !OKN) return null; var s = OKN.seat, mp = MON.g.position, d = Math.hypot(mp.x - s.x, mp.z - s.z), asp = innerWidth / innerHeight;
+    var fill = Math.min(.8, .94 * asp / (MON.w / MON.h)), tg = (MON.h / 2 / d) / fill, fov = Math.max(24, Math.min(fov0(), 2 * Math.atan(tg) * 180 / Math.PI));
+    return { fov: fov, look: new T.Vector3(mp.x, mp.y + .08 * tg * d, mp.z) }; }   /* смотрим чуть выше центра: экран ниже кнопок "Встать" */
+  function sitLook() { var f = sitFit(); return f ? f.look : OKN.look(); }
+  function sitUI(v) { if (!UL) return; root.classList.toggle('k-sit', !!v); document.body.classList.toggle('kmn-sit', !!v); }
   function aimAt(p) { var d = p.clone().sub(pos); return [Math.atan2(-d.x, -d.z), Math.atan2(d.y, Math.hypot(d.x, d.z))]; }
   function sit() { if (!OKN || SIT || anim) return; var s = OKN.seat; upUI(); sel = null; card(null); target = null; lookAt = null; vel.set(0, 0, 0);
-    var from = pos.clone(), to = new T.Vector3(s.x, s.eye, s.z), fy = yaw, fp = pitch; from.y = EYE; var sv = pos.clone(); pos.copy(to); var a = aimAt(OKN.look()); pos.copy(sv);
-    anim = { t: 0, d: RED ? .3 : 1.5, step: function (u) { var e = ease(u); pos.lerpVectors(from, to, e); yaw = fy + angD(fy, a[0]) * e; pitch = fp + (a[1] - fp) * e; },
-      end: function () { SIT = { uT: -99, y: yaw, p: pitch }; ui.up.classList.add('on'); if (MON) { if (window.GOLOS && MON.talk) GOLOS.stop(); MON.talk = false; MON.said = -1; MON.t0 = 0; }
-        if (OKN.sat) OKN.sat(true); var G = window.GOLOS; hint((G && G.on ? 'Слушай теорию. ' : 'Включи звук 🔊 вверху - Лера прочитает теорию. ') + (MOB ? 'Встать - джойстик или кнопка "Встать".' : 'Встать - W, стрелка или кнопка "Встать".'), 5000); } };
+    var from = pos.clone(), to = new T.Vector3(s.x, s.eye, s.z), fy = yaw, fp = pitch; from.y = EYE; var sv = pos.clone(); pos.copy(to); var a = aimAt(sitLook()); pos.copy(sv); var sf = sitFit(), f0 = CAM.fov;
+    anim = { t: 0, d: RED ? .3 : 1.5, step: function (u) { var e = ease(u); pos.lerpVectors(from, to, e); yaw = fy + angD(fy, a[0]) * e; pitch = fp + (a[1] - fp) * e; if (sf) { CAM.fov = f0 + (sf.fov - f0) * e; CAM.updateProjectionMatrix(); } },
+      end: function () { SIT = { uT: -99, y: yaw, p: pitch }; ui.up.classList.add('on'); sitUI(true); if (MON) { if (window.GOLOS && MON.talk) GOLOS.stop(); MON.talk = false; MON.said = -1; MON.t0 = 0; }
+        if (OKN.sat) OKN.sat(true); var G = window.GOLOS; if (!window.NACHALO_TEORII) hint((G && G.on ? 'Слушай теорию. ' : 'Включи звук 🔊 вверху - Лера прочитает теорию. ') + (MOB ? 'Встать - джойстик или кнопка "Встать".' : 'Встать - W, стрелка или кнопка "Встать".'), 5000); } };
   }
-  function standUp(tg) { if (!SIT || anim) return; var s = OKN.seat, from = pos.clone(), to = new T.Vector3(s.x + (s.ux || 0), EYE, s.z + (s.uz || 1.1)); SIT = null; if (ui.up) ui.up.classList.remove('on'); if (OKN.sat) OKN.sat(false);
-    anim = { t: 0, d: RED ? .2 : .7, step: function (u) { pos.lerpVectors(from, to, ease(u)); }, end: function () { pos.y = EYE; if (tg) { target = tg; arrived = false; } } }; }
+  function standUp(tg) { if (!SIT || anim) return; var s = OKN.seat, from = pos.clone(), to = new T.Vector3(s.x + (s.ux || 0), EYE, s.z + (s.uz || 1.1)); SIT = null; if (ui.up) ui.up.classList.remove('on'); if (OKN.sat) OKN.sat(false); sitUI(false); var f1 = CAM.fov, f2 = fov0();
+    anim = { t: 0, d: RED ? .2 : .7, step: function (u) { pos.lerpVectors(from, to, ease(u)); if (UL && f1 !== f2) { CAM.fov = f1 + (f2 - f1) * ease(u); CAM.updateProjectionMatrix(); } }, end: function () { pos.y = EYE; if (tg) { target = tg; arrived = false; if (viaT === tg) plan(); } } }; }
   /* сидя: ученик крутит головой сам - ждём 3.5 с, потом взгляд плавно идёт за кораблём за окном или возвращается к экрану */
   function seatLook(t, dt) { if (Math.abs(angD(SIT.y, yaw)) > 1e-4 || Math.abs(SIT.p - pitch) > 1e-4) SIT.uT = t;
-    if (t - SIT.uT > 3.5) { var f = OKN.focus && OKN.focus(pos), a = aimAt(f || OKN.look()), k = 1 - Math.exp(-dt * (f ? 1.5 : .9)); yaw += angD(yaw, a[0]) * k; pitch += (a[1] - pitch) * k; }
+    if (t - SIT.uT > 3.5) { var f = OKN.focus && !(UL && window.NACHALO_TEORII && (NACHALO_TEORII.sam || NACHALO_TEORII.busy)) && OKN.focus(pos), a = aimAt(f || sitLook()), k = 1 - Math.exp(-dt * (f ? 1.5 : .9)); yaw += angD(yaw, a[0]) * k; pitch += (a[1] - pitch) * k; }
     SIT.y = yaw; SIT.p = pitch; }
 
   /* ---------- кадр ---------- */
@@ -632,6 +751,7 @@ function make(cfg) {
       /* WASD / стрелки */
       var kx = (keys.KeyD || 0) - (keys.KeyA || 0), kz = (keys.KeyW || keys.ArrowUp || 0) - (keys.KeyS || keys.ArrowDown || 0);
       if (FU) { kx = Math.max(-1, Math.min(1, kx + FU.joy.s)); kz = Math.max(-1, Math.min(1, kz + FU.joy.f)); }
+      if (HOLD) { kx = kz = 0; target = null; jv = 0; }
       if (keys.ArrowLeft) yaw += dt * 1.8; if (keys.ArrowRight) yaw -= dt * 1.8;
       if (SIT) { if (kx || kz || target || jv > 0) { var tg0 = target; kx = kz = 0; target = null; jv = 0; standUp(tg0); } else { seatLook(t, dt); kx = kz = 0; } }
       else if (OKN && sel && sel.kind === 'seat' && arrived) { sit(); }
@@ -645,9 +765,12 @@ function make(cfg) {
       else if (kx || kz) { var f = new T.Vector3(-Math.sin(yaw), 0, -Math.cos(yaw)), r = new T.Vector3(-f.z, 0, f.x); target = pos.clone().addScaledVector(f, kz * st).addScaledVector(r, kx * st); clampP(target); target.y = EYE; lookAt = null; if (sel) { sel = null; card(null); } }
       if (window.FPSUPR && FPSUPR.v2 && !kx && !kz && !target) vel.set(0, 0, 0);
       /* ходьба к цели: плавный разгон и торможение, обход препятствий скольжением */
-      if (target) { var d = target.clone().sub(pos); d.y = 0; var L = d.length();
-        if (L < .04) { target = null; vel.set(0, 0, 0); if (sel) { arrived = true; unlock(); } }
-        else { var want = d.normalize().multiplyScalar(Math.min(run ? 6.0 : 3.0, L * (run ? 3.6 : 2.2) + .25)); vel.lerp(want, Math.min(1, dt * 5)); var nx = pos.x + vel.x * dt, nz = pos.z + vel.z * dt;
+      if (target) { if (viaT !== target) via = null; var wp = via && via.length ? via[0] : null, d = (wp || target).clone().sub(pos); d.y = 0; var L = d.length();
+        if (wp && L < .18) { via.shift(); }
+        else if (!wp && L < .04) { target = null; vel.set(0, 0, 0); if (sel) { arrived = true; unlock(); } }
+        else { if (UL && viaT === target) { /* страховка: стоим на месте дольше 0.9 с - считаем, что пришли */ if (!stuckP) stuckP = pos.clone(); stuckT += dt; if (stuckT > .9) { if (Math.hypot(pos.x - stuckP.x, pos.z - stuckP.z) < .06) { target = null; via = null; vel.set(0, 0, 0); if (sel) { arrived = true; unlock(); } } stuckT = 0; stuckP = null; } }
+          if (!target) d.set(0, 0, 0);
+          var want = d.normalize().multiplyScalar(wp ? (run ? 6.0 : 3.0) : Math.min(run ? 6.0 : 3.0, L * (run ? 3.6 : 2.2) + .25)); vel.lerp(want, Math.min(1, dt * 5)); var nx = pos.x + vel.x * dt, nz = pos.z + vel.z * dt;
           if (!blocked(nx, nz, pos.x, pos.z)) { pos.x = nx; pos.z = nz; } else if (!blocked(nx, pos.z, pos.x, pos.z)) pos.x = nx; else if (!blocked(pos.x, nz, pos.x, pos.z)) pos.z = nz; else { target = null; vel.set(0, 0, 0); if (sel) arrived = true; }
           bob += vel.length() * dt * 2.4; } }
       /* прыжок */
@@ -655,19 +778,72 @@ function make(cfg) {
       if (lookAt) { var dd = lookAt.clone().sub(pos), ty = Math.atan2(-dd.x, -dd.z), tp = Math.atan2(dd.y, Math.hypot(dd.x, dd.z)); yaw += angD(yaw, ty) * Math.min(1, dt * 3.2); pitch += (tp - pitch) * Math.min(1, dt * 3.2); if (!target && Math.abs(angD(yaw, ty)) < .01) lookAt = null; }
     }
     CAM.position.set(pos.x, (anim || SIT ? pos.y : EYE + jy) + (anim || SIT || jy > 0 ? 0 : Math.sin(bob * 2) * .022), pos.z); CAM.rotation.order = 'YXZ'; CAM.rotation.set(pitch, yaw, 0);
-    if (GX) { GX.render(dt); fpsG(raw); } else R.render(S, CAM);
+    if (GX) { if (FPSDBG) R.info.reset(); GX.render(dt); if (FPSDBG) { DBG.calls = R.info.render.calls; DBG.tris = R.info.render.triangles; }
+      if (AV) AV.push(raw * 1000, document.visibilityState === 'visible' && FIN, !!SIT || (!anim && vel.lengthSq() < .02)); else fpsG(raw); } else R.render(S, CAM);
   }
+  var DBG = { calls: 0, tris: 0 };
   var fL = 0, fN = 0, fT = 0, fW = /[?&]q=/.test(location.search) ? 1e9 : 5;
   function fpsG(dt) { if (fW > 0) { fW -= dt; return; } fN++; fT += dt; if (fN >= 70) { if (fT / fN > (PROBA ? (fL ? 1 / 26 : 1 / 40) : 1 / 21) && document.visibilityState === 'visible' && !paused) { if (window.KACHESTVO) { if (KACHESTVO.manual) { fW = 1e9; return; } KACHESTVO.slow(); } fL++; if (GX.lower() === 2 && !window.KACHESTVO) lsS('kursy_grafika', 'low'); fW = 3; } fN = 0; fT = 0; } }
 
   /* ---------- состояние заданий ---------- */
-  function refreshAll() { nextTarget(); Object.keys(STANDS).forEach(function (k) { drawStand(STANDS[k]); }); hud(); }
+  function refreshAll() { nextTarget(); Object.keys(STANDS).forEach(function (k) { drawStand(STANDS[k]); }); if (HK && HK.refresh) try { HK.refresh(); } catch (e) {} hud(); }
 
   /* ---------- вход и выход ---------- */
   /* ---------- 21.11 (проба new.html): экран загрузки, склейка предметов, прогрев - движение начинается, когда всё готово ---------- */
   var FIN = false, MERGED = false, LOADT = 0;
   var BYSTRO = !!(window.KURS_ZAGRUZKA && window.SKLEYKA) && !/[?&]bystro=0\b/.test(location.search);
-  function finish() { if (FIN || !GX) { FIN = true; return; } FIN = true; adoptG(); try { GX.bakeEnv(0, 1.6, 0); } catch (e) {} }
+  /* 26.11 (KMN_UL): мягкие тени под мебелью и свет от окон на полу. Это две плоские "наклейки" на пол
+     (2 команды рисования и несколько сотен треугольников на всю комнату), настоящие тени и свет не считаются - телефон не нагружается. */
+  function floorBake() { if (!UL || !GX || !FLOOR || !FLOOR.parent) return;
+    var sp = cfg.spill || { n: 1, w: 1, e: 1 }, ok = cfg.okno || {}, colS = new T.Color(cfg.spillColor || '#9a4dff'), ww = Math.min(14, D - 3);
+    function tex() { var c = document.createElement('canvas'); c.width = c.height = 64; var x = c.getContext('2d'), g = x.createRadialGradient(32, 32, 0, 32, 32, 32); g.addColorStop(0, 'rgba(255,255,255,1)'); g.addColorStop(.35, 'rgba(255,255,255,.62)'); g.addColorStop(.7, 'rgba(255,255,255,.2)'); g.addColorStop(1, 'rgba(255,255,255,0)'); x.fillStyle = g; x.fillRect(0, 0, 64, 64); var t = new T.CanvasTexture(c); t.generateMipmaps = false; t.minFilter = T.LinearFilter; return t; }
+    function B() { this.p = []; this.u = []; this.c = []; this.i = []; }
+    /* прямоугольник на полу: x0..x1, z0..z1; uv по углам (x0z0, x1z0, x1z1, x0z1) */
+    B.prototype.q = function (x0, z0, x1, z1, uv, col, y) { var b = this.p.length / 3; this.p.push(x0, y, z0, x1, y, z0, x1, y, z1, x0, y, z1); for (var k = 0; k < 4; k++) { this.u.push(uv[k][0], uv[k][1]); this.c.push(col.r, col.g, col.b); } this.i.push(b, b + 2, b + 1, b, b + 3, b + 2); };
+    B.prototype.mesh = function (mat, ro) { if (!this.i.length) return null; var g = new T.BufferGeometry(); g.setAttribute('position', new T.Float32BufferAttribute(this.p, 3)); g.setAttribute('uv', new T.Float32BufferAttribute(this.u, 2)); g.setAttribute('color', new T.Float32BufferAttribute(this.c, 3)); g.setIndex(this.i);
+      var m = new T.Mesh(g, mat); m.renderOrder = ro; m.userData.noMerge = true; m.userData.noMirror = true; m.userData.noShadow = true; m.frustumCulled = false; FLOOR.parent.add(m); return m; };
+    var t = tex(), sh = new B(), gl = new B(), blk = new T.Color(0, 0, 0), e = .42, xs, zs, us, i, j;
+    /* тень: середина сплошная, края мягкие (9 частей) */
+    BOX.forEach(function (b) { if ((TABLE && b === TABLE.box) || Math.abs(b[0]) > W / 2 - .15 || Math.abs(b[1]) > D / 2 - .15 || b[2] > 4 || b[3] > 4 || (b[2] > 1.6 && b[3] > 1.6)) return;
+      xs = [b[0] - b[2] - e, b[0] - b[2] + .08, b[0] + b[2] - .08, b[0] + b[2] + e]; zs = [b[1] - b[3] - e, b[1] - b[3] + .08, b[1] + b[3] - .08, b[1] + b[3] + e]; us = [0, .5, .5, 1];
+      for (i = 0; i < 3; i++) for (j = 0; j < 3; j++) sh.q(xs[i], zs[j], xs[i + 1], zs[j + 1], [[us[i], us[j]], [us[i + 1], us[j]], [us[i + 1], us[j + 1]], [us[i], us[j + 1]]], blk, .006); });
+    /* свет от окна: полоса вдоль стены, гаснет вглубь комнаты */
+    function band(side, a0, a1, len, k) { var c = colS.clone().multiplyScalar(k), m = Math.min(2.2, (a1 - a0) / 3), as = [a0 - .6, a0 + m, a1 - m, a1 + .6], uu = [0, .5, .5, 1];
+      for (i = 0; i < 3; i++) { var p0 = as[i], p1 = as[i + 1], u0 = uu[i], u1 = uu[i + 1];
+        if (side === 'n') gl.q(p0, -D / 2, p1, -D / 2 + len, [[u0, .5], [u1, .5], [u1, 1], [u0, 1]], c, .009);
+        else if (side === 'w') gl.q(-W / 2, p0, -W / 2 + len, p1, [[u0, .5], [u0, 1], [u1, 1], [u1, .5]], c, .009);
+        else gl.q(W / 2 - len, p0, W / 2, p1, [[u0, 1], [u0, .5], [u1, .5], [u1, 1]], c, .009); } }
+    if (sp.n) (ok.n || []).forEach(function (h) { band('n', h[0], h[1], 5.2, 1); });
+    if (sp.w) (ok.w || []).forEach(function (h) { band('w', h[0], h[1], 5.2, 1); });
+    if (sp.e && cfg.window !== false) band('e', -1 - ww / 2, -1 + ww / 2, 3.6, .45);
+    (cfg.marks || []).forEach(function (q) { var c = new T.Color(q.c).multiplyScalar(q.a || 1); gl.q(q.x - q.r, q.z - q.r, q.x + q.r, q.z + q.r, [[0, 0], [1, 0], [1, 1], [0, 1]], c, .009); });
+    var dark = GX.S && GX.S.dark;
+    sh.mesh(new T.MeshBasicMaterial({ map: t, vertexColors: true, transparent: true, opacity: cfg.shadowK != null ? cfg.shadowK : .5, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2, toneMapped: false }), 1);
+    gl.mesh(new T.MeshBasicMaterial({ map: t, vertexColors: true, transparent: true, opacity: cfg.spillK != null ? cfg.spillK : .3, blending: T.AdditiveBlending, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -3, polygonOffsetUnits: -3 }), 2);
+    /* 27.11 (проход 4): лучи света из окон и пылинки в них. Только на средней и богатой ступени (на простой спрятаны и не рисуются).
+       Лучи - наклонные полупрозрачные полотна от верха окна к полу, все в одном предмете (1 команда рисования); пылинки - ещё 1 команда. */
+    if (!AV || cfg.shafts === false) return;
+    var P = [], U = [], Cc = [], Ix = [], DP = [], rnd = (function (sd) { return function () { sd = (sd * 16807) % 2147483647; return sd / 2147483647; }; })(4711);
+    function shaft(side, a0, a1, top, len, k) { var c = colS.clone().multiplyScalar(k);
+      for (var n = 0; n < 3; n++) { var l = len * (.5 + .25 * n), b0 = P.length / 3, q, in0 = .06 + n * .02;
+        if (side === 'n') q = [[a0, top, -D / 2 + in0], [a1, top, -D / 2 + in0], [a1 + .3, .03, -D / 2 + l], [a0 - .3, .03, -D / 2 + l]];
+        else if (side === 'w') q = [[-W / 2 + in0, top, a0], [-W / 2 + in0, top, a1], [-W / 2 + l, .03, a1 + .3], [-W / 2 + l, .03, a0 - .3]];
+        else q = [[W / 2 - in0, top, a0], [W / 2 - in0, top, a1], [W / 2 - l, .03, a1 + .3], [W / 2 - l, .03, a0 - .3]];
+        q.forEach(function (v) { P.push(v[0], v[1], v[2]); Cc.push(c.r, c.g, c.b); }); U.push(.14, .5, .86, .5, 1, 1, 0, 1); Ix.push(b0, b0 + 1, b0 + 2, b0, b0 + 2, b0 + 3); }
+      var cnt = Math.min(46, Math.round((a1 - a0) * 5));
+      for (n = 0; n < cnt; n++) { var a = a0 + rnd() * (a1 - a0), d = .3 + rnd() * len * .75, y = .25 + rnd() * (top - .4) * (1 - d / (len * 1.1)); if (side === 'n') DP.push(a, y, -D / 2 + d); else if (side === 'w') DP.push(-W / 2 + d, y, a); else DP.push(W / 2 - d, y, a); } }
+    if (sp.n) (ok.n || []).forEach(function (h) { shaft('n', h[0], h[1], h[2] || H - .5, 3.6, 1); });
+    if (sp.w) (ok.w || []).forEach(function (h) { shaft('w', h[0], h[1], h[2] || H - .5, 3.6, 1); });
+    if (sp.e && cfg.window !== false) shaft('e', -1 - ww / 2, -1 + ww / 2, H - .5, 2.8, .5);
+    if (!Ix.length) return;
+    var sg = new T.BufferGeometry(); sg.setAttribute('position', new T.Float32BufferAttribute(P, 3)); sg.setAttribute('uv', new T.Float32BufferAttribute(U, 2)); sg.setAttribute('color', new T.Float32BufferAttribute(Cc, 3)); sg.setIndex(Ix);
+    var sm = new T.Mesh(sg, new T.MeshBasicMaterial({ map: t, vertexColors: true, transparent: true, opacity: cfg.shaftK != null ? cfg.shaftK : .2, blending: T.AdditiveBlending, depthWrite: false, side: T.DoubleSide, fog: false }));
+    var dg = new T.BufferGeometry(); dg.setAttribute('position', new T.Float32BufferAttribute(DP, 3));
+    var dm = new T.Points(dg, new T.PointsMaterial({ map: t, color: colS.clone().lerp(new T.Color('#ffffff'), .6), size: .045, sizeAttenuation: true, transparent: true, opacity: .55, blending: T.AdditiveBlending, depthWrite: false, fog: false }));
+    RICH = new T.Group(); RICH.add(sm); RICH.add(dm); RICH.traverse(function (m) { m.userData.noMerge = true; m.userData.noMirror = true; m.userData.noShadow = true; m.frustumCulled = false; m.raycast = function () {}; }); sm.renderOrder = 3; dm.renderOrder = 4;
+    RICH.visible = AV.rung().t > 0; FLOOR.parent.add(RICH);
+    TICK.push(function (tt) { if (!RICH.visible) return; dm.position.y = Math.sin(tt * .23) * .12; dm.position.x = Math.sin(tt * .11) * .1; dm.position.z = Math.cos(tt * .09) * .1; sm.material.opacity = (cfg.shaftK != null ? cfg.shaftK : .2) * (.9 + .1 * Math.sin(tt * .5)); }); }
+  function finish() { if (FIN || !GX) { FIN = true; return; } FIN = true; floorBake(); adoptG(); try { GX.bakeEnv(0, 1.6, 0); } catch (e) {} }
   function noMerge(o) { if (o) (o.userData || (o.userData = {})).noMerge = true; }
   function skleit() { if (MERGED || !window.SKLEYKA) return; MERGED = true;
     noMerge(FLOOR); noMerge(GUIDE); if (MON) noMerge(MON.g); Object.keys(STANDS).forEach(function (k) { noMerge(STANDS[k].g); }); if (dotG) noMerge(dotG); DOTS.forEach(noMerge);
@@ -694,7 +870,7 @@ function make(cfg) {
     return function () { var d = []; S.updateMatrixWorld(true); S.traverse(function (o) { var v = a.get(o); if (v == null || v !== o.matrix.elements.join() + o.visible) d.push(o); }); return d; }; }
   function openLoad(a) {
     var Z = window.KURS_ZAGRUZKA, my = {}; api = a; I = window.VZ_KURS_INFO; K = window.VZ_KURS; LOADING = my;
-    Z.show({ title: cfg.title || (mod && mod.t) || '', sub: 'Модуль ' + (mod ? mod.n : ''), color: MC, text: built ? 'Готовим зал' : 'Строим помещение' });
+    var oL = OPT.lesson; Z.show({ title: oL ? (oL.title || oL.t) : (cfg.title || (mod && mod.t) || ''), sub: cfg.kicker != null && !oL ? (cfg.loadSub || '') : 'Модуль ' + (oL ? oL.n : mod ? mod.n : ''), color: MC, text: built ? 'Готовим зал' : 'Строим помещение' });
     var alive = function () { return LOADING === my; };
     Z.paint().then(function () { if (!alive()) return; if (!built) build(); Z.step('Загружаем фактуры и модели', .25);
       var p0 = Math.max(1, Z.pending()), iv = setInterval(function () { Z.step(null, .25 + .45 * (1 - Z.pending() / p0)); }, 120);
@@ -706,28 +882,44 @@ function make(cfg) {
     .then(function () { if (!alive()) return; LOADING = null; start(a); Z.hide(); })
     .catch(function (e) { if (window.console) console.warn('zagruzka', e); if (alive()) { LOADING = null; start(a); Z.hide(); } });
   }
-  var LOADING = null;
-  function open(a) { if (BYSTRO) return openLoad(a); start(a); }
+  var LOADING = null, OPT = {}, LES = null;
+  /* 24.11 (Лётная школа): урок другого модуля на том же телевизоре - open(api, { lesson: { slides, n, t, title }, sit: true }).
+     Стол сборки на время урока убираем (вместе с нажатием и препятствием), по коридору к заданиям не ведём. */
+  function lesson(L) { LES = L ? { slides: L.slides, n: L.n, t: L.t, title: L.title, end: L.end, done: false } : null; upText();
+    if (MON) { MON.heard = false; MON.list = LES ? LES.slides : MON.base; MON.title = LES ? LES.t : null; MON.go(0); MON.draw(1); }
+    if (TABLE) { var tv = !LES; TABLE.g.visible = tv; var mc = GX && GX.mirrorOf && GX.mirrorOf(TABLE.g); if (mc) mc.visible = tv;
+      var ci = CLICK.indexOf(TABLE.click); if (tv && ci < 0) CLICK.push(TABLE.click); if (!tv && ci >= 0) CLICK.splice(ci, 1);
+      var bi = BOX.indexOf(TABLE.box); if (tv && bi < 0) BOX.push(TABLE.box); if (!tv && bi >= 0) BOX.splice(bi, 1); } }
+  function open(a, opt) { OPT = opt || {}; if (BYSTRO) return openLoad(a); start(a); }
   function start(a) {
-    api = a; I = window.VZ_KURS_INFO; K = window.VZ_KURS; if (!built) build();
-    on = true; paused = false; root.classList.add('on'); sel = null; card(null); sndUI();
+    api = a; I = window.VZ_KURS_INFO; K = window.VZ_KURS;
+    if (cfg.needGX) { try { if (!built) build(); } catch (e) { if (window.console) console.warn('komnata', e); } if (!built || !GX || !HK) { if (a && a.fail) a.fail(); return; } }   /* холл без новой графики не строим - shkola.js покажет простой холл */
+    if (!built) build(); lesson(OPT.lesson || null); HOLD = false;
+    on = true; paused = false; root.classList.add('on'); document.body.classList.add('kmn-on'); sel = null; card(null); sndUI();
+    if (AV) { AV.rest(3500); if (FPSDBG) { R.info.autoReset = false; KACHESTVO.dbg = function () { var a = AV.info(), r = AV.rung(); return 'ступень ' + (a.idx + 1) + ' из ' + a.of + ': ' + ['простая', 'средняя', 'богатая'][r.t] + ', резкость ' + r.d + '\nточек ' + cv.width + 'x' + cv.height + ', команд ' + DBG.calls + ', треуг. ' + DBG.tris + (a.last ? '\nзамер ' + a.last.fps.toFixed(0) + ' к/с, смен ' + a.changes : ''); }; }
+      /* для проверок и строки ?fps: что сейчас включено в этой комнате */
+      window.KOMNATA_DBG = { mid: cfg.mid, get gx() { return GX; }, get av() { return AV; }, get calls() { return DBG.calls; }, get tris() { return DBG.tris; }, size: function () { return [cv.width, cv.height]; },
+        view: function (p, l) { pos.set(p[0], p[1], p[2]); var v = aimAt(new T.Vector3(l[0], l[1], l[2])); yaw = v[0]; pitch = v[1]; target = null; lookAt = null; vel.set(0, 0, 0); } }; }
     CAM.aspect = innerWidth / innerHeight; CAM.fov = fov0(); CAM.updateProjectionMatrix(); R.setSize(innerWidth, innerHeight); gfit();
-    ui.ttlS.textContent = 'МОДУЛЬ ' + mod.n; ui.ttlB.textContent = cfg.title || mod.t;
+    ui.ttlS.textContent = cfg.kicker != null && !LES ? cfg.kicker : 'МОДУЛЬ ' + (LES ? LES.n : mod.n); ui.ttlB.textContent = LES ? (LES.title || LES.t) : (cfg.title || mod.t); if (ui.ttlL) { ttlT.forEach(clearTimeout); ui.ttlL.innerHTML = ''; ui.ttl.classList.remove('gone'); }
     refreshAll();
     /* вход: за воротами, ворота разъезжаются, шагаем внутрь */
     var st = cfg.start, lk = cfg.look, from = new T.Vector3(0, EYE, D / 2 + 2.6), to = new T.Vector3(st[0], EYE, st[1]);
-    SIT = null; if (ui.up) ui.up.classList.remove('on');
+    SIT = null; if (ui.up) ui.up.classList.remove('on'); sitUI(false); if (MON) MON.mute = false;
     pos.copy(from); yaw = Math.atan2(-(lk[0] - from.x), -(lk[2] - from.z)); pitch = -.04; target = null; lookAt = null; vel.set(0, 0, 0);
     doorL.position.x = -.8; doorR.position.x = .8;
     ui.fade.style.background = '#05060f'; ui.fade.style.transition = 'opacity .9s'; ui.fade.style.opacity = 1; requestAnimationFrame(function () { ui.fade.style.opacity = 0; });
-    ui.hello.querySelector('small').textContent = 'МОДУЛЬ ' + mod.n; ui.hello.querySelector('b').textContent = cfg.title || mod.t; ui.hello.querySelector('span').textContent = mod.t;
+    ui.hello.querySelector('small').textContent = cfg.kicker != null && !LES ? cfg.kicker : 'МОДУЛЬ ' + (LES ? LES.n : mod.n); ui.hello.querySelector('b').textContent = LES ? (LES.title || LES.t) : (cfg.title || mod.t); ui.hello.querySelector('span').textContent = LES ? LES.t : mod.t;
     ui.hello.classList.add('on'); setTimeout(function () { ui.hello.classList.remove('on'); }, 2600);
+    if (OPT.spawn) { var sp = OPT.spawn; pos.set(sp.x, EYE, sp.z); yaw = sp.yaw || 0; pitch = sp.pitch || 0; anim = null; ui.hello.classList.remove('on'); ttlType(); }   /* 24.11: вернулись с этажа - стоим у лифта, без входа через ворота */
+    else
     anim = { t: 0, d: RED ? .4 : 3.2, step: function (u) { var dO = Math.min(1, u / .35), e = ease(dO); doorL.position.x = -.8 - e * 1.6; doorR.position.x = .8 + e * 1.6;
         var w = ease(Math.max(0, (u - .25) / .75)); pos.lerpVectors(from, to, w); bob = w * 8; },
-      end: function () { var first = !lsG('kmn_hi_' + cfg.mid); lsS('kmn_hi_' + cfg.mid, '1');
-        doorAnim(0);
+      end: function () { var first = !LES && !OPT.sit && !lsG('kmn_hi_' + cfg.mid); if (!LES) lsS('kmn_hi_' + cfg.mid, '1');
+        doorAnim(0); ttlType(); if (OPT.sit) setTimeout(function () { if (on && !SIT) sit(); }, 60);   /* Лётная школа: с этажа сразу в кресло */
         /* подсказка управления больше не всплывает сама - кнопка "?" вверху */
         var G = window.GOLOS; if (first && cfg.hello && G && G.on && G.can && G.can()) { SPEAK = true; G.say(cfg.hello, { onend: function () { SPEAK = false; } }); } } };
+    if (HK && HK.open) try { HK.open(OPT); } catch (e) { if (window.console) console.warn('hook open', e); }
     clock.getDelta(); frame();
     /* окно задания поверх: комната размыта и стоит */
     winObs = new MutationObserver(function () { var w = document.getElementById('win'), o = w && w.classList.contains('on'); document.body.classList.toggle('kmn-win', !!o); if (o) { stopTalk(); paused = true; winP = true; card(null); unlock(); }
@@ -737,7 +929,7 @@ function make(cfg) {
   /* ворота: закрыть после входа (0) или открыть (1) за секунду */
   function doorAnim(open) { var a0 = doorR.position.x, a1 = open ? 2.4 : .8, t0 = clock.elapsedTime;
     TICK.push(function dA(t) { var u = Math.min(1, (t - t0) / 1.1), e = ease(u), x = a0 + (a1 - a0) * e; doorR.position.x = x; doorL.position.x = -x; if (u >= 1) TICK.splice(TICK.indexOf(dA), 1); }); }
-  function close() { if (LOADING) { LOADING = null; if (window.KURS_ZAGRUZKA) KURS_ZAGRUZKA.hide(); } if (SIT) { SIT = null; if (OKN && OKN.sat) OKN.sat(false); } unlock(); on = false; cancelAnimationFrame(raf); stopTalk(); root.classList.remove('on'); document.body.classList.remove('kmn-win'); if (winObs) winObs.disconnect(); card(null); }
+  function close() { if (window.NACHALO_TEORII) { NACHALO_TEORII.hide(); NACHALO_TEORII.busy = NACHALO_TEORII.sam = false; } if (LOADING) { LOADING = null; if (window.KURS_ZAGRUZKA) KURS_ZAGRUZKA.hide(); } if (SIT) { SIT = null; if (OKN && OKN.sat) OKN.sat(false); } if (root) sitUI(false); unlock(); on = false; HOLD = false; if (HK && HK.close) try { HK.close(); } catch (e) {} cancelAnimationFrame(raf); stopTalk(); root.classList.remove('on'); document.body.classList.remove('kmn-win', 'kmn-on'); if (window.MUZYKA) MUZYKA.close(); if (winObs) winObs.disconnect(); card(null); }
   function leave() { stopTalk(); if (api) api.exit(); }
   /* окно задания закрыто: обновляем стенды, при свежем прохождении - праздник и проводник к следующему */
   function back(tid, fresh) {

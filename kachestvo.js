@@ -28,7 +28,7 @@ function guess() {
   else if ((mem <= 4 || cpu <= 4) && lvl === 'high') lvl = 'mid';
   if (MOB && lvl === 'high') lvl = 'mid';
   return lvl; }
-var AUTO = guess();
+var AUTO = guess(), GUESS0 = AUTO;   /* GUESS0 - что подсказывает само устройство, без памяти о прошлых замерах */
 /* авто: если раньше уже снижали из-за долгих кадров - помним это (kursy_grafika_avto) */
 var saved = g(KA); if (saved && ORD.indexOf(saved) >= 0 && ORD.indexOf(saved) < ORD.indexOf(AUTO)) AUTO = saved;
 var qp = (/[?&]q=(low|mid|high)\b/.exec(location.search) || [])[1];
@@ -44,6 +44,9 @@ var Q = window.KACHESTVO = {
     else if (ORD.indexOf(v) >= 0) { manual = true; s(KR, '1'); level = v; s(K, v); } emit(); },
   /* кадры долгие: в авто - на ступень ниже (запоминаем), вручную - ничего не делаем */
   slow: function () { if (manual || qp) return false; var i = ORD.indexOf(level); if (i <= 0) return false; level = ORD[i - 1]; AUTO = level; s(KA, level); s(K, level); emit(); return true; },
+  /* 27.11 (Лётная школа): автонастройка на лету (grafika-avto.js) сообщает, какой уровень сейчас держит: его видят строка в шестерёнке и помещения-iframe. Ручной выбор не трогает. */
+  guess0: GUESS0, dbg: null,
+  sync: function (v) { if (manual || qp || ORD.indexOf(v) < 0 || v === level) return; level = v; AUTO = v; s(K, v); if (ORD.indexOf(v) < ORD.indexOf(GUESS0)) s(KA, v); else s(KA, null); upd(); },
   /* предел резкости для сцены: город, крыши */
   dpr: function (mob) { var d = window.devicePixelRatio || 1; return level === 'low' ? Math.min(d, mob ? .9 : 1) : level === 'mid' ? Math.min(d, mob ? 1.1 : 1.25) : Math.min(d, mob ? 1.25 : 1.75); }
 };
@@ -70,5 +73,5 @@ if (!mount()) { var n = 0, iv = setInterval(function () { if (mount() || ++n > 1
 if (/[?&]fps\b/.test(location.search)) (function () { var d = document.createElement('div'), fr = 0, t0 = performance.now(), worst = 0, lt = 0;
   d.style.cssText = 'position:fixed;left:8px;bottom:8px;z-index:99;padding:4px 8px;border-radius:8px;background:rgba(0,0,0,.65);color:#7cf3ff;font:700 12px/1.3 monospace;pointer-events:none;white-space:pre';
   function add() { if (document.body) document.body.appendChild(d); else setTimeout(add, 100); } add();
-  (function k(t) { requestAnimationFrame(k); fr++; if (lt) worst = Math.max(worst, t - lt); lt = t; if (t - t0 >= 1000) { d.textContent = Math.round(fr * 1000 / (t - t0)) + ' к/с  (худший кадр ' + Math.round(worst) + ' мс)\nкачество: ' + NM[level].toLowerCase() + (manual ? '' : ' (авто)'); fr = 0; t0 = t; worst = 0; } })(0); })();
+  (function k(t) { requestAnimationFrame(k); fr++; if (lt) worst = Math.max(worst, t - lt); lt = t; if (t - t0 >= 1000) { var ex = ''; try { ex = Q.dbg ? Q.dbg() : ''; } catch (e) {} d.textContent = Math.round(fr * 1000 / (t - t0)) + ' к/с  (худший кадр ' + Math.round(worst) + ' мс)\nкачество: ' + NM[level].toLowerCase() + (manual ? '' : ' (авто)') + (ex ? '\n' + ex : ''); fr = 0; t0 = t; worst = 0; } })(0); })();
 })();
