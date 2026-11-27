@@ -435,6 +435,9 @@ function make(cfg) {
   function guideTick(t, dt) {
     var c = cfg.guideTo ? cfg.guideTo() : NEXT && (CLICK.find(function (z) { return (z.kind === 'stand' || z.kind === 'table') && z.tid === NEXT; }));
     if (c) gTo.set(c.look[0], 2.9, c.look[2]); else gTo.set(pos.x - Math.sin(yaw + .5) * 4.5, 3.3, pos.z - Math.cos(yaw + .5) * 4.5);
+    /* 27.11 вечер (Alexandr: дрон "с улицы" пролетает сквозь стену): цель проводника - точка у стены (lift look) или 4,5 м впереди, которая могла быть за стеной.
+       Держим цель внутри комнаты с запасом 0,8 м от стен и ниже потолка: комната - коробка, поэтому и путь по прямой не выходит наружу */
+    if (UL) { gTo.x = Math.max(-W / 2 + .8, Math.min(W / 2 - .8, gTo.x)); gTo.z = Math.max(-D / 2 + .8, Math.min(D / 2 - .8, gTo.z)); gTo.y = Math.min(gTo.y, H - .7); }
     GUIDE.position.lerp(gTo, Math.min(1, dt * 1.2)); GUIDE.position.y += Math.sin(t * 2) * .004; GUIDE.rotation.y += dt * .5; GUIDE.userData.spin(.8);
     /* светящийся путь от ученика к стоянке у следующего задания */
     var show = c && !(sel && sel.tid === NEXT && arrived) && pos.distanceTo(new T.Vector3(c.at[0], EYE, c.at[1])) > 1.6;
@@ -628,24 +631,24 @@ function make(cfg) {
   }
 
   /* ---------- управление ---------- */
-  var ray = new T.Raycaster(), mp = new T.Vector2(), drag = null, keys = {};
+  var ray = new T.Raycaster(), mp = new T.Vector2(), drag = null, keys = {}, lookT = -1e9;   /* lookT - когда последний раз поворачивали камеру (для автонастройки графики) */
   var MLOOK = PROBA && !MOB && !!document.documentElement.requestPointerLock, lockHint = false;
   function locked() { return document.pointerLockElement === cv; }
   function unlock() { if (locked()) try { document.exitPointerLock(); } catch (e) {} }
   function input() {
     cv.addEventListener('pointerdown', function (e) { if (anim) return; drag = { id: e.pointerId, x: e.clientX, y: e.clientY, yaw: yaw, pitch: pitch, moved: false }; });
-    addEventListener('pointermove', function (e) { if (!on) return; if (!drag || drag.id !== e.pointerId) { hover(e); return; } var dx = e.clientX - drag.x, dy = e.clientY - drag.y; if (Math.abs(dx) + Math.abs(dy) > (PROBA ? 3 : 8)) drag.moved = true; if (drag.moved) { var FX = window.FPSUPR || {}; /* 17.11 (проба): как в "Побеге" - палец вверх, камера смотрит вверх */ yaw = drag.yaw + (PROBA ? -dx : dx) * (FX.dragK || .0055); pitch = Math.max(-1.1, Math.min(.85, drag.pitch + (FX.pitchSign || 1) * dy * (FX.dragK || .0045))); lookAt = null; } });
+    addEventListener('pointermove', function (e) { if (!on) return; if (!drag || drag.id !== e.pointerId) { hover(e); return; } var dx = e.clientX - drag.x, dy = e.clientY - drag.y; if (Math.abs(dx) + Math.abs(dy) > (PROBA ? 3 : 8)) drag.moved = true; if (drag.moved) { var FX = window.FPSUPR || {}; /* 17.11 (проба): как в "Побеге" - палец вверх, камера смотрит вверх */ yaw = drag.yaw + (PROBA ? -dx : dx) * (FX.dragK || .0055); pitch = Math.max(-1.1, Math.min(.85, drag.pitch + (FX.pitchSign || 1) * dy * (FX.dragK || .0045))); lookAt = null; lookT = performance.now(); } });
     addEventListener('pointerup', function (e) { if (!on || !drag || drag.id !== e.pointerId) return; var d = drag; drag = null; if (d.moved || anim || paused) return;
       if (MLOOK && e.pointerType === 'mouse') { if (locked()) interact(); else if (window.FPSUPR && FPSUPR.v3) { /* 17.11: как в "Побеге" - любой щелчок захватывает курсор, по предмету ещё и подходим */ var lk = function () { try { var r = cv.requestPointerLock(); if (r && r.catch) r.catch(function () {}); } catch (er) {} }; tap(e.clientX, e.clientY); if (!(sel && arrived)) lk(); } else { if (sel && arrived) tap(e.clientX, e.clientY); else { try { cv.requestPointerLock(); } catch (er) {} } } return; }
       tap(e.clientX, e.clientY); });
-    if (MLOOK) { addEventListener('mousemove', function (e) { if (!on || anim || paused) return; if (!locked() && (e.buttons || e.target !== cv)) return; if (UL && SIT && !locked()) return; /* 26.11: в кресле мышь без захвата камеру не водит - иначе, пока тянешься к кнопкам, взгляд уезжает в потолок */ /* 12.11: как в "Побеге" - камера идёт за пальцем по тачпаду и без нажатия */ var m = window.FPSUPR && FPSUPR.mv ? FPSUPR.mv(e) : [e.movementX || 0, e.movementY || 0]; if (!m || Math.abs(m[0]) > 250 || Math.abs(m[1]) > 250) return; /* браузер иногда присылает ложный рывок; 18.11 (проба): и скачок в момент захвата */ lkX -= m[0] * .0023; lkY -= m[1] * .0023; lookAt = null; });
+    if (MLOOK) { addEventListener('mousemove', function (e) { if (!on || anim || paused) return; if (!locked() && (e.buttons || e.target !== cv)) return; if (UL && SIT && !locked()) return; /* 26.11: в кресле мышь без захвата камеру не водит - иначе, пока тянешься к кнопкам, взгляд уезжает в потолок */ /* 12.11: как в "Побеге" - камера идёт за пальцем по тачпаду и без нажатия */ var m = window.FPSUPR && FPSUPR.mv ? FPSUPR.mv(e) : [e.movementX || 0, e.movementY || 0]; if (!m || Math.abs(m[0]) > 250 || Math.abs(m[1]) > 250) return; /* браузер иногда присылает ложный рывок; 18.11 (проба): и скачок в момент захвата */ lkX -= m[0] * .0023; lkY -= m[1] * .0023; lookAt = null; lookT = performance.now(); });
       var lkX = 0, lkY = 0, lkT = 0; (function sm(t) { requestAnimationFrame(sm); var dt = lkT ? Math.min(.1, (t - lkT) / 1000) : .016; lkT = t; if (!on || (Math.abs(lkX) + Math.abs(lkY) < 1e-5)) { lkX = lkY = 0; return; } var k = 1 - Math.exp(-dt * ((window.FPSUPR && FPSUPR.SM) || 22)), x = lkX * k, y = lkY * k; lkX -= x; lkY -= y; yaw += x; pitch = Math.max(-1.1, Math.min(.85, pitch + y)); })(0);
       if (window.FPSUPR && FPSUPR.mouseHelp) FPSUPR.mouseHelp({ canvas: cv, locked: locked, lock: function () { try { var r = cv.requestPointerLock(); if (r && r.catch) r.catch(function () {}); } catch (er) {} }, walk: function () { return on && !paused && !anim; }, look: function (dx, dy) { yaw += dx; pitch = Math.max(-1.1, Math.min(.85, pitch + dy)); lookAt = null; } });
       document.addEventListener('pointerlockchange', function () { var L = locked(); if (!L) keys = {}; document.body.classList.toggle('kmn-lock', L); if (L && !lockHint) { lockHint = true; hint('Мышь поворачивает камеру. Щелчок или E - подойти и открыть. Esc - вернуть стрелку.', 6000); } }); }
     /* тачпад и колесо мыши: два пальца по тачпаду (или колесо) - поворот камеры вверх-вниз и влево-вправо; щипок (Ctrl + колесо) - шаг вперёд-назад */
     cv.addEventListener('wheel', function (e) { if (anim || paused) return; e.preventDefault(); var k = e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? 400 : 1, dx = e.deltaX * k, dy = e.deltaY * k;
       if (e.ctrlKey) { var f = new T.Vector3(-Math.sin(yaw), 0, -Math.cos(yaw)); target = pos.clone().addScaledVector(f, dy < 0 ? .8 : -.8); clampP(target); sel = null; card(null); return; }
-      function cl(v) { return Math.max(-.12, Math.min(.12, v)); } yaw -= cl(dx * .0025); pitch = Math.max(-1.1, Math.min(.85, pitch - cl(dy * .0025))); lookAt = null; }, { passive: false });
+      function cl(v) { return Math.max(-.12, Math.min(.12, v)); } yaw -= cl(dx * .0025); pitch = Math.max(-1.1, Math.min(.85, pitch - cl(dy * .0025))); lookAt = null; lookT = performance.now(); }, { passive: false });
     addEventListener('keydown', function (e) { if (!on || paused) return; if (e.target && /INPUT|TEXTAREA|SELECT/.test(e.target.tagName) && e.code !== 'Escape') return; keys[e.code] = 1; if (e.code === 'Escape' && sel) { sel = null; card(null); }
       /* пробел - прыжок, Enter или E - действие */
       if (e.code === 'Space') { e.preventDefault(); if (!anim && jy <= 0) jv = window.FPSUPR ? FPSUPR.JV : 3.6; }
@@ -654,7 +657,7 @@ function make(cfg) {
     /* 18.11: клавиша не должна залипать (Alexandr нажал Fn - бег вперёд не останавливался): окно потеряло фокус - все клавиши отпущены */
     addEventListener('blur', function () { keys = {}; }); document.addEventListener('visibilitychange', function () { keys = {}; });
     if (PROBA && window.FPSUPR) FU = FPSUPR.create({ canvas: cv, root: root, noMouse: true, walk: function () { return on && !paused && !anim && !HOLD; }, act: function () { if (!anim) interact(); }, jump: function () { if (!anim && jy <= 0) jv = FPSUPR.JV; },
-      look: function (dx, dy) { yaw += dx; pitch = Math.max(-1.1, Math.min(.85, pitch + dy)); lookAt = null; } });
+      look: function (dx, dy) { yaw += dx; pitch = Math.max(-1.1, Math.min(.85, pitch + dy)); lookAt = null; lookT = performance.now(); } });
   }
   var FU = null;
   /* Enter / E: если уже подошли - главное действие карточки (начать задание, собрать дрон, слушать); если нет - подойти к тому, что в центре взгляда или ближе всего впереди */
@@ -673,7 +676,12 @@ function make(cfg) {
   function pick(cx, cy) { mp.set(cx / innerWidth * 2 - 1, -cy / innerHeight * 2 + 1); ray.setFromCamera(mp, CAM);
     var hit = ray.intersectObjects(CLICK.map(function (c) { return c.o; }).concat([FLOOR]), true)[0]; if (!hit) return null;
     var o = hit.object, c = null; while (o && !c) { c = CLICK.find(function (z) { return z.o === o; }); o = o.parent; } return { c: c, p: hit.point, d: hit.distance }; }
-  function hover(e) { if (MOB || paused || anim) return; var h = pick(e.clientX, e.clientY); cv.style.cursor = h && h.c ? 'pointer' : 'default'; }
+  function hover(e) { if (MOB || paused || anim) return;
+    /* 27.11 (камера на тачпаде подзаедала): луч по всем предметам шёл на каждое движение, и при захваченной мыши тоже (курсора не видно).
+       Теперь не чаще раза за кадр и только когда стрелка видна */
+    if (UL) { if (locked()) return; hvE = e; if (hvR) return; hvR = requestAnimationFrame(function () { hvR = 0; var q = hvE; hvE = null; if (!q || !on || paused || anim || locked()) return; var h = pick(q.clientX, q.clientY), c = h && h.c ? 'pointer' : 'default'; if (cv.style.cursor !== c) cv.style.cursor = c; }); return; }
+    var h = pick(e.clientX, e.clientY); cv.style.cursor = h && h.c ? 'pointer' : 'default'; }
+  var hvE = null, hvR = 0;
   function tap(cx, cy) {
     if (HOLD) return;
     var h = pick(cx, cy); if (!h) return;
@@ -779,7 +787,7 @@ function make(cfg) {
     }
     CAM.position.set(pos.x, (anim || SIT ? pos.y : EYE + jy) + (anim || SIT || jy > 0 ? 0 : Math.sin(bob * 2) * .022), pos.z); CAM.rotation.order = 'YXZ'; CAM.rotation.set(pitch, yaw, 0);
     if (GX) { if (FPSDBG) R.info.reset(); GX.render(dt); if (FPSDBG) { DBG.calls = R.info.render.calls; DBG.tris = R.info.render.triangles; }
-      if (AV) AV.push(raw * 1000, document.visibilityState === 'visible' && FIN, !!SIT || (!anim && vel.lengthSq() < .02)); else fpsG(raw); } else R.render(S, CAM);
+      if (AV) AV.push(raw * 1000, document.visibilityState === 'visible' && FIN, !drag && performance.now() - lookT > 1500 && (!!SIT || (!anim && vel.lengthSq() < .02))); else fpsG(raw);   /* 27.11: менять графику, только когда камеру не крутят - смена даёт заминку */ } else R.render(S, CAM);
   }
   var DBG = { calls: 0, tris: 0 };
   var fL = 0, fN = 0, fT = 0, fW = /[?&]q=/.test(location.search) ? 1e9 : 5;
