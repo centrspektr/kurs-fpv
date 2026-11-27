@@ -131,7 +131,14 @@ function mount() {
   function close() { if (!isOpen()) return; if (window.MUZYKA && MUZYKA.close) MUZYKA.close(); else pn.classList.add('off'); }
   veil.addEventListener('click', close);
   D.addEventListener('keydown', function (e) { if (e.key === 'Escape' && isOpen()) close(); });
-  sync(); return true;
+  sync();
+  /* 28.11 (Alexandr, ПК): открылось меню, список этажей лифта или окно задания - стрелка нужна для выбора, поэтому захват мыши снимаем,
+     и картинка стоит (свободная стрелка камеру не крутит). Снова крутить - щелчок по залу. */
+  function free() { try { if (D.pointerLockElement) D.exitPointerLock(); } catch (e) {} }
+  function watch(id) { var el = D.getElementById(id); if (!el) return false; new MutationObserver(function () { if (el.classList.contains('on')) free(); }).observe(el, { attributes: true, attributeFilter: ['class'] }); return true; }
+  new MutationObserver(function () { if (isOpen()) free(); }).observe(pn, { attributes: true, attributeFilter: ['class'] });
+  ['shLift', 'win'].forEach(function (id) { (function w(n) { if (!watch(id) && n < 120) setTimeout(function () { w(n + 1); }, 250); })(0); });
+  return true;
 }
 (function wait(n) { if (mount()) return; if (n < 120) setTimeout(function () { wait(n + 1); }, 250); })(0);
 })();

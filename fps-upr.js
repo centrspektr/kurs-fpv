@@ -89,11 +89,11 @@ function mouseHelp(h) {   /* h: { canvas, locked(), lock(), walk() } */
   var mx = -1, my = -1, edT = 0; document.addEventListener('mouseleave', function () { mx = my = -1; }); addEventListener('blur', function () { mx = my = -1; });
   addEventListener('mousemove', function (e) { mx = e.clientX; my = e.clientY; });
   if (h.look) (function ed(t) { requestAnimationFrame(ed); var dt = edT ? Math.min(.1, (t - edT) / 1000) : .016; edT = t;
-    if (mx < 0 || h.locked() || !h.walk()) return; var m = Math.max(28, innerWidth * .04), sx = 0, sy = 0;
+    if (mx < 0 || h.locked() || !h.walk() || (h.edge && !h.edge())) return; var m = Math.max(28, innerWidth * .04), sx = 0, sy = 0;
     if (mx < m) sx = 1 - mx / m; else if (mx > innerWidth - m) sx = -(1 - (innerWidth - mx) / m);
     if (my < m * .8) sy = (1 - my / (m * .8)) * .6; else if (my > innerHeight - m * .8) sy = -(1 - (innerHeight - my) / (m * .8)) * .6;
     if (sx || sy) h.look(sx * 2.2 * dt, sy * 1.2 * dt); })(0);
-  addEventListener('mousemove', function (e) { if (h.locked() || e.buttons || !h.walk()) return; var m = 24;
+  addEventListener('mousemove', function (e) { if (h.locked() || e.buttons || !h.walk() || (h.edge && !h.edge())) return; var m = 24;
     if (e.clientX < m || e.clientY < m || e.clientX > innerWidth - m || e.clientY > innerHeight - m) show(); });
   addEventListener('keydown', function (e) { if (h.locked() || e.repeat || !h.walk()) return; if (e.target && /INPUT|TEXTAREA|SELECT/.test(e.target.tagName)) return;
     if (/^(Key[WASD]|Arrow(Up|Down|Left|Right)|Shift(Left|Right)|Space)$/.test(e.code) && e.isTrusted) h.lock(); });
