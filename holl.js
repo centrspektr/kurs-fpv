@@ -383,10 +383,10 @@ function build(X) {
     var c = K.grp(0, 0, -.6); K.tor(1.5, .028, warmL, 0, 3.55, 0, c, 56).rotation.x = PI / 2; K.tor(1.54, .02, brass, 0, 3.585, 0, c, 56).rotation.x = PI / 2; K.tor(.85, .022, warmL, 0, 3.3, 0, c, 40).rotation.x = PI / 2;
     for (var k = 0; k < 3; k++) { var a = k / 3 * PI * 2; K.cyl(.006, .006, H - 3.57, steelM, Math.cos(a) * 1.5, (H + 3.57) / 2, Math.sin(a) * 1.5, c, 5); K.cyl(.006, .006, H - 3.32, steelM, Math.cos(a + 1) * .85, (H + 3.32) / 2, Math.sin(a + 1) * .85, c, 5); }
     K.noSh(c); G.add(c, { shadow: false });
-    /* три дрона кружат под кольцом */
-    var orb = K.grp(0, 3.0, -.6), qs = []; [0, 1, 2].forEach(function (k) { var q = X.quad(.42, CITY[k]); var a = k / 3 * PI * 2; q.position.set(Math.cos(a) * 1.15, 0, Math.sin(a) * 1.15); q.rotation.y = -a; q.userData.a = a; orb.add(q); qs.push(q); });
+    /* три дрона кружат под кольцом. 28.11 (Alexandr: летающие дроны в комнатах отвлекают): в Лётной школе (KMN_UL) их нет */
+    if (!window.KMN_UL) { var orb = K.grp(0, 3.0, -.6), qs = []; [0, 1, 2].forEach(function (k) { var q = X.quad(.42, CITY[k]); var a = k / 3 * PI * 2; q.position.set(Math.cos(a) * 1.15, 0, Math.sin(a) * 1.15); q.rotation.y = -a; q.userData.a = a; orb.add(q); qs.push(q); });
     K.noSh(orb); G.add(orb, { shadow: false, live: true });
-    X.TICK.push(function (t, dt) { orb.rotation.y = t * .22; qs.forEach(function (q, k) { q.position.y = Math.sin(t * 1.3 + k * 2.1) * .12; q.rotation.z = Math.sin(t * .9 + k) * .08; q.userData.spin(dt * 30); }); });
+    X.TICK.push(function (t, dt) { orb.rotation.y = t * .22; qs.forEach(function (q, k) { q.position.y = Math.sin(t * 1.3 + k * 2.1) * .12; q.rotation.z = Math.sin(t * .9 + k) * .08; q.userData.spin(dt * 30); }); }); }
   })();
 
   /* ---------- у входа: коврик и стойки-ограждения ---------- */

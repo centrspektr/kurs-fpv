@@ -401,7 +401,8 @@ function make(cfg) {
       [[0, s / 2, 0], [0, -s / 2, 0], [s / 2, 0, Math.PI / 2], [-s / 2, 0, Math.PI / 2]].forEach(function (p) { var m = new T.Mesh(new T.PlaneGeometry(s, h), nm); m.position.set(p[0], h / 2, p[1]); m.rotation.y = p[2]; g.add(m); });
       for (var i = 0; i < 2; i++) { var gate = new T.Mesh(new T.TorusGeometry(.42, .04, 8, 32), glow('#ff9f5a')); gate.position.set(i ? .8 : -.8, 1.1, 0); gate.rotation.y = Math.PI / 2; g.add(gate); }
       var q = quad(.32, '#ea580c'); g.add(q);
-      TICK.push(function (t) { q.position.set(Math.sin(t * .9) * .9, 1.1 + Math.sin(t * 1.7) * .25, Math.cos(t * .9) * .9); q.rotation.y = -t * .9; q.rotation.z = Math.sin(t * .9) * .2; q.userData.spin(.9); });
+      /* 28.11: в Лётной школе вуп стоит на полу клетки, не летает (летающие дроны в комнатах отвлекают) */
+      if (UL) { q.position.set(0, .03, 0); q.rotation.y = .5; } else TICK.push(function (t) { q.position.set(Math.sin(t * .9) * .9, 1.1 + Math.sin(t * 1.7) * .25, Math.cos(t * .9) * .9); q.rotation.y = -t * .9; q.rotation.z = Math.sin(t * .9) * .2; q.userData.spin(.9); });
       label('ПОЛЁТНАЯ КЛЕТКА', 'вуп летает в зале', '#9dff7c', o.x, 3.4, o.z, .7); block(o.x, o.z, s / 2 + .1, s / 2 + .1, 0); return g; },
     batt: function (o) { var g = grp(o.x, 0, o.z, o.ry); box(1.6, 2.2, .7, M({ color: '#3a2a12', roughness: .5, metalness: .4 }), 0, 1.1, 0, g);
       for (var i = 0; i < 3; i++) for (var j = 0; j < 4; j++) { box(.3, .14, .3, M({ color: '#facc15', roughness: .5 }), -.54 + j * .36, .55 + i * .55, .25, g); var l = box(.05, .05, .01, glow(j % 3 ? '#9dff7c' : '#ffd36e'), -.54 + j * .36, .55 + i * .55, .41, g, 1); (function (l, k) { TICK.push(function (t) { l.visible = Math.sin(t * 2 + k) > -.6; }); })(l, i * 4 + j); }
@@ -425,7 +426,9 @@ function make(cfg) {
   /* ---------- дрон-проводник и путь ---------- */
   var GUIDE, gTo = new T.Vector3(), DOTS = [], dotG;
   function guideBuild() {
-    GUIDE = quad(.5, MC); GUIDE.position.set(0, 2.4, 0); S.add(GUIDE); var gl = new T.PointLight(MC, .6, 4, 2); GUIDE.add(gl);
+    GUIDE = quad(.5, MC); GUIDE.position.set(0, 2.4, 0); S.add(GUIDE);
+    /* 28.11 (Alexandr: летающие дроны в комнатах отвлекают, тень за ними отстаёт): в Лётной школе проводника не показываем - ни дрона, ни его света и тени; путь точками на полу остаётся */
+    if (UL) { GUIDE.visible = false; GUIDE.traverse(function (m) { m.castShadow = false; m.userData.noShadow = true; }); } else { var gl = new T.PointLight(MC, .6, 4, 2); GUIDE.add(gl); }
     dotG = new T.Group(); S.add(dotG); var dm = glow('#ffd36e', .8), dg = new T.CircleGeometry(.07, 12);
     for (var i = 0; i < 40; i++) { var d = new T.Mesh(dg, dm.clone()); d.rotation.x = -Math.PI / 2; d.position.y = .02; dotG.add(d); DOTS.push(d); }
   }
@@ -438,7 +441,7 @@ function make(cfg) {
     /* 27.11 вечер (Alexandr: дрон "с улицы" пролетает сквозь стену): цель проводника - точка у стены (lift look) или 4,5 м впереди, которая могла быть за стеной.
        Держим цель внутри комнаты с запасом 0,8 м от стен и ниже потолка: комната - коробка, поэтому и путь по прямой не выходит наружу */
     if (UL) { gTo.x = Math.max(-W / 2 + .8, Math.min(W / 2 - .8, gTo.x)); gTo.z = Math.max(-D / 2 + .8, Math.min(D / 2 - .8, gTo.z)); gTo.y = Math.min(gTo.y, H - .7); }
-    GUIDE.position.lerp(gTo, Math.min(1, dt * 1.2)); GUIDE.position.y += Math.sin(t * 2) * .004; GUIDE.rotation.y += dt * .5; GUIDE.userData.spin(.8);
+    if (GUIDE.visible) { GUIDE.position.lerp(gTo, Math.min(1, dt * 1.2)); GUIDE.position.y += Math.sin(t * 2) * .004; GUIDE.rotation.y += dt * .5; GUIDE.userData.spin(.8); }
     /* светящийся путь от ученика к стоянке у следующего задания */
     var show = c && !(sel && sel.tid === NEXT && arrived) && pos.distanceTo(new T.Vector3(c.at[0], EYE, c.at[1])) > 1.6;
     dotG.visible = !!show; if (!show) return;
