@@ -122,7 +122,15 @@ function make(cfg) {
   /* ---------- помещение ---------- */
   var doorL, doorR, GX = null;
   function gq() { if (window.KACHESTVO) return KACHESTVO.level; /* 21.11 (проба): качество из шестерёнки или подобранное само */ var m = /[?&]q=(high|mid|low)/.exec(location.search); if (m) return m[1]; var s = lsG('kursy_grafika'); if (s) return s; var mem = navigator.deviceMemory || 4, cpu = navigator.hardwareConcurrency || 4; return MOB ? ((mem <= 3 || cpu <= 4) ? 'low' : 'mid') : 'high'; }
-  function gfit() { if (GX) GX.resize(innerWidth, innerHeight, Math.min(devicePixelRatio || 1, GX.quality === 'high' ? 2 : GX.quality === 'mid' ? (window.KACHESTVO ? 1.25 : 1.5) : (window.KACHESTVO ? 1 : 1.25))); }
+  /* 27.11 (KMN_UL, проход 4): автонастройка графики на лету - grafika-avto.js меряет кадры и выбирает ступень (эффекты + резкость), GX.tier переключает эффекты без пересборки комнаты.
+     ?avto=0 - как было раньше (качество выбирается один раз при входе). */
+  var AV = null, TN = ['low', 'mid', 'high'], QPAR = /[?&]q=(low|mid|high)\b/.test(location.search), FPSDBG = /[?&]fps\b/.test(location.search);
+  var LQ = !!window.KMN_UL && !!window.GRAFIKA_AVTO && !!window.KACHESTVO && !/[?&]avto=0\b/.test(location.search);
+  function avMake(canFx) { var Q = window.KACHESTVO; AV = GRAFIKA_AVTO.make({ mob: MOB, dprMax: devicePixelRatio || 1, guess: Q.guess0 || Q.auto, manual: (Q.manual || QPAR) ? Q.level : null, canFx: canFx,
+    store: { get: lsG, set: function (k, v) { if (v == null) { try { localStorage.removeItem(k); } catch (e) {} } else lsS(k, v); } }, apply: avApply }); }
+  var RICH = null;   /* лучи из окон и пылинки: видны со средней ступени */
+  function avApply(r, was) { if (!GX) return; if (GX.tier && r.t !== was.t) { GX.tier(r.t); GX.shadowEvery(r.t > 1 && !MOB ? 2 : 20); } if (RICH) RICH.visible = r.t > 0; gfit(); var Q = window.KACHESTVO; if (Q && Q.sync && !AV.manual) Q.sync(TN[r.t]); }
+  function gfit() { if (GX && AV) { GX.resize(innerWidth, innerHeight, Math.min(devicePixelRatio || 1, AV.rung().d)); return; } if (GX) GX.resize(innerWidth, innerHeight, Math.min(devicePixelRatio || 1, GX.quality === 'high' ? 2 : GX.quality === 'mid' ? (window.KACHESTVO ? 1.25 : 1.5) : (window.KACHESTVO ? 1 : 1.25))); }
   /* помещение в новой графике: зал, ворота, тамбур за воротами, окно на город */
   function roomG() { var gw = 3.2, gh = 3.5, lamps = [], ww = Math.min(14, D - 3), i, k;
     if (cfg.lamps) lamps = cfg.lamps; else
@@ -576,7 +584,11 @@ function make(cfg) {
   /* ---------- построение сцены (один раз) ---------- */
   function build() {
     buildUI();
-    R = new T.WebGLRenderer({ antialias: !MOB, powerPreference: 'high-performance' });
+    if (LQ && window.INTER && cfg.grafika !== false) try { avMake(true); } catch (e) { AV = null; }
+    /* 27.11: на телефоне сглаживание краёв включаем, когда авто держит простую ступень с запасом по резкости (0:1.25 и выше) - там нет свечения, которое сглаживает само.
+       На ручной "Низкой" и на самой нижней ступени всё как раньше: без сглаживания. */
+    var aa0 = !MOB || !!(AV && !AV.manual && AV.rung().t === 0 && AV.index() >= 2);
+    R = new T.WebGLRenderer({ antialias: aa0, powerPreference: 'high-performance' });
     R.setPixelRatio(Math.min(devicePixelRatio, MOB ? 1.5 : 2)); R.setSize(innerWidth, innerHeight);
     R.outputEncoding = T.sRGBEncoding; R.toneMapping = T.ACESFilmicToneMapping; R.toneMappingExposure = .92;
     R.shadowMap.enabled = true; R.shadowMap.type = T.PCFSoftShadowMap; cv = R.domElement; root.prepend(cv);
@@ -584,7 +596,12 @@ function make(cfg) {
     if (T.RoomEnvironment) { var pm = new T.PMREMGenerator(R); S.environment = pm.fromScene(new T.RoomEnvironment(), .04).texture; }
     CAM = new T.PerspectiveCamera(64, innerWidth / innerHeight, .05, 200);
     if (window.INTER && cfg.grafika !== false) { var gs = (!cfg.styleFix && (/[?&]s=([ABC])/.exec(location.search) || [])[1]) || cfg.style || 'C';
-      try { GX = INTER.create({ renderer: R, scene: S, camera: CAM, style: gs, accent: gs === 'A' ? '#e0409a' : MC, quality: gq(), shadowEvery: UL ? (gq() === 'high' && !MOB ? 2 : 20) : 0, mirror: !window.KACHESTVO || gq() === 'high', tex: cfg.tex || 'proba/modul3/tex/' }); gfit(); } catch (e) { GX = null; } }
+      var q0 = AV ? TN[AV.rung().t] : gq(), KQ0 = window.KACHESTVO;
+      try { GX = INTER.create({ renderer: R, scene: S, camera: CAM, style: gs, accent: gs === 'A' ? '#e0409a' : MC, quality: q0, shadowEvery: UL ? (q0 === 'high' && !MOB ? 2 : 20) : 0,
+          mirror: AV ? (q0 === 'high' || (!AV.manual && KQ0.guess0 === 'high')) : (!window.KACHESTVO || gq() === 'high'), live: !!AV, tex: cfg.tex || 'proba/modul3/tex/' });
+        if (AV && !GX.canFx && AV.rung().t) { avMake(false); GX.tier(0); }
+        if (AV) { KQ0.on(function () { if (!AV) return; AV.set((KQ0.manual || QPAR) ? KQ0.level : 'auto'); }); if (KQ0.sync && !AV.manual) KQ0.sync(TN[AV.rung().t]); window.GRAFIKA_LIVE = true; }
+        gfit(); } catch (e) { GX = null; AV = null; } }
     var OKH = GX && window.KOMNATA_OKNO && KOMNATA_OKNO[cfg.mid]; if (OKH && OKH.pre) try { OKH.pre(cfg); } catch (e) { OKH = null; } HK = OKH;   /* 18.11 (проба new.html): теория у большого окна - teoriya-okno.js */
     mats(); room();
     if (cfg.monitor) monitor(cfg.monitor);
@@ -761,8 +778,10 @@ function make(cfg) {
       if (lookAt) { var dd = lookAt.clone().sub(pos), ty = Math.atan2(-dd.x, -dd.z), tp = Math.atan2(dd.y, Math.hypot(dd.x, dd.z)); yaw += angD(yaw, ty) * Math.min(1, dt * 3.2); pitch += (tp - pitch) * Math.min(1, dt * 3.2); if (!target && Math.abs(angD(yaw, ty)) < .01) lookAt = null; }
     }
     CAM.position.set(pos.x, (anim || SIT ? pos.y : EYE + jy) + (anim || SIT || jy > 0 ? 0 : Math.sin(bob * 2) * .022), pos.z); CAM.rotation.order = 'YXZ'; CAM.rotation.set(pitch, yaw, 0);
-    if (GX) { GX.render(dt); fpsG(raw); } else R.render(S, CAM);
+    if (GX) { if (FPSDBG) R.info.reset(); GX.render(dt); if (FPSDBG) { DBG.calls = R.info.render.calls; DBG.tris = R.info.render.triangles; }
+      if (AV) AV.push(raw * 1000, document.visibilityState === 'visible' && FIN, !!SIT || (!anim && vel.lengthSq() < .02)); else fpsG(raw); } else R.render(S, CAM);
   }
+  var DBG = { calls: 0, tris: 0 };
   var fL = 0, fN = 0, fT = 0, fW = /[?&]q=/.test(location.search) ? 1e9 : 5;
   function fpsG(dt) { if (fW > 0) { fW -= dt; return; } fN++; fT += dt; if (fN >= 70) { if (fT / fN > (PROBA ? (fL ? 1 / 26 : 1 / 40) : 1 / 21) && document.visibilityState === 'visible' && !paused) { if (window.KACHESTVO) { if (KACHESTVO.manual) { fW = 1e9; return; } KACHESTVO.slow(); } fL++; if (GX.lower() === 2 && !window.KACHESTVO) lsS('kursy_grafika', 'low'); fW = 3; } fN = 0; fT = 0; } }
 
@@ -800,7 +819,30 @@ function make(cfg) {
     (cfg.marks || []).forEach(function (q) { var c = new T.Color(q.c).multiplyScalar(q.a || 1); gl.q(q.x - q.r, q.z - q.r, q.x + q.r, q.z + q.r, [[0, 0], [1, 0], [1, 1], [0, 1]], c, .009); });
     var dark = GX.S && GX.S.dark;
     sh.mesh(new T.MeshBasicMaterial({ map: t, vertexColors: true, transparent: true, opacity: cfg.shadowK != null ? cfg.shadowK : .5, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2, toneMapped: false }), 1);
-    gl.mesh(new T.MeshBasicMaterial({ map: t, vertexColors: true, transparent: true, opacity: cfg.spillK != null ? cfg.spillK : .3, blending: T.AdditiveBlending, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -3, polygonOffsetUnits: -3 }), 2); }
+    gl.mesh(new T.MeshBasicMaterial({ map: t, vertexColors: true, transparent: true, opacity: cfg.spillK != null ? cfg.spillK : .3, blending: T.AdditiveBlending, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -3, polygonOffsetUnits: -3 }), 2);
+    /* 27.11 (проход 4): лучи света из окон и пылинки в них. Только на средней и богатой ступени (на простой спрятаны и не рисуются).
+       Лучи - наклонные полупрозрачные полотна от верха окна к полу, все в одном предмете (1 команда рисования); пылинки - ещё 1 команда. */
+    if (!AV || cfg.shafts === false) return;
+    var P = [], U = [], Cc = [], Ix = [], DP = [], rnd = (function (sd) { return function () { sd = (sd * 16807) % 2147483647; return sd / 2147483647; }; })(4711);
+    function shaft(side, a0, a1, top, len, k) { var c = colS.clone().multiplyScalar(k);
+      for (var n = 0; n < 3; n++) { var l = len * (.5 + .25 * n), b0 = P.length / 3, q, in0 = .06 + n * .02;
+        if (side === 'n') q = [[a0, top, -D / 2 + in0], [a1, top, -D / 2 + in0], [a1 + .3, .03, -D / 2 + l], [a0 - .3, .03, -D / 2 + l]];
+        else if (side === 'w') q = [[-W / 2 + in0, top, a0], [-W / 2 + in0, top, a1], [-W / 2 + l, .03, a1 + .3], [-W / 2 + l, .03, a0 - .3]];
+        else q = [[W / 2 - in0, top, a0], [W / 2 - in0, top, a1], [W / 2 - l, .03, a1 + .3], [W / 2 - l, .03, a0 - .3]];
+        q.forEach(function (v) { P.push(v[0], v[1], v[2]); Cc.push(c.r, c.g, c.b); }); U.push(.14, .5, .86, .5, 1, 1, 0, 1); Ix.push(b0, b0 + 1, b0 + 2, b0, b0 + 2, b0 + 3); }
+      var cnt = Math.min(46, Math.round((a1 - a0) * 5));
+      for (n = 0; n < cnt; n++) { var a = a0 + rnd() * (a1 - a0), d = .3 + rnd() * len * .75, y = .25 + rnd() * (top - .4) * (1 - d / (len * 1.1)); if (side === 'n') DP.push(a, y, -D / 2 + d); else if (side === 'w') DP.push(-W / 2 + d, y, a); else DP.push(W / 2 - d, y, a); } }
+    if (sp.n) (ok.n || []).forEach(function (h) { shaft('n', h[0], h[1], h[2] || H - .5, 3.6, 1); });
+    if (sp.w) (ok.w || []).forEach(function (h) { shaft('w', h[0], h[1], h[2] || H - .5, 3.6, 1); });
+    if (sp.e && cfg.window !== false) shaft('e', -1 - ww / 2, -1 + ww / 2, H - .5, 2.8, .5);
+    if (!Ix.length) return;
+    var sg = new T.BufferGeometry(); sg.setAttribute('position', new T.Float32BufferAttribute(P, 3)); sg.setAttribute('uv', new T.Float32BufferAttribute(U, 2)); sg.setAttribute('color', new T.Float32BufferAttribute(Cc, 3)); sg.setIndex(Ix);
+    var sm = new T.Mesh(sg, new T.MeshBasicMaterial({ map: t, vertexColors: true, transparent: true, opacity: cfg.shaftK != null ? cfg.shaftK : .2, blending: T.AdditiveBlending, depthWrite: false, side: T.DoubleSide, fog: false }));
+    var dg = new T.BufferGeometry(); dg.setAttribute('position', new T.Float32BufferAttribute(DP, 3));
+    var dm = new T.Points(dg, new T.PointsMaterial({ map: t, color: colS.clone().lerp(new T.Color('#ffffff'), .6), size: .045, sizeAttenuation: true, transparent: true, opacity: .55, blending: T.AdditiveBlending, depthWrite: false, fog: false }));
+    RICH = new T.Group(); RICH.add(sm); RICH.add(dm); RICH.traverse(function (m) { m.userData.noMerge = true; m.userData.noMirror = true; m.userData.noShadow = true; m.frustumCulled = false; m.raycast = function () {}; }); sm.renderOrder = 3; dm.renderOrder = 4;
+    RICH.visible = AV.rung().t > 0; FLOOR.parent.add(RICH);
+    TICK.push(function (tt) { if (!RICH.visible) return; dm.position.y = Math.sin(tt * .23) * .12; dm.position.x = Math.sin(tt * .11) * .1; dm.position.z = Math.cos(tt * .09) * .1; sm.material.opacity = (cfg.shaftK != null ? cfg.shaftK : .2) * (.9 + .1 * Math.sin(tt * .5)); }); }
   function finish() { if (FIN || !GX) { FIN = true; return; } FIN = true; floorBake(); adoptG(); try { GX.bakeEnv(0, 1.6, 0); } catch (e) {} }
   function noMerge(o) { if (o) (o.userData || (o.userData = {})).noMerge = true; }
   function skleit() { if (MERGED || !window.SKLEYKA) return; MERGED = true;
@@ -854,6 +896,10 @@ function make(cfg) {
     if (cfg.needGX) { try { if (!built) build(); } catch (e) { if (window.console) console.warn('komnata', e); } if (!built || !GX || !HK) { if (a && a.fail) a.fail(); return; } }   /* холл без новой графики не строим - shkola.js покажет простой холл */
     if (!built) build(); lesson(OPT.lesson || null); HOLD = false;
     on = true; paused = false; root.classList.add('on'); document.body.classList.add('kmn-on'); sel = null; card(null); sndUI();
+    if (AV) { AV.rest(3500); if (FPSDBG) { R.info.autoReset = false; KACHESTVO.dbg = function () { var a = AV.info(), r = AV.rung(); return 'ступень ' + (a.idx + 1) + ' из ' + a.of + ': ' + ['простая', 'средняя', 'богатая'][r.t] + ', резкость ' + r.d + '\nточек ' + cv.width + 'x' + cv.height + ', команд ' + DBG.calls + ', треуг. ' + DBG.tris + (a.last ? '\nзамер ' + a.last.fps.toFixed(0) + ' к/с, смен ' + a.changes : ''); }; }
+      /* для проверок и строки ?fps: что сейчас включено в этой комнате */
+      window.KOMNATA_DBG = { mid: cfg.mid, get gx() { return GX; }, get av() { return AV; }, get calls() { return DBG.calls; }, get tris() { return DBG.tris; }, size: function () { return [cv.width, cv.height]; },
+        view: function (p, l) { pos.set(p[0], p[1], p[2]); var v = aimAt(new T.Vector3(l[0], l[1], l[2])); yaw = v[0]; pitch = v[1]; target = null; lookAt = null; vel.set(0, 0, 0); } }; }
     CAM.aspect = innerWidth / innerHeight; CAM.fov = fov0(); CAM.updateProjectionMatrix(); R.setSize(innerWidth, innerHeight); gfit();
     ui.ttlS.textContent = cfg.kicker != null && !LES ? cfg.kicker : 'МОДУЛЬ ' + (LES ? LES.n : mod.n); ui.ttlB.textContent = LES ? (LES.title || LES.t) : (cfg.title || mod.t); if (ui.ttlL) { ttlT.forEach(clearTimeout); ui.ttlL.innerHTML = ''; ui.ttl.classList.remove('gone'); }
     refreshAll();

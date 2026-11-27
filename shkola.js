@@ -429,8 +429,9 @@ window.POVOROT_GAME = function () { return roomOn(); };
       bar.querySelector('.n').onclick = function () { bar.classList.remove('on'); };
       bar.querySelector('.y').onclick = function () { var u = location.href.replace(/([?&])q=(low|mid|high)(&|$)/, function (m, a, b, c) { return c ? a : ''; }); if (u === location.href) location.reload(); else location.replace(u); }; }
     var NM = { low: 'низкая', mid: 'средняя', high: 'высокая' }; bar.querySelector('span').textContent = 'Графика: ' + (Q.manual ? NM[Q.level] : 'авто (' + NM[Q.level] + ')') + '. Нужен перезапуск школы.'; bar.classList.add('on'); }
-  D.addEventListener('click', function (e) { var b = e.target && e.target.closest && e.target.closest('#kchR button'); if (!b) return; setTimeout(function () { if (Q.level !== was) show(); else if (bar) bar.classList.remove('on'); }, 0); }, true);
-  var iv = setInterval(function () { var sm = D.querySelector('#kchR small'); if (sm) { sm.textContent = '"Авто" подбирает графику под устройство и само снижает её, если кадры идут медленно. Тормозит - выбери "Низкая".'; clearInterval(iv); } }, 500);
+  D.addEventListener('click', function (e) { var b = e.target && e.target.closest && e.target.closest('#kchR button'); if (!b) return; setTimeout(function () { if (window.GRAFIKA_LIVE) { was = Q.level; if (bar) bar.classList.remove('on'); toast('Графика: ' + (Q.manual ? { low: 'низкая', mid: 'средняя', high: 'высокая' }[Q.level] : 'авто') + ' - применено'); return; }   /* 27.11: качество меняется сразу, перезапуск не нужен */
+      if (Q.level !== was) show(); else if (bar) bar.classList.remove('on'); }, 0); }, true);
+  var iv = setInterval(function () { var sm = D.querySelector('#kchR small'); if (sm) { sm.textContent = window.GRAFIKA_AVTO ? '"Авто" меряет кадры прямо в игре: на быстром устройстве картинка резче и богаче, на слабом - проще. Тормозит - выбери "Низкая".' : '"Авто" подбирает графику под устройство и само снижает её, если кадры идут медленно. Тормозит - выбери "Низкая".'; clearInterval(iv); } }, 500);
 })();
 
 /* ---------- мелочи ---------- */
