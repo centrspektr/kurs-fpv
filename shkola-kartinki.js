@@ -95,5 +95,21 @@ U.oshibka = S(screen(16, 16, 96, 64) + '<path d="M28 66 Q52 30 70 46 L96 28" str
 U.trenirovka = S([['разминка: 1-2 круга', C], ['одна цель на день', Y], ['упал - выдохни', P], ['устал - отдых', G]].map(function (a, i) { var y = 28 + i * 26; return circ(46, y, 8, 'none', a[1], 2.4) + T(46, y + 4, String(i + 1), { s: 10, w: 800, c: a[1] }) + T(64, y + 4, a[0], { s: 13, a: 'start' }); }).join(''), '');
 
 window.UROK_PIC = window.UROK_PIC || {};
+/* 27.11: тот же набор для рисования отдаём второму файлу схем (shkola-kartinki2.js) */
+window.UROK_KIT = { S: S, T: T, L: L, A: A, rect: rect, circ: circ, no: no, ok: ok, man: man, dside: dside, dtop: dtop, batt: batt, pult: pult, screen: screen, gate: gate, col: { C: C, P: P, Y: Y, G: G, R: R, W: W, DIM: DIM, BG: BG } };
 Object.keys(U).forEach(function (k) { window.UROK_PIC['u:' + k] = U[k]; });
+})();
+
+/* 26.11 (Лётная школа, KMN_UL): в карточках заданий часть картинок была эмодзи, которые не подходили к тексту
+   (стадион-"пельмень" вместо площадки, глаза, свитки). Там, где для темы уже есть своя схема (эти же схемы идут на телевизоре урока
+   и в kartinki.js), ставим её. Файл заданий не трогаем: подмена только в школе, на главной всё как было. */
+(function () {
+'use strict';
+if (!window.KMN_UL) return; var K = window.VZ_KURS; if (!K || !K.lib) return;
+var kp = K.pic; K.pic = function (k) { return (k && k.indexOf('u:') === 0 && window.UROK_PIC && window.UROK_PIC[k]) || (kp ? kp(k) : ''); };
+var MAP = { 'm1_rules|0|1': 'u:lyudi', 'm1_rules|0|3': 'u:dizarm', 'm1_rules|0|4': 'u:akboff', 'm1_where|0|0': 'vorota', 'm1_where|0|1': 'u:nelzya', 'm1_check|0|4': 'u:check',
+  'm4_sticks|0|1': 'u:gaz', 'm4_sticks|0|2': 'u:yaw', 'm4_modes|0|1': 'u:angle', 'm4_modes|0|2': 'u:acro', 'm4_trainer|0|2': 'u:yaw', 'm4_track|0|1': 'trassa',
+  'm5_race|0|0': 'zaezd', 'm5_class|0|3': 'razmer', 'm5_fly1|0|1': 'trassa', 'm5_rules|0|3': 'u:zachet', 'm5_video|0|2': 'kanaly', 'm5_roles|0|1': 'u:roli', 'm5_coach|0|0': 'u:roli',
+  'm6_track|0|1': 'u:duga', 'm6_track|0|2': 'vorota', 'm6_dvr|0|1': 'u:oshibka', 'm6_dvr|0|2': 'zapis', 'm6_fix|0|0': 'u:trenirovka', 'm6_as|0|0': 'u:as' };
+Object.keys(MAP).forEach(function (key) { var a = key.split('|'), t = K.lib[a[0]], st = t && t.steps[+a[1]], c = st && st.cards && st.cards[+a[2]]; if (c && (!c.pic || c.pic.indexOf('e:') === 0)) c.pic = MAP[key]; });
 })();

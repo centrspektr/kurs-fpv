@@ -10,7 +10,7 @@
 'use strict';
 var T = window.THREE, K = window.VZ_KURS, I = window.VZ_KURS_INFO;
 if (!T || !K || !I) { location.replace(window.PLAIN_URL || 'prosto-new.html'); return; }
-var MODS = K.mods, D = document;
+var MODS = K.mods, D = document, UL = !!window.KMN_UL;   /* 26.11: правки после проверки школы; ?ul=0 - как было */
 var COL = ['#5effc0', '#7cf3ff', '#facc15', '#9dff7c', '#ff6b86', '#b794ff', '#7cf3ff', '#ffd36e'];
 function col(i) { return COL[i % COL.length]; }
 function $(id) { return D.getElementById(id); }
@@ -83,6 +83,19 @@ css.textContent = [
 'body.sh-holl #shLift{z-index:12;background:linear-gradient(rgba(10,12,24,.72),rgba(8,9,18,.9));backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);padding:calc(18px + env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) 20px max(16px,env(safe-area-inset-left,0px))}',
 'body.sh-holl #shRide{z-index:14}body.sh-holl #shC{visibility:hidden}',
 'body.sh-holl #shLift .in{max-width:760px}body.sh-holl #shLift .sub{font:800 19px ShU,Unbounded,sans-serif;color:#ffd9a0;margin-bottom:12px}body.sh-holl #shLift .sub small{display:block;font:600 14px ShM;color:#a7acd2;margin-top:3px}',
+/* 26.11: лифт = загрузка этажа (одна заставка вместо двух), окно входа по коду, кнопка комнаты практики */
+'#shRideF,#shRideX{display:none}',
+'body.sh-rd #shRide{z-index:45;background:radial-gradient(90% 75% at 50% 42%,#2b1d12 0%,#140e0c 55%,#070608 100%);transition:opacity .35s}body.sh-rd #shRide.out{opacity:0}body.sh-rd #zgr{visibility:hidden!important}',
+'body.sh-rd #shRideF{display:flex;gap:8px;margin-bottom:10px}#shRideF i{font:800 13px ShU,Unbounded,sans-serif;font-style:normal;width:30px;height:30px;border-radius:50%;border:1.5px solid #5a4630;color:#8a765c;display:flex;align-items:center;justify-content:center;transition:background .2s,color .2s,border-color .2s}',
+'#shRideF i.p{border-color:#c9a36a;color:#ffd9a0}#shRideF i.a{border-color:var(--c);background:var(--c);color:#0a0c18;box-shadow:0 0 16px var(--c)}',
+'body.sh-rd #shRideX{display:block;font:600 14px ShM;color:#c9b79a;margin-top:12px;min-height:20px;text-align:center;padding:0 16px}body.sh-rd #shRide .bar{background:#3a2c20}',
+'@media (max-height:430px){body.sh-rd #shRide b{font-size:64px}body.sh-rd #shRide .bar{margin-top:14px}}',
+'#shIn{position:fixed;inset:0;z-index:60;display:none;align-items:center;justify-content:center;background:rgba(5,6,14,.72);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);padding:12px;overflow:auto}#shIn.on{display:flex}',
+'#shIn .bx{width:min(420px,100%);background:#101530;border:1.5px solid #2e355e;border-radius:18px;padding:16px 16px 14px;margin:auto}#shIn h3{font:800 18px ShU,Unbounded,sans-serif;margin:0 0 6px;color:#ffd9a0}#shIn p{margin:0 0 10px;font-size:14.5px;line-height:1.4;color:#c8cdea}',
+'#shInC{display:block;width:100%;box-sizing:border-box;border:2px solid #2e355e;border-radius:12px;background:#0a0d20;color:#fff;font:800 24px ShU,Unbounded,sans-serif;letter-spacing:.18em;text-align:center;padding:10px;text-transform:uppercase;outline:none}#shInC:focus{border-color:#7cf3ff}',
+'#shInE{min-height:18px;color:#ff8ea0;font:600 13.5px ShM;margin-top:6px}#shIn .rw{display:flex;gap:8px}#shIn .rw .shBtn{margin-top:6px;padding:12px}',
+'@media (max-height:430px){#shIn{align-items:flex-start}#shIn .bx{padding:10px 14px}#shIn p{font-size:13.5px;margin-bottom:6px}#shInC{font-size:20px;padding:7px}}',
+'#shPr{margin:10px 0 2px}#shPr button{display:flex;align-items:center;gap:10px;width:100%;text-align:left;border:1.5px solid var(--c,#7cf3ff);border-radius:14px;padding:11px 14px;background:#121733;color:#e8ecff;font:700 15px ShM;cursor:pointer}#shPr small{display:block;font:600 12.5px ShM;color:#a7acd2;margin-top:2px}#shPr b{font-size:22px}',
 '@media (min-width:620px){body.sh-holl #shFls{display:grid;grid-template-columns:1fr 1fr;gap:0 10px}}',
 '@media (max-height:430px){body.sh-holl .shFl{padding:7px 12px;margin-bottom:7px}body.sh-holl .shFl .n{width:38px;height:38px;font-size:16px}body.sh-holl #shLift .sub{font-size:16px;margin-bottom:8px}}'
 ].join('\n');
@@ -92,7 +105,7 @@ var C = el('canvas'); C.id = 'shC'; D.body.insertBefore(C, D.body.firstChild);
 var top = el('div', 'sh', '<button id="shBack" type="button" aria-label="Назад" hidden>←</button><div id="shTT"><div id="shT"></div><div id="shDots"></div></div>', D.body); top.id = 'shTop';
 var bot = el('div', 'sh', '', D.body); bot.id = 'shBot';
 var lift = el('div', 'sh', '<div class="in"><div class="sub" id="shLiftS">Выбери этаж. Этаж = модуль курса.</div><div id="shFls"></div><button class="shBtn alt" id="shLiftX" type="button">Остаться в холле</button></div>', D.body); lift.id = 'shLift';
-var ride = el('div', 'sh', '<b id="shRideN">1</b><div class="t" id="shRideT"></div><div class="bar"><i id="shRideB"></i></div>', D.body); ride.id = 'shRide';
+var ride = el('div', 'sh', '<div id="shRideF"></div><b id="shRideN">1</b><div class="t" id="shRideT"></div><div class="bar"><i id="shRideB"></i></div><div id="shRideX"></div>', D.body); ride.id = 'shRide';
 var tap = el('div', null, null, D.body); tap.id = 'shTap';
 for (var i = 0; i < MODS.length; i++) el('i', null, null, $('shDots'));
 function dots() { var ds = $('shDots').children, nf = nextFloor(); for (var i = 0; i < ds.length; i++) { var s = modState(i); ds[i].style.background = s === 'done' ? col(i) : i === nf ? 'rgba(255,255,255,.55)' : ''; } }
@@ -251,7 +264,33 @@ function hk() { return (window.KOMNATA_OKNO && KOMNATA_OKNO.hall) || {}; }
 window.SHKOLA_HOLL = {
   info: function () { var done = 0, mods = MODS.map(function (m, i) { var s = modState(i); if (s === 'done') done++; return { n: m.n, t: m.t, st: s, c: col(i), p: Math.round(I.prog(m.id) * 100) }; }); return { mods: mods, next: nextFloor(), done: done }; },
   menu: function (noPush) { if (HALLON) openLift(!noPush); },
-  progress: function () { openWin(null, 'Мой прогресс'); } };
+  progress: function () { openWin(null, 'Мой прогресс'); },
+  who: function () { var m = me(); return m ? { first: m.first || '', cls: m.cls || '' } : null; }, login: UL ? function () { loginOpen(); } : null };
+/* 26.11: вход по коду. На ресепшене было написано "войти по своему коду", а самого входа в школе не было.
+   Тот же запрос, что на странице prosto-new.html (адрес сервера из config.js, не меняем). */
+function lsGet(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
+function me() { try { var P = JSON.parse(lsGet((window.KURSY || {}).meKey || 'kursy_fpv_me') || 'null'); return P && P.code && P.status === 'принят' ? P : null; } catch (e) { return null; } }
+var inEl = null;
+function loginOpen() { var C = window.KURSY || {}; if (!inEl) { inEl = el('div', 'sh', '<div class="bx" role="dialog" aria-modal="true" aria-labelledby="shInH"><h3 id="shInH"></h3><p id="shInP"></p><input id="shInC" type="text" maxlength="8" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="КОД" aria-label="Код ученика"><div id="shInE" role="alert"></div><div class="rw"><button class="shBtn alt" id="shInX" type="button">Закрыть</button><button class="shBtn" id="shInGo" type="button"></button></div></div>', D.body); inEl.id = 'shIn';
+    ['pointerdown', 'touchstart', 'wheel', 'click'].forEach(function (t) { inEl.addEventListener(t, function (e) { e.stopPropagation(); }); });
+    /* клавиши, пока окно открыто, до комнаты не доходят (иначе W/A/S/D ходят и захватывают мышь) */
+    addEventListener('keydown', function (e) { if (!inEl.classList.contains('on')) return; e.stopPropagation(); if (e.key === 'Enter' && e.target !== $('shInX')) { e.preventDefault(); $('shInGo').click(); } if (e.key === 'Escape') loginShut(); }, true);
+    addEventListener('keyup', function (e) { if (inEl.classList.contains('on')) e.stopPropagation(); }, true);
+    $('shInX').onclick = loginShut; }
+  var m = me(), go = $('shInGo'), inp = $('shInC'), sure = false; $('shInE').textContent = ''; inp.value = ''; go.disabled = false;
+  if (m) { $('shInH').textContent = 'Ты вошёл'; $('shInP').textContent = 'Ученик: ' + (m.first || '') + (m.cls ? ', ' + m.cls : '') + '. Прогресс сохраняется на сервере, его видит педагог.'; inp.style.display = 'none'; go.textContent = 'Выйти';
+    go.onclick = function () { if (!sure) { sure = true; go.textContent = 'Точно выйти?'; return; } try { localStorage.removeItem(C.meKey); } catch (e) {} location.reload(); }; }
+  else { $('shInH').textContent = 'Вход по коду'; $('shInP').textContent = 'Код даёт педагог. С кодом твой прогресс сохраняется на сервере и его видит педагог. Без кода - только на этом устройстве.'; inp.style.display = ''; go.textContent = 'Войти';
+    go.onclick = function () { var code = inp.value.toUpperCase().replace(/[^A-Z0-9]/g, ''); if (code.length < 5) { $('shInE').textContent = 'Код - 6 букв и цифр'; return; }
+      if (!C.api || !window.fetch) { $('shInE').textContent = 'Вход сейчас недоступен'; return; }
+      go.disabled = true; go.textContent = 'Проверяю...'; $('shInE').textContent = '';
+      fetch(C.api, { method: 'POST', body: JSON.stringify({ op: 'sjoin', code: code, club: C.club }) }).then(function (r) { return r.json(); }).then(function (j) {
+        if (!j || !j.ok) throw new Error((j && j.error) || 'Код не подошёл');
+        try { localStorage.setItem(C.meKey, JSON.stringify({ status: 'принят', code: j.code, first: j.first, cls: j.cls, selo: j.selo || '', seloName: j.seloName || '' })); } catch (e) { throw new Error('Не удалось сохранить вход на этом устройстве'); }
+        location.reload();
+      }).catch(function (e) { go.disabled = false; go.textContent = 'Войти'; $('shInE').textContent = /fetch|network|load/i.test(e.message) ? 'Нет связи с сервером, попробуй позже' : e.message; }); }; }
+  inEl.classList.add('on'); if (HALLON && hk().hold) hk().hold(true); try { if (D.pointerLockElement) D.exitPointerLock(); } catch (e) {} }
+function loginShut() { if (!inEl) return; inEl.classList.remove('on'); var a = D.activeElement; if (a && a.blur) a.blur(); if (HALLON && hk().hold) hk().hold(false); }
 function openHall(opt) { MODE = 'hall'; FL = null; HALLON = true; lift.classList.remove('on'); tap.style.display = 'none'; D.body.classList.add('sh-room', 'sh-holl');
   try { HOLL.open({ mid: 'hall', state: function () { return 'open'; }, task: function () { return false; }, exit: function () {}, fail: hallFail }, opt || null); } catch (e) { if (window.console) console.warn('holl', e); hallFail(); } }
 function hallFail() { HOLL = null; HALLON = false; D.body.classList.remove('sh-room', 'sh-holl'); try { if (window.KURS_ZAGRUZKA) KURS_ZAGRUZKA.hide(); } catch (e) {} hall(); }
@@ -278,16 +317,27 @@ function openLift(fwd) { MODE = 'lift'; tap.style.display = 'none'; if (fwd) pus
   $('shFls').innerHTML = h; lift.classList.add('on'); lift.scrollTop = 0;
   bot.innerHTML = ''; bot.style.display = 'none'; }
 $('shFls').addEventListener('click', function (e) { var b = e.target.closest('.shFl'); if (!b) return; var i = +b.dataset.i; if (modState(i) === 'lock') { toast('Этот этаж откроет педагог'); return; } goFloor(i); });
-$('shLiftX').onclick = function () { back(); };
+$('shLiftX').onclick = function () { if (UL && history.state && history.state.sh === 'lift') history.back(); else back(); };   /* 26.11: раньше каждый "Остаться в холле" оставлял лишний шаг "назад" */
 function goFloor(i) { lift.classList.remove('on');
   if (HALLON && hk().board) { MODE = 'ride'; hk().board(i + 1, function () { rideGo(i); }); return; }   /* заходим в кабину, двери закрываются - потом поездка */
   rideGo(i); }
-function rideGo(i) { ride.style.setProperty('--c', col(i)); $('shRideN').textContent = MODS[i].n; $('shRideT').textContent = MODS[i].t; ride.classList.add('on');
+function rideGo(i) { ride.style.setProperty('--c', col(i)); $('shRideN').textContent = MODS[i].n; $('shRideT').textContent = MODS[i].t; ride.classList.remove('out'); ride.classList.add('on');
+  if (UL) { rideUL(i); return; }
   var b = $('shRideB'); b.style.transition = 'none'; b.style.width = '0'; void b.offsetWidth; b.style.transition = 'width 1.1s ease-in-out'; b.style.width = '100%';
   setTimeout(function () { closeHall(); floor(i, null); var tv = tvOf(MODS[i]);   /* 24.11 (Alexandr): этаж - это сразу комната: из лифта садимся к телевизору */
     if (tv) { DIRECT = true; enterRoom(i, tv); }
     setTimeout(function () { ride.classList.remove('on'); }, 150); }, 1150); }
 var DIRECT = false;
+/* 26.11: лифт = загрузка. Раньше экран поездки и экран загрузки комнаты сменяли друг друга с наложением текста.
+   Теперь экран один: лифт едет, полоска показывает настоящую загрузку этажа и уходит, когда комната готова. */
+function rideUL(i) { var b = $('shRideB'), x = $('shRideX'), f = $('shRideF'), h = '<i>Х</i>', k; for (k = 0; k < MODS.length; k++) h += '<i>' + esc(MODS[k].n) + '</i>';
+  f.innerHTML = h; var cs = f.children, cur = 0, stp = setInterval(function () { for (var q = 0; q < cs.length; q++) cs[q].className = q === cur ? (cur === i + 1 ? 'a' : 'p') : ''; if (cur >= i + 1) clearInterval(stp); else cur++; }, Math.max(90, 900 / (i + 2)));
+  D.body.classList.add('sh-rd'); x.textContent = 'Лифт едет на этаж ' + MODS[i].n;
+  b.style.transition = 'none'; b.style.width = '0'; void b.offsetWidth; b.style.transition = 'width 1.05s ease-in-out'; b.style.width = '30%';
+  setTimeout(function () { closeHall(); floor(i, null); var tv = tvOf(MODS[i]); if (tv) { DIRECT = true; enterRoom(i, tv); }
+    b.style.transition = 'width .25s linear'; var t0 = Date.now(), ok = 0, iv = setInterval(function () { var Z = window.KURS_ZAGRUZKA, z = $('zgr'), vis = !!(z && z.classList.contains('on'));
+      if ((Z && Z.on) || vis) { ok = 0; var pe = z && z.querySelector('.zg-p'), te = z && z.querySelector('.zg-x'), pr = pe ? parseInt(pe.textContent, 10) || 0 : 0; b.style.width = (30 + pr * .7) + '%'; if (te && te.textContent) x.textContent = te.textContent; } else ok++;
+      if ((ok >= 3 && Date.now() - t0 > 350) || Date.now() - t0 > 90000) { clearInterval(iv); clearInterval(stp); b.style.width = '100%'; ride.classList.add('out'); setTimeout(function () { ride.classList.remove('on', 'out'); D.body.classList.remove('sh-rd'); }, 380); } }, 100); }, 1100); }
 function floor(i, z) {
   closeHall(); D.body.classList.remove('sh-room');
   MODE = 'floor'; push('floor'); tap.style.display = 'none'; lift.classList.remove('on'); var m = MODS[i]; FL = { i: i, m: m, zone: null, cams: floorScene(i) }; fit(); bot.style.display = ''; doors = null;
@@ -326,10 +376,10 @@ addEventListener('popstate', function () {
 
 /* ============ ОКНО ЗАДАНИЯ (moduli.js) ============ */
 var win = $('win'), winTid = null, winWas = null;
-function openWin(tid, title) { winTid = tid; winWas = tid ? I.task(tid) : null; var L = tid && K.lib[tid];
+function openWin(tid, title, mid) { var pr0 = $('shPr'); if (pr0) pr0.remove(); winTid = tid; winWas = tid ? I.task(tid) : null; var L = tid && K.lib[tid];
   $('winT').textContent = title || (L ? L.t : ''); win.classList.add('on'); var p = $('wpane'); if (p) p.scrollTop = 0;
-  if (tid) I.go.task(tid); else I.go.home(); D.body.classList.add('sh-hide'); tap.style.display = 'none'; }
-function closeWin() { if (!win.classList.contains('on')) return; win.classList.remove('on'); D.body.classList.remove('sh-hide'); var t = winTid, fresh = t && winWas !== 'done' && I.task(t) === 'done'; winTid = null;
+  if (tid) I.go.task(tid); else if (mid) I.go.mod(mid); else I.go.home(); D.body.classList.add('sh-hide'); tap.style.display = 'none'; }
+function closeWin() { if (!win.classList.contains('on')) return; var pr0 = $('shPr'); if (pr0) pr0.remove(); win.classList.remove('on'); D.body.classList.remove('sh-hide'); var t = winTid, fresh = t && winWas !== 'done' && I.task(t) === 'done'; winTid = null;
   if (ROOM) { try { ROOM.back(t, fresh); } catch (e) {} return; }
   if (window.KURS_KOMNATA && KURS_KOMNATA.on) { try { KURS_KOMNATA.back(t, fresh); } catch (e) {} return; }
   if (HALLON) { dots(); try { HOLL.back(null, false); } catch (e) {} return; }
@@ -338,7 +388,17 @@ $('winX').addEventListener('click', function (e) { e.stopImmediatePropagation();
 var gb = $('gearB'); if (gb) gb.hidden = true; var nx = $('nxB'); if (nx) nx.hidden = true;
 /* комнаты от первого лица (iframe, komnaty.js) просят окно задания */
 window.KURS_OPEN_TASK = function (tid) { if (!K.lib[tid]) return false; openWin(tid); return true; };
-window.KURS_KOMNATA_OUT = function () { roomShut = Date.now(); D.body.classList.remove('sh-room'); if (FL) zone(FL.zone); need = true; };
+window.KURS_KOMNATA_OUT = function () { roomShut = Date.now(); D.body.classList.remove('sh-room');
+  if (PRAC) { PRAC = false; DIRECT = false;   /* из комнаты практики (зашли с урока) - обратно к лифту; шаги "назад" убираем после текущего события */
+    setTimeout(function () { var st = history.state && history.state.sh; if (st === 'room') { ignorePop = true; history.go(-2); } else if (st === 'floor') { ignorePop = true; history.back(); } need = true; back(); }, 0); return; }
+  if (FL) zone(FL.zone); need = true; };
+/* 26.11: задания этажа. После урока идти было некуда: тест, тренажёры и комнаты 3 и 5 этажей из лифта не открывались.
+   Теперь из комнаты урока открывается список заданий модуля (готовое окно курса), на 3 и 5 этажах - ещё и вход в комнату практики. */
+var PRAC = false;
+function floorWin(i) { var m = MODS[i]; openWin(null, 'Задания этажа ' + m.n, m.id); var r = roomOf(m), top = D.querySelector('#wpane .wtop');
+  if (r && r.type === 'i' && ROOM && DIRECT && top) { var d = el('div', null, '<button type="button"><b>🚪</b><span>Комната практики: ' + esc(r.name) + '<small>Те же задания, но в комнате от первого лица</small></span></button>'); d.id = 'shPr'; d.style.setProperty('--c', col(i)); top.parentNode.insertBefore(d, top.nextSibling); d.firstChild.onclick = function () { practice(i); }; } }
+function practice(i) { if (!ROOM || !DIRECT || !window.KURS_KOMNATA) return; var pr0 = $('shPr'); if (pr0) pr0.remove(); win.classList.remove('on'); D.body.classList.remove('sh-hide'); winTid = null;
+  var r = ROOM; ROOM = null; try { r.close(); } catch (e) {} PRAC = true; D.body.classList.add('sh-room'); KURS_KOMNATA.open(MODS[i].id); }
 
 /* ============ КОМНАТЫ ============ */
 var ROOM = null;
@@ -347,6 +407,7 @@ function enterRoom(i, tv) { var m = MODS[i], r = tv ? { type: 'k' } : roomOf(m);
   if (r.type === 'k') { ROOM = tv ? KURS_KOMNATY.m2 : KURS_KOMNATY[m.id];
     ROOM.open({ mid: m.id, color: col(i), name: m.n + '. ' + m.t, state: function (tid) { return I.task(tid); },
       task: function (tid) { if (I.task(tid) === 'lock') return false; openWin(tid); return true; },
+      tasks: UL && tv ? function () { floorWin(i); } : null,
       exit: function () { exitRoom(false); } }, tv ? { sit: true, lesson: tv.lesson } : null);
     push('room');
   } else KURS_KOMNATA.open(m.id); }
@@ -358,6 +419,19 @@ function exitRoom(byBack) { if (!ROOM) return; var r = ROOM; ROOM = null; D.body
   if (FL) zone(FL.zone); need = true; }
 /* комнаты рассчитаны на горизонтальный экран телефона: в комнате просим повернуть (povorot.js), в здании - любое положение */
 window.POVOROT_GAME = function () { return roomOn(); };
+
+/* 26.11: графика. Комнаты собираются один раз, поэтому новое качество раньше включалось только после перезагрузки страницы, и об этом нигде не говорилось.
+   Теперь после выбора в шестерёнке школа сама предлагает перезапуститься (прогресс хранится на устройстве и не теряется). */
+(function () { var Q = window.KACHESTVO; if (!UL || !Q) return; var was = Q.level, bar = null;
+  el('style', null, '#shQ{position:fixed;z-index:70;left:50%;bottom:calc(14px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);display:none;align-items:center;gap:10px;max-width:calc(100vw - 24px);background:rgba(8,10,24,.94);border:1.5px solid #7cf3ff;border-radius:14px;padding:9px 10px 9px 14px;font:600 14px ShM,Manrope,system-ui,sans-serif;color:#e8ecff}#shQ.on{display:flex}#shQ button{flex:none;border:0;border-radius:10px;padding:9px 12px;font:800 13px ShM,Manrope,system-ui,sans-serif;cursor:pointer}#shQ .y{background:#7cf3ff;color:#06101e}#shQ .n{background:#1a2040;color:#c8cdea}', D.head);
+  function show() { if (!bar) { bar = el('div', 'sh', '<span></span><button type="button" class="y">Применить</button><button type="button" class="n">Позже</button>', D.body); bar.id = 'shQ';
+      ['pointerdown', 'touchstart', 'click'].forEach(function (t) { bar.addEventListener(t, function (e) { e.stopPropagation(); }); });
+      bar.querySelector('.n').onclick = function () { bar.classList.remove('on'); };
+      bar.querySelector('.y').onclick = function () { var u = location.href.replace(/([?&])q=(low|mid|high)(&|$)/, function (m, a, b, c) { return c ? a : ''; }); if (u === location.href) location.reload(); else location.replace(u); }; }
+    var NM = { low: 'низкая', mid: 'средняя', high: 'высокая' }; bar.querySelector('span').textContent = 'Графика: ' + (Q.manual ? NM[Q.level] : 'авто (' + NM[Q.level] + ')') + '. Нужен перезапуск школы.'; bar.classList.add('on'); }
+  D.addEventListener('click', function (e) { var b = e.target && e.target.closest && e.target.closest('#kchR button'); if (!b) return; setTimeout(function () { if (Q.level !== was) show(); else if (bar) bar.classList.remove('on'); }, 0); }, true);
+  var iv = setInterval(function () { var sm = D.querySelector('#kchR small'); if (sm) { sm.textContent = '"Авто" подбирает графику под устройство и само снижает её, если кадры идут медленно. Тормозит - выбери "Низкая".'; clearInterval(iv); } }, 500);
+})();
 
 /* ---------- мелочи ---------- */
 var tst = null; function toast(t) { var e = $('toast'); if (!e) return; e.textContent = t; e.classList.add('show'); clearTimeout(tst); tst = setTimeout(function () { e.classList.remove('show'); }, 2200); }
