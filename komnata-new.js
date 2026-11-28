@@ -735,6 +735,14 @@ function make(cfg) {
     var fill = Math.min(.8, .94 * asp / (MON.w / MON.h)), tg = (MON.h / 2 / d) / fill, fov = Math.max(24, Math.min(fov0(), 2 * Math.atan(tg) * 180 / Math.PI));
     return { fov: fov, look: new T.Vector3(mp.x, mp.y + .08 * tg * d, mp.z) }; }   /* смотрим чуть выше центра: экран ниже кнопок "Встать" */
   function sitLook() { var f = sitFit(); return f ? f.look : OKN.look(); }
+  /* 28.11 (Лётная школа, shkola-viktorina.js): телевикторина рисуется поверх экрана ТВ. Школа спрашивает, где экран на странице, и сажает ученика в кресло */
+  var TVAPI = { rect: function () { if (!on || !MON || !MON.g.visible) return null; var r = null, bad = false;
+      [[-1, -1], [1, -1], [1, 1], [-1, 1]].forEach(function (p) { var v = new T.Vector3(p[0] * MON.w / 2, p[1] * MON.h / 2, .01); MON.g.localToWorld(v); v.project(CAM); if (v.z > 1) { bad = true; return; }
+        var x = (v.x + 1) / 2 * innerWidth, y = (1 - v.y) / 2 * innerHeight; if (!r) r = { l: x, r: x, t: y, b: y }; else { r.l = Math.min(r.l, x); r.r = Math.max(r.r, x); r.t = Math.min(r.t, y); r.b = Math.max(r.b, y); } });
+      return r && !bad ? { x: r.l, y: r.t, w: r.r - r.l, h: r.b - r.t } : null; },
+    sit: function () { if (!on || !OKN) return false; if (!SIT && !anim) sit(); return true; },
+    draw: function () { if (on && GX && !anim) try { GX.render(0); } catch (e) {} },   /* окно задания ставит комнату на паузу: после поворота экрана картинку рисуем заново */
+    get ok() { return on && !!MON && !!OKN && !LOADING; }, get sitting() { return !!SIT && !anim; }, get busy() { return !!anim; } };
   function sitUI(v) { if (!UL) return; root.classList.toggle('k-sit', !!v); document.body.classList.toggle('kmn-sit', !!v); }
   function aimAt(p) { var d = p.clone().sub(pos); return [Math.atan2(-d.x, -d.z), Math.atan2(d.y, Math.hypot(d.x, d.z))]; }
   function sit() { if (!OKN || SIT || anim) return; var s = OKN.seat; upUI(); sel = null; card(null); target = null; lookAt = null; vel.set(0, 0, 0);
@@ -906,6 +914,7 @@ function make(cfg) {
     api = a; I = window.VZ_KURS_INFO; K = window.VZ_KURS;
     if (cfg.needGX) { try { if (!built) build(); } catch (e) { if (window.console) console.warn('komnata', e); } if (!built || !GX || !HK) { if (a && a.fail) a.fail(); return; } }   /* холл без новой графики не строим - shkola.js покажет простой холл */
     if (!built) build(); lesson(OPT.lesson || null); HOLD = false;
+    if (UL) window.KMN_TV = TVAPI;
     on = true; paused = false; root.classList.add('on'); document.body.classList.add('kmn-on'); sel = null; card(null); sndUI();
     if (AV) { AV.rest(3500); if (FPSDBG) { R.info.autoReset = false; KACHESTVO.dbg = function () { var a = AV.info(), r = AV.rung(); return 'ступень ' + (a.idx + 1) + ' из ' + a.of + ': ' + ['простая', 'средняя', 'богатая'][r.t] + ', резкость ' + r.d + '\nточек ' + cv.width + 'x' + cv.height + ', команд ' + DBG.calls + ', треуг. ' + DBG.tris + (a.last ? '\nзамер ' + a.last.fps.toFixed(0) + ' к/с, смен ' + a.changes : ''); }; }
       /* для проверок и строки ?fps: что сейчас включено в этой комнате */
