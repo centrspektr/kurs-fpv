@@ -48,7 +48,7 @@ function make(o) {
   function capRung(i) { var id = L[i].id, f = fails[id] = (fails[id] || 0) + 1, tu = tierUp(i); caps[id] = now() + (tu ? (f > 1 ? 6 * 3600e3 : 300e3) : Math.min(600e3, 60e3 * Math.pow(2, f - 1))); return tu || f >= 2; }
   function capped(i) { var c = caps[L[i].id]; return !!c && c > now(); }
   function down(k, why) { var was = idx; if (idx <= 0) { bad = 0; return; } var keep = capRung(idx); trial = 0; if (go(idx - (k || 1), why)) save(keep ? L[was].id : null); }
-  /* dt - время кадра в мс; ok = false - сейчас не меряем (пауза, загрузка, вкладка скрыта); calm - можно ли сейчас менять эффекты (ученик стоит или сидит) */
+  /* dt - время кадра в мс; ok = false - сейчас не меряем (пауза, загрузка, вкладка скрыта); calm - можно ли сейчас повышать качество (ученик стоит или сидит и не крутит камеру); понижение - в любой момент */
   function push(dt, ok, calm) {
     if (ok === false || dt > 400) { n = sum = slow = vslow = 0; if (cool < 600) cool = 600; return; }
     if (cool > 0) { cool -= dt; return; }
@@ -66,7 +66,8 @@ function make(o) {
     good++;
     var up = idx + 1; if (up >= L.length || capped(up)) return;
     var tier = L[up].t !== L[idx].t;
-    if (good >= (tier ? 8 : 3) && (!tier || calm !== false)) { from = idx; if (go(up, 'вверх')) trial = tier ? 4 : 3; }
+    if (good >= (tier ? 8 : 3) && calm !== false) {   /* 27.11: и резкость меняем только в покое - пересоздание картинки даёт короткую заминку, а камеру в этот момент крутят */
+      from = idx; if (go(up, 'вверх')) trial = tier ? 4 : 3; }
   }
   var A = {
     push: push, ladder: L,
