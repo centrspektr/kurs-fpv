@@ -51,7 +51,7 @@ css.textContent =
   'body.sh-tvq .kr-end{font-family:' + F + ';color:#eef0ff}body.sh-tvq .kr-end .big{font:300 calc(var(--fs) * 2.2)/1 ' + F + ';color:' + A2 + ';background:none;-webkit-text-fill-color:currentColor}' +
   'body.sh-tvq .kr-end p,body.sh-tvq .kr-end details{font:300 calc(var(--fs) * .7)/1.45 ' + F + '}body.sh-tvq .kr-end>div:first-child{display:none}' +
   'body.sh-tvq .kr-x{background:none;border:0;padding:0}body.sh-tvq .kr-err{text-align:left;max-height:calc(var(--th) * .3);overflow:auto}' +
-  'body.sh-tvq .tvq-col{display:flex!important;flex-direction:column;flex:1 0 auto;padding:0!important;margin:0!important;min-height:0!important}' +
+  'body.sh-tvq .tvq-col{display:flex!important;flex-direction:column;flex:1 0 auto;padding:0!important;margin:0 auto!important;width:100%;min-height:0!important}' +
   'body.sh-tvq #kmn .k-up,body.sh-tvq #kmn .k-st{opacity:0!important;pointer-events:none!important}' +
   'body.sh-tvq .kr-q:has(.kr-why) .kq-pic{display:none}body.sh-tvq .kr-btn:focus,body.sh-tvq .kr-btn:focus-visible{outline:0!important;box-shadow:none!important}body.sh-tvq .kr-btn:focus-visible::after{opacity:1;height:2px}' +
   '@keyframes tvqIn{from{opacity:0;transform:translateY(6px)}}' +
@@ -68,8 +68,10 @@ function place() { var tv = window.KMN_TV, r = tv && tv.rect(); if (!r) return f
   return true; }
 function start() { ON = true; WAIT = true; last = ''; var tv = window.KMN_TV; D.body.classList.add('sh-tvq', 'tvq-wait'); if (window.GOLOS && GOLOS.stop) try { GOLOS.stop(); } catch (e) {}
   tv.sit(); var t0 = Date.now();
-  (function w() { if (!ON) return; if ((tv.sitting || Date.now() - t0 > 2500) && place()) { WAIT = false; D.body.classList.remove('tvq-wait'); return; } if (Date.now() - t0 > 4000) { FAIL = true; stop(); return; } raf = requestAnimationFrame(w); })(); }
-function stop() { ON = false; WAIT = false; cancelAnimationFrame(raf); D.body.classList.remove('sh-tvq', 'tvq-wait', 'tvq-small'); off.forEach(function (c) { c.classList.remove('tvq-off'); }); off = []; cols.forEach(function (c) { c.classList.remove('tvq-col'); }); cols = []; }
+  (function w() { if (!ON) return; if ((tv.sitting || Date.now() - t0 > 2500) && place()) { WAIT = false; D.body.classList.remove('tvq-wait'); follow(); return; } if (Date.now() - t0 > 4000) { FAIL = true; stop(); return; } raf = requestAnimationFrame(w); })(); }
+/* камера могла ещё доезжать (медленный телефон): пока окно открыто, сверяем место экрана */
+var fiv = 0; function follow() { clearInterval(fiv); fiv = setInterval(function () { if (!ON) { clearInterval(fiv); return; } var o = last; place(); if (last !== o && window.KMN_TV) KMN_TV.draw(); }, 200); }
+function stop() { clearInterval(fiv); ON = false; WAIT = false; cancelAnimationFrame(raf); D.body.classList.remove('sh-tvq', 'tvq-wait', 'tvq-small'); off.forEach(function (c) { c.classList.remove('tvq-off'); }); off = []; cols.forEach(function (c) { c.classList.remove('tvq-col'); }); cols = []; }
 function check() { if (!stage()) FAIL = false; var w = want();
   if (w && !ON) start(); else if (!w && ON) stop();
   if (ON) { var s = stage(); if (s) hideAround(s); } }

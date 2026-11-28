@@ -99,14 +99,16 @@ var FIX = {
 
 /* 27.11 (проход 4): полная таблица выровненных ответов - в shkola-otvety.js, она главнее девяти строк выше */
 var OTV = window.SHKOLA_OTVETY; if (OTV) Object.keys(OTV).forEach(function (k) { FIX[k] = OTV[k]; });
-var QP = {}, nfix = 0;
+var QP = {}, nfix = 0, n4 = 0, O4 = window.KMN_UL && !/[?&]otv4=0\b/.test(location.search) ? window.SHKOLA_OTVETY4 : null;
 Object.keys(K.lib).forEach(function (tid) { var t = K.lib[tid]; (t.steps || []).forEach(function (st) { if (st.s !== 'quiz') return;
   [st.pool, st.x].forEach(function (pool, pi) { if (!Array.isArray(pool)) return;
     pool.forEach(function (q) { var f = q && FIX[q.q]; if (f && q.a && q.a.length === f.length) { q.a = f.slice(); nfix++; } });
+    /* 28.11: четвёртый ответ для телевикторины (ромб A-D), shkola-otvety4.js */
+    if (O4) pool.forEach(function (q) { var a4 = q && O4[q.q]; if (a4 && q.a && q.a.length === 3 && q.a.indexOf(a4) < 0) { q.a.push(a4); n4++; } });
     var row = TAB[tid] && TAB[tid][pi]; if (!row) return; var ks = row.split(' ');
     if (ks.length !== pool.length) { try { console.warn('shkola-testy: ' + tid + (pi ? ' x' : '') + ' - вопросов ' + pool.length + ', картинок ' + ks.length + ', картинки отключены'); } catch (e) {} return; }
     pool.forEach(function (q, i) { if (q && typeof q.q === 'string' && ks[i] !== '-' && !QP[q.q]) QP[q.q] = ks[i]; }); }); }); });
-window.SHKOLA_TESTY = { pics: QP, fixed: nfix };
+window.SHKOLA_TESTY = { pics: QP, fixed: nfix, four: n4 };
 
 /* ---------- вставка картинки в вопрос ---------- */
 var css = document.createElement('style');
