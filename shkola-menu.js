@@ -155,7 +155,9 @@ function mount() {
   /* 28.11: без значков и чёрточек перед словами ("? Управление" -> "Управление", "🔊 Голос Леры" -> "Голос Леры"). Подписи пишут другие файлы и меняют их на ходу -
      чистим первый текст у пунктов меню каждый раз, когда он меняется */
   var ICON = /^[^0-9A-Za-zА-Яа-яЁё"«(]+/;
-  function clean() { pn.querySelectorAll('.kmnG button, .shFs, label > span, #kchR > span').forEach(function (el) { var t = el.firstChild; if (t && t.nodeType === 3) { var v = t.nodeValue.replace(ICON, ''); if (v !== t.nodeValue) t.nodeValue = v; } }); }
+  function clean() { pn.querySelectorAll('.kmnG button, .shFs, label > span, #kchR > span').forEach(function (el) { var t = el.firstChild; if (t && t.nodeType === 3) { var v = t.nodeValue.replace(ICON, ''); if (v !== t.nodeValue) t.nodeValue = v; } });
+    /* 28.11: фоновой музыки в школе нет, этот ползунок - громкость звуков холла (holl-zvuki.js) */
+    var mm = pn.querySelector('#muzM'), ms = mm && mm.parentNode.querySelector('span'), mt = ms && ms.firstChild; if (mt && mt.nodeType === 3 && mt.nodeValue !== 'Звуки ') mt.nodeValue = 'Звуки '; if (mm && mm.getAttribute('aria-label') !== 'Громкость звуков') mm.setAttribute('aria-label', 'Громкость звуков'); }
   /* ползунок: закрашенная часть дорожки до точки */
   function fill() { pn.querySelectorAll('input[type=range]').forEach(function (r) { var mn = +r.min || 0, mx = +r.max || 100; r.style.setProperty('--v', ((r.value - mn) / (mx - mn) * 100) + '%'); }); }
   pn.addEventListener('input', fill);
